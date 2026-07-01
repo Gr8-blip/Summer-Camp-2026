@@ -1,6 +1,6 @@
 // Single source of truth for bootcamp-wide info shown on dashboards.
 // Update BOOTCAMP_START_DATE as the real date gets locked in.
-export const BOOTCAMP_START_DATE = "2026-08-01T00:00:00";
+export const BOOTCAMP_START_DATE = "2026-07-27T00:00:00";
 
 export const ANNOUNCEMENTS = [
   "Welcome to the Bootcamp!",

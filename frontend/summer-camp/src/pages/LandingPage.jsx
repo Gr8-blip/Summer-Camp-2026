@@ -71,6 +71,7 @@ export default function LandingPage() {
           <div className="nav-links">
             <a href="#what-they-build">What They Build</a>
             <a href="#faqs">FAQs</a>
+            <a href="#contact">Contact</a>
             <button className="btn-secondary btn nav-login" onClick={() => navigate("/login")}>
               Parent Login
             </button>
@@ -251,6 +252,36 @@ export default function LandingPage() {
             {FAQS.map((f) => (
               <FaqItem key={f.q} q={f.q} a={f.a} />
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CONTACT */}
+      <section className="section contact" id="contact">
+        <div className="container">
+          <h2 className="section-title">Got More Questions? We Got You.</h2>
+          <p className="section-subtitle">
+            Reach out directly — we're real people, not bots (well, we build bots, but you get the idea 😄).
+          </p>
+          <div className="contact-grid">
+            <a className="contact-card" href="tel:+234802000447">
+              <div className="contact-icon">📞</div>
+              <h3>Call Us</h3>
+              <p>+234 802 000 447</p>
+              <span className="contact-hint">Mon – Fri, 9am – 5pm WAT</span>
+            </a>
+            <a className="contact-card" href="mailto:support@ravilletech.com">
+              <div className="contact-icon">✉️</div>
+              <h3>Email Support</h3>
+              <p>support@ravilletech.com</p>
+              <span className="contact-hint">We reply within 24 hours</span>
+            </a>
+            <a className="contact-card" href="https://wa.me/234802000447" target="_blank" rel="noreferrer">
+              <div className="contact-icon">💬</div>
+              <h3>WhatsApp</h3>
+              <p>+234 802 000 447</p>
+              <span className="contact-hint">Quickest way to reach us</span>
+            </a>
           </div>
         </div>
       </section>

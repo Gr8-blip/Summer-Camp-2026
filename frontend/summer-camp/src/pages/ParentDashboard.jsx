@@ -1,6 +1,24 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { BOOTCAMP_START_DATE, ANNOUNCEMENTS, getDaysUntil } from "../bootcampConfig";
 import "./ParentDashboard.css";
+
+function CopyableCode({ code }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <button className={`pd-login-chip ${copied ? "pd-login-chip-copied" : ""}`} onClick={handleCopy} title="Click to copy student login code">
+      {copied ? "✅ Copied!" : `🔑 ${code}`}
+    </button>
+  );
+}
 
 export default function ParentDashboard({ family }) {
   const navigate = useNavigate();
@@ -30,14 +48,14 @@ export default function ParentDashboard({ family }) {
       </div>
 
       <div className="pd-card">
-        <h3>🧒 Registered Students</h3>
+        <h3>🧒 Registered Students & Login Code</h3>
         {family.students?.length ? (
           <ul className="pd-students-list">
             {family.students.map((s) => (
               <li key={s.id} className="pd-student-row">
                 <span>• {s.full_name}</span>
                 {isActive ? (
-                  <span className="pd-login-chip">{s.login_code}</span>
+                 <CopyableCode code={s.login_code} />
                 ) : (
                   <span className="pd-login-pending">Code pending payment</span>
                 )}
