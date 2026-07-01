@@ -61,7 +61,10 @@ export default function PaymentCallback() {
             <p>{message}</p>
             <p className="callback-sub">
               Family #{familyId} is now active. Your kids' login codes have been generated —
-              log in to your dashboard to find them.
+              log in to your dashboard or check your email to find them.
+              <br />
+              <br />
+              NB: If you don't see the email, check your spam folder or reach out to us.
             </p>
             <button className="btn btn-primary" onClick={() => navigate("/login")}>
               Go to Parent Login →
