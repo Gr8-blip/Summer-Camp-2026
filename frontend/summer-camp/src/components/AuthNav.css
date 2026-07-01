@@ -1,0 +1,28 @@
+.auth-nav-logo {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 20;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--color-purple);
+  background: white;
+  padding: 10px 18px;
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-soft);
+  transition: transform 0.15s ease;
+}
+
+.auth-nav-logo:hover {
+  transform: translateY(-2px);
+}
+
+@media (max-width: 480px) {
+  .auth-nav-logo {
+    top: 16px;
+    left: 16px;
+    font-size: 1rem;
+    padding: 8px 14px;
+  }
+}

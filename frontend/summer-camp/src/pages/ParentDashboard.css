@@ -1,0 +1,132 @@
+.parent-dash {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.pd-welcome {
+  font-size: 1.8rem;
+  margin-bottom: 24px;
+}
+
+.pd-card {
+  background: white;
+  border-radius: var(--radius-md);
+  padding: 24px;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 18px;
+}
+
+.pd-card h3 {
+  font-size: 1.05rem;
+  margin-bottom: 6px;
+}
+
+.pd-status-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pd-payment-label {
+  font-size: 0.9rem;
+  color: var(--color-text-soft);
+}
+
+.pd-paid { color: #047857; }
+.pd-unpaid { color: #B45309; }
+
+.pd-pay-btn {
+  flex-shrink: 0;
+  padding: 12px 22px !important;
+  font-size: 0.9rem !important;
+}
+
+.pd-students-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pd-student-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.pd-login-chip {
+  background: var(--gradient-success);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.pd-login-pending {
+  font-size: 0.78rem;
+  color: var(--color-text-soft);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.pd-muted {
+  color: var(--color-text-soft);
+  font-size: 0.9rem;
+}
+
+.pd-countdown-card {
+  text-align: center;
+  background: var(--gradient-hero);
+  color: white;
+}
+
+.pd-countdown-card h3 {
+  color: white;
+  opacity: 0.95;
+}
+
+.pd-countdown-number {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.pd-announcements {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pd-announcements li {
+  background: var(--color-bg);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  position: relative;
+  padding-left: 30px;
+}
+
+.pd-announcements li::before {
+  content: "•";
+  position: absolute;
+  left: 14px;
+  color: var(--color-purple);
+  font-weight: 700;
+}
+
+@media (max-width: 480px) {
+  .pd-status-card { flex-direction: column; align-items: flex-start; }
+  .pd-pay-btn { width: 100%; }
+}

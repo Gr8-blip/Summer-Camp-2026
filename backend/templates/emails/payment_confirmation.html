@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Confirmation</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f7fb;font-family:Arial,Helvetica,sans-serif;">
+
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7fb;padding:40px 15px;">
+<tr>
+<td align="center">
+
+<table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 8px 25px rgba(0,0,0,.08);">
+
+    <!-- Header -->
+    <tr>
+        <td align="center" style="background:#2563eb;padding:35px 25px;color:white;">
+            <h1 style="margin:0;font-size:30px;">
+                🚀 RavilleTech
+            </h1>
+
+            <p style="margin:12px 0 0;font-size:16px;">
+                Summer Tech Bootcamp 2026
+            </p>
+        </td>
+    </tr>
+
+    <!-- Body -->
+    <tr>
+        <td style="padding:40px 35px;color:#374151;">
+
+            <h2 style="margin-top:0;color:#111827;">
+                Payment Successful 🎉
+            </h2>
+
+            <p style="font-size:16px;line-height:28px;">
+                Hi <strong>{{ parent_name }}</strong>,
+            </p>
+
+            <p style="font-size:16px;line-height:28px;">
+                Thank you for registering for the
+                <strong>RavilleTech Summer Tech Bootcamp 2026.</strong>
+
+                Your payment has been received successfully and your registration has been confirmed.
+            </p>
+
+            <!-- Payment Card -->
+            <table width="100%" cellpadding="12" cellspacing="0"
+                   style="margin:30px 0;background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;">
+                <tr>
+                    <td>
+                        <strong>Payment Amount</strong><br>
+                        ₦{{ payment_amount }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <strong>Reference</strong><br>
+                        {{ payment_reference }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <strong>Status</strong><br>
+                        <span style="color:#16a34a;font-weight:bold;">
+                            ✅ Confirmed
+                        </span>
+                    </td>
+                </tr>
+            </table>
+
+            <h3 style="margin-top:40px;color:#111827;">
+                Student Login Codes
+            </h3>
+
+            <p style="margin-bottom:25px;">
+                Please keep these codes safe. Students will use them to access the bootcamp.
+            </p>
+
+            {% for student in students %}
+
+            <table width="100%" cellpadding="15" cellspacing="0"
+                   style="margin-bottom:18px;border:1px solid #e5e7eb;border-radius:10px;background:#fafafa;">
+
+                <tr>
+                    <td>
+                        <strong style="font-size:16px;">
+                            {{ student.full_name }}
+                        </strong>
+
+                        <br><br>
+
+                        <span style="
+                            display:inline-block;
+                            background:#2563eb;
+                            color:white;
+                            padding:10px 18px;
+                            border-radius:8px;
+                            font-size:17px;
+                            font-weight:bold;
+                            letter-spacing:1px;
+                            font-family:monospace;
+                        ">
+                            {{ student.login_code }}
+                        </span>
+                    </td>
+                </tr>
+
+            </table>
+
+            {% endfor %}
+
+            <p style="margin-top:35px;font-size:16px;line-height:28px;">
+                We can't wait to see your students inside the bootcamp and begin an exciting journey into programming, AI, web development, and more!
+            </p>
+
+        </td>
+    </tr>
+
+    <!-- Footer -->
+    <tr>
+        <td align="center"
+            style="background:#111827;color:#d1d5db;padding:30px 25px;font-size:14px;line-height:24px;">
+
+            <strong style="color:white;font-size:16px;">
+                RavilleTech
+            </strong>
+
+            <br><br>
+
+            Empowering the next generation of innovators through technology.
+
+            <br><br>
+
+            Questions?
+
+            <br>
+
+            📧 support@ravilletech.com
+
+            <br><br>
+
+            © 2026 RavilleTech. All rights reserved.
+
+        </td>
+    </tr>
+
+</table>
+
+</td>
+</tr>
+</table>
+
+</body>
+</html>
