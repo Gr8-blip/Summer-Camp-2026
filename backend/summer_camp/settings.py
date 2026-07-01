@@ -159,7 +159,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
-BOOTCAMP_PAYMENT_AMOUNT = 130000  # Amount in Naira for each group of 3 students
+BOOTCAMP_PAYMENT_AMOUNT = int(os.getenv("BOOTCAMP_AMOUNT_PAYMENT"))  # Amount in Naira for each group of 3 students
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
