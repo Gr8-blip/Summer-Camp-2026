@@ -39,14 +39,15 @@ const WHY_CARDS = [
 
 const FAQS = [
   { q: "Does my child need coding experience?", a: "Nope! Zero experience needed. We start from scratch and build up with hands-on guidance the whole way." },
+  {
+    q: "Does my child need a laptop to participate in this bootcamp?", a: "Yes. A laptop and a stable internet connection are required so your child can write code, build their AI projects, and participate fully in the hands-on activities throughout the bootcamp."
+  },
   { q: "What age group is this for?", a: "Ages 9–16. The pace and projects adapt to where your child is at." },
   { q: "Is the project really theirs?", a: "100%. Every kid picks their own idea and personality for their AI — no two builds look the same." },
   { q: "How are classes delivered?", a: "Fully online, live, from anywhere with an internet connection." },
   { q: "Will there be a certificate?", a: "Yes! Every student gets a certificate after presenting on Demo Day." },
   { q: "What happens after the bootcamp?", a: "Your child keeps their project, plus access to resources to keep building and learning." },
-  {
-    q: "Does my child need a laptop to participate in this bootcamp?", a: "Yes. A laptop and a stable internet connection are required so your child can write code, build their AI projects, and participate fully in the hands-on activities throughout the bootcamp."
-  }
+
 ];
 
 function FaqItem({ q, a }) {
@@ -62,6 +63,51 @@ function FaqItem({ q, a }) {
   );
 }
 
+function PricingCalculator({ onRegister }) {
+  const [kidCount, setKidCount] = useState(1);
+  const PRICE_PER_GROUP = 130000;
+  const groups = Math.ceil(kidCount / 3);
+  const total = groups * PRICE_PER_GROUP;
+
+  return (
+    <div className="calc-inner">
+      <div className="calc-counter">
+        <button
+          className="calc-btn"
+          onClick={() => setKidCount((n) => Math.max(1, n - 1))}
+          disabled={kidCount <= 1}
+        >−</button>
+        <span className="calc-count">{kidCount} {kidCount === 1 ? "kid" : "kids"}</span>
+        <button
+          className="calc-btn"
+          onClick={() => setKidCount((n) => Math.min(9, n + 1))}
+          disabled={kidCount >= 9}
+        >+</button>
+      </div>
+
+      <div className="calc-breakdown">
+        <div className="calc-row">
+          <span>Groups needed</span>
+          <span>{groups} × ₦130,000</span>
+        </div>
+        <div className="calc-row calc-total-row">
+          <span>You pay</span>
+          <span className="calc-total">₦{total.toLocaleString()}</span>
+        </div>
+        {kidCount > 3 && (
+          <p className="calc-note">
+            💡 {kidCount} kids = {groups} groups of 3 — each kid still gets the full experience!
+          </p>
+        )}
+      </div>
+
+      <button className="btn btn-primary btn-block" onClick={onRegister}>
+        Register {kidCount} {kidCount === 1 ? "Kid" : "Kids"} →
+      </button>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   const navigate = useNavigate();
 
@@ -73,6 +119,7 @@ export default function LandingPage() {
           <div className="nav-logo">🚀 Ravilletech</div>
           <div className="nav-links">
             <a href="#what-they-build">What They Build</a>
+            <a href="#pricing">Pricing</a>
             <a href="#faqs">FAQs</a>
             <a href="#contact">Contact</a>
             <button className="btn-secondary btn nav-login" onClick={() => navigate("/login")}>
@@ -247,6 +294,59 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* PRICING */}
+      <section className="section pricing" id="pricing">
+        <div className="container">
+          <h2 className="section-title">Simple, Transparent Pricing</h2>
+          <p className="section-subtitle">
+            No hidden fees. No confusing tiers. Just one straightforward plan.
+          </p>
+
+          <div className="pricing-layout">
+
+            {/* Main pricing card */}
+            <div className="pricing-card">
+              <div className="pricing-badge">🔥 Summer 2026</div>
+              <div className="pricing-amount">
+                <span className="pricing-currency">₦</span>
+                <span className="pricing-number">130,000</span>
+              </div>
+              <p className="pricing-per">per group of up to 3 kids</p>
+
+              <div className="pricing-divider" />
+
+              <ul className="pricing-includes">
+                <li>✅ Full bootcamp access (all sessions)</li>
+                <li>✅ Build a real, working AI project</li>
+                <li>✅ Live online classes with an instructor</li>
+                <li>✅ Demo Day presentation</li>
+                <li>✅ Certificate of completion</li>
+                <li>✅ Keep the project after bootcamp</li>
+              </ul>
+
+              <button className="btn btn-primary btn-block pricing-cta" onClick={() => navigate("/register")}>
+                🚀 Register Now
+              </button>
+            </div>
+
+            {/* Interactive calculator */}
+            <div className="pricing-calc">
+              <h3>🧮 How much will I pay?</h3>
+              <p className="calc-sub">
+                Kids are grouped in 3s for live sessions. One payment covers up to 3 kids — so
+                a 4th kid just starts a new group.
+              </p>
+
+              <div className="calc-control">
+                <span className="calc-label">How many kids are you registering?</span>
+                <PricingCalculator onRegister={() => navigate("/register")} />
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
       {/* FAQS */}
       <section className="section faqs" id="faqs">
         <div className="container">
@@ -260,6 +360,7 @@ export default function LandingPage() {
       </section>
 
       {/* CONTACT */}
+
       <section className="section contact" id="contact">
         <div className="container">
           <h2 className="section-title">Got More Questions? We Got You.</h2>
@@ -288,6 +389,8 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+
 
       {/* FINAL CTA */}
       <section className="final-cta">
