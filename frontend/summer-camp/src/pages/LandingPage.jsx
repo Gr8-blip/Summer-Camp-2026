@@ -44,6 +44,9 @@ const FAQS = [
   { q: "How are classes delivered?", a: "Fully online, live, from anywhere with an internet connection." },
   { q: "Will there be a certificate?", a: "Yes! Every student gets a certificate after presenting on Demo Day." },
   { q: "What happens after the bootcamp?", a: "Your child keeps their project, plus access to resources to keep building and learning." },
+  {
+    q: "Does my child need a laptop to participate in this bootcamp?", a: "Yes. A laptop and a stable internet connection are required so your child can write code, build their AI projects, and participate fully in the hands-on activities throughout the bootcamp."
+  }
 ];
 
 function FaqItem({ q, a }) {
