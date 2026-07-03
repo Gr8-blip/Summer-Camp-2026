@@ -80,7 +80,7 @@ export default function PlanReview() {
           <div className="plan-emoji">🎉</div>
           <h2>You're Almost In!</h2>
           <p className="plan-sub">
-            Registration locked in for family <strong>#{familyId}</strong>. One last step —
+            Registration locked in for your family. One last step —
             complete payment to activate your spot in the bootcamp.
           </p>
 

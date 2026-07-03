@@ -223,3 +223,9 @@ ul {
 .fade-up {
   animation: pop-in 0.5s ease both;
 }
+
+
+.callback-sub a {
+  color: var(--color-purple);
+  font-weight: 600;
+}

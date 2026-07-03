@@ -267,10 +267,10 @@ export default function LandingPage() {
             Reach out directly — we're real people, not bots (well, we build bots, but you get the idea 😄).
           </p>
           <div className="contact-grid">
-            <a className="contact-card" href="tel:+234802000447">
+            <a className="contact-card" href="tel:+2348052000447">
               <div className="contact-icon">📞</div>
               <h3>Call Us</h3>
-              <p>+234 802 000 447</p>
+              <p>+234 805 2000 447</p>
               <span className="contact-hint">Mon – Fri, 9am – 5pm WAT</span>
             </a>
             <a className="contact-card" href="mailto:support@ravilletech.com">
@@ -279,10 +279,10 @@ export default function LandingPage() {
               <p>support@ravilletech.com</p>
               <span className="contact-hint">We reply within 24 hours</span>
             </a>
-            <a className="contact-card" href="https://wa.me/234802000447" target="_blank" rel="noreferrer">
+            <a className="contact-card" href="https://wa.me/2348052000447" target="_blank" rel="noreferrer">
               <div className="contact-icon">💬</div>
               <h3>WhatsApp</h3>
-              <p>+234 802 000 447</p>
+              <p>+234 805 2000 447</p>
               <span className="contact-hint">Quickest way to reach us</span>
             </a>
           </div>

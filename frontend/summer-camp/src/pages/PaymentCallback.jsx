@@ -60,12 +60,14 @@ export default function PaymentCallback() {
             <h2>You're In!</h2>
             <p>{message}</p>
             <p className="callback-sub">
-              Family #{familyId} is now active. Your kids' login codes have been generated —
+              Your Family is now active. Your kids' login codes have been generated —
               log in to your dashboard or check your email to find them.
               <br />
               <br />
-              NB: If you don't see the email, check your spam folder or reach out to us.
+              NB: If you don't see the email, check your spam folder or reach out to us at <a href="mailto:support@ravilletech.com">support@ravilletech.com</a> or <a href="https://wa.me/2348052000447" target="_blank" rel="noreferrer">WhatsApp (faster reply)</a>.
+              
             </p>
+            {/* Add reach out to use email and whatsapp (faster reply) */}
             <button className="btn btn-primary" onClick={() => navigate("/login")}>
               Go to Parent Login →
             </button>
