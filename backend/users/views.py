@@ -8,6 +8,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
 from .serializers import RegistrationSerializer
 from .models import Family, Payment, Student
 from .emails import send_payment_confirmation_email
@@ -23,23 +24,7 @@ class Me(APIView):
         except Family.DoesNotExist:
             return Response({"error": "No family found for this account"}, status=404)
         
-        return Response({
-            "family_id": family.id,
-            "status": family.status,
-            "parent": {
-                "id": user.id,
-                "email": user.email,
-                "first_name": user.first_name,
-                "last_name": user.last_name
-            },
-            "students": [
-                {
-                    "id": student.id,
-                    "full_name": student.full_name,
-                    "login_code": student.login_code
-                } for student in family.students.all()
-            ]
-        })
+        return Response({"message": "Logged in", "family_id": family.id})
 
 class RegistrationView(APIView):
     def post(self, request):
@@ -52,29 +37,48 @@ class RegistrationView(APIView):
 
 class StudentLoginView(APIView):
     def post(self, request):
-        code = request.data.get("login_code")
+        login_code = request.data.get("login_code", "").strip().upper()
+
+        if not login_code:
+            return Response(
+                {"error": "Login code is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-            student = Student.objects.get(login_code=code)
+            student = Student.objects.select_related(
+                "user",
+                "family"
+            ).get(login_code=login_code)
         except Student.DoesNotExist:
             return Response(
-                {"error": "Invalid login code"},
-                status=400
+                {"error": "Invalid login code."},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-        # 🚨 optional safety gate
         if student.family.status != "active":
             return Response(
-                {"error": "Family not active"},
-                status=403
+                {"error": "Family account is not active."},
+                status=status.HTTP_403_FORBIDDEN
             )
 
-        return Response({
-            "student_id": student.id,
-            "name": student.full_name,
-            "family_id": student.family.id
-        })
-        
+        refresh = RefreshToken.for_user(student.user)
+
+        return Response(
+            {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+                "student": {
+                    "id": student.id,
+                    "name": student.full_name,
+                    "family_id": student.family.id,
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+    
+
+
 class ParentLoginView(APIView):
     def post(self, request):
         email = request.data.get("email")
@@ -93,6 +97,41 @@ class ParentLoginView(APIView):
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
+        })
+
+class AdminLoginView(APIView):
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+
+        user = authenticate(
+            username=email,
+            password=password
+        )
+
+        if not user:
+            return Response(
+                {"error": "Invalid credentials"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not user.is_superuser:
+            return Response(
+                {"error": "You are not authorized to access the admin dashboard."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            "refresh": str(refresh),
+            "access": str(refresh.access_token),
+            "admin": {
+                "id": user.id,
+                "email": user.email,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+            }
         })
 
 @api_view(['POST'])

@@ -39,15 +39,11 @@ const WHY_CARDS = [
 
 const FAQS = [
   { q: "Does my child need coding experience?", a: "Nope! Zero experience needed. We start from scratch and build up with hands-on guidance the whole way." },
-  {
-    q: "Does my child need a laptop to participate in this bootcamp?", a: "Yes. A laptop and a stable internet connection are required so your child can write code, build their AI projects, and participate fully in the hands-on activities throughout the bootcamp."
-  },
   { q: "What age group is this for?", a: "Ages 9–16. The pace and projects adapt to where your child is at." },
   { q: "Is the project really theirs?", a: "100%. Every kid picks their own idea and personality for their AI — no two builds look the same." },
   { q: "How are classes delivered?", a: "Fully online, live, from anywhere with an internet connection." },
   { q: "Will there be a certificate?", a: "Yes! Every student gets a certificate after presenting on Demo Day." },
   { q: "What happens after the bootcamp?", a: "Your child keeps their project, plus access to resources to keep building and learning." },
-
 ];
 
 function FaqItem({ q, a }) {
@@ -334,7 +330,7 @@ export default function LandingPage() {
               <h3>🧮 How much will I pay?</h3>
               <p className="calc-sub">
                 Kids are grouped in 3s for live sessions. One payment covers up to 3 kids — so
-                a 4th kid just starts a new group.
+                a 4th kid just starts a new group, not a new fortune 😄
               </p>
 
               <div className="calc-control">
@@ -360,7 +356,6 @@ export default function LandingPage() {
       </section>
 
       {/* CONTACT */}
-
       <section className="section contact" id="contact">
         <div className="container">
           <h2 className="section-title">Got More Questions? We Got You.</h2>
@@ -368,10 +363,10 @@ export default function LandingPage() {
             Reach out directly — we're real people, not bots (well, we build bots, but you get the idea 😄).
           </p>
           <div className="contact-grid">
-            <a className="contact-card" href="tel:+2348052000447">
+            <a className="contact-card" href="tel:+2348000000000">
               <div className="contact-icon">📞</div>
               <h3>Call Us</h3>
-              <p>+234 805 2000 447</p>
+              <p>+234 800 000 0000</p>
               <span className="contact-hint">Mon – Fri, 9am – 5pm WAT</span>
             </a>
             <a className="contact-card" href="mailto:support@ravilletech.com">
@@ -380,17 +375,15 @@ export default function LandingPage() {
               <p>support@ravilletech.com</p>
               <span className="contact-hint">We reply within 24 hours</span>
             </a>
-            <a className="contact-card" href="https://wa.me/2348052000447" target="_blank" rel="noreferrer">
+            <a className="contact-card" href="https://wa.me/2348000000000" target="_blank" rel="noreferrer">
               <div className="contact-icon">💬</div>
               <h3>WhatsApp</h3>
-              <p>+234 805 2000 447</p>
+              <p>+234 800 000 0000</p>
               <span className="contact-hint">Quickest way to reach us</span>
             </a>
           </div>
         </div>
       </section>
-
-
 
       {/* FINAL CTA */}
       <section className="final-cta">

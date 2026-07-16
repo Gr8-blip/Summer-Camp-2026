@@ -1,73 +1,13 @@
-.dashboard-page {
-  background: var(--color-bg);
-  min-height: 100vh;
-}
-
-.dashboard-nav {
-  background: white;
-  border-bottom: 2px solid var(--color-border);
-}
-
-.dashboard-nav-inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-}
-
-.dashboard-nav-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.dashboard-user {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--color-text-soft);
-}
-
-.dashboard-logout {
-  padding: 10px 22px !important;
-  font-size: 0.85rem !important;
-}
-
-.dashboard-content {
-  padding: 50px 24px;
-}
-
-.dashboard-loading {
-  text-align: center;
-  padding: 80px 0;
-  color: var(--color-text-soft);
-}
-
-.spinner-dark {
-  border: 3px solid var(--color-border);
-  border-top-color: var(--color-purple);
-  width: 32px;
-  height: 32px;
-  margin: 0 auto 16px;
-}
-
-.dashboard-card {
-  background: white;
-  border-radius: var(--radius-md);
-  padding: 26px;
-  box-shadow: var(--shadow-card);
-}
-
-.dashboard-error-card {
-  text-align: center;
-  max-width: 560px;
-  margin: 0 auto;
-}
-
-.dashboard-error-card h2 {
-  font-size: 1.3rem;
-  margin: 12px 0;
-}
-
-.callback-emoji {
-  font-size: 3.4rem;
-}
+.dashboard-page{background:var(--color-bg);min-height:100vh;}
+.dashboard-nav{background:white;border-bottom:2px solid var(--color-border);}
+.dashboard-nav-inner{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;}
+.dashboard-nav-right{display:flex;align-items:center;gap:16px;}
+.dashboard-user{font-weight:600;font-size:0.9rem;color:var(--color-text-soft);}
+.dashboard-logout{padding:10px 22px!important;font-size:0.85rem!important;}
+.dashboard-content{padding:50px 24px;}
+.dashboard-loading{text-align:center;padding:80px 0;color:var(--color-text-soft);}
+.spinner-dark{border:3px solid var(--color-border);border-top-color:var(--color-purple);width:32px;height:32px;margin:0 auto 16px;border-radius:50%;animation:spin 0.7s linear infinite;}
+.dashboard-card{background:white;border-radius:var(--radius-md);padding:26px;box-shadow:var(--shadow-card);}
+.dashboard-error-card{text-align:center;max-width:560px;margin:0 auto;}
+.dashboard-error-card h2{font-size:1.3rem;margin:12px 0;}
+.callback-emoji{font-size:3.4rem;}

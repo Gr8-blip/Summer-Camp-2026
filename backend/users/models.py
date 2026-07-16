@@ -25,12 +25,14 @@ class Family(models.Model):
         return f"Family {self.id} - {self.status}"
 
 class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', null=True)
     family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name='students')
     full_name = models.CharField(max_length=100)
     age = models.PositiveSmallIntegerField()
     email = models.EmailField(blank=True, null=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     login_code = models.CharField(max_length=25, unique=True, blank=True, null=True)
+    xp = models.PositiveIntegerField(default=0)
     
     def __str__(self):
         return f"Student {self.id} - {self.full_name}"

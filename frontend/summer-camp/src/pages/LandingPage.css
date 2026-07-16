@@ -405,16 +405,10 @@
 
 .pricing-layout {
   display: grid;
-  grid-template-columns: 1fr; 
+  grid-template-columns: 1fr 1fr;
   gap: 30px;
   margin-top: 50px;
   align-items: start;
-}
-
-@media (min-width: 768px) {
-  .pricing-layout {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 /* Main card */

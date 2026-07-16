@@ -1,61 +1,46 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getFamilyMe } from "../api/client";
+import { getStudentDashboard } from "../api/client";
 import ParentDashboard from "./ParentDashboard";
 import StudentDashboard from "./StudentDashboard";
 import "./Dashboard.css";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { logout, parentEmail, isAuthenticated } = useAuth();
+  const { logout, logoutStudent, parentEmail, isAuthenticated, isStudentAuthenticated } = useAuth();
 
-  const [viewer, setViewer] = useState(null); // "parent" | "student" | null (still deciding)
-  const [family, setFamily] = useState(null);
-  const [student, setStudent] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [viewer, setViewer]     = useState(null);
+  const [dashData, setDashData] = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState("");
 
   useEffect(() => {
-    (async () => {
-      // Parents carry a JWT from /parent-login/, so check that path first.
-      if (isAuthenticated) {
-        setViewer("parent");
-        try {
-          const data = await getFamilyMe();
-          setFamily(data);
-        } catch (err) {
-          setError(err.data?.error || "Couldn't load your dashboard data.");
-        } finally {
-          setLoading(false);
-        }
-        return;
-      }
-
-      // Students get no JWT from /student-login/ — their info was stashed
-      // in localStorage at login time, and that's all we render from since
-      // there's no authenticated student endpoint yet.
-      const stored = localStorage.getItem("student_info");
-      if (stored) {
-        setViewer("student");
-        setStudent(JSON.parse(stored));
-        setLoading(false);
-        return;
-      }
-
-      // Neither — bounce to login.
-      navigate("/login");
-    })();
-  }, [isAuthenticated, navigate]);
+    if (isAuthenticated) {
+      setViewer("parent");
+      setLoading(false);
+      return;
+    }
+    if (isStudentAuthenticated) {
+      setViewer("student");
+      getStudentDashboard()
+        .then(setDashData)
+        .catch((err) => setError(err.data?.error || "Couldn't load your dashboard."))
+        .finally(() => setLoading(false));
+      return;
+    }
+    navigate("/login");
+  }, [isAuthenticated, isStudentAuthenticated, navigate]);
 
   const handleLogout = () => {
-    if (viewer === "parent") {
-      logout();
-    } else {
-      localStorage.removeItem("student_info");
-    }
+    if (viewer === "parent") logout();
+    else logoutStudent();
     navigate("/");
   };
+
+  const displayName = viewer === "parent"
+    ? parentEmail
+    : (dashData?.student?.name || JSON.parse(localStorage.getItem("student_info") || "{}")?.name || "Student");
 
   return (
     <div className="page-shell dashboard-page">
@@ -63,12 +48,8 @@ export default function Dashboard() {
         <div className="container dashboard-nav-inner">
           <div className="nav-logo">🚀 Ravilletech</div>
           <div className="dashboard-nav-right">
-            <span className="dashboard-user">
-              👋 {viewer === "parent" ? parentEmail : student?.name}
-            </span>
-            <button className="btn btn-secondary dashboard-logout" onClick={handleLogout}>
-              Log Out
-            </button>
+            <span className="dashboard-user">👋 {displayName}</span>
+            <button className="btn btn-secondary dashboard-logout" onClick={handleLogout}>Log Out</button>
           </div>
         </div>
       </nav>
@@ -89,13 +70,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && !error && viewer === "parent" && family && (
-          <ParentDashboard family={family} />
-        )}
-
-        {!loading && !error && viewer === "student" && student && (
-          <StudentDashboard student={student} />
-        )}
+        {!loading && !error && viewer === "parent" && <ParentDashboard />}
+        {!loading && !error && viewer === "student" && dashData && <StudentDashboard data={dashData} />}
       </div>
     </div>
   );

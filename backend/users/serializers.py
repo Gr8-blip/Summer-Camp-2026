@@ -1,5 +1,6 @@
 import random
 import string
+import uuid
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Parent, Family, Student
@@ -75,7 +76,14 @@ class RegistrationSerializer(serializers.Serializer):
         
         # Create Students
         for student_data in students_data:
-            Student.objects.create(family=family, login_code=generate_login_code(), **student_data)
+            student_user = User.objects.create(
+                username=f"student-{uuid.uuid4().hex}",
+                email=student_data["email"]
+            )
+
+            student_user.set_unusable_password()
+            student_user.save()
+            Student.objects.create(family=family, login_code=generate_login_code(), user=student_user, **student_data)
         
         
         return family
