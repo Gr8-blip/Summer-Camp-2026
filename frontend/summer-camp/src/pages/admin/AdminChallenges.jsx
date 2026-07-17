@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { adminGetChallenges, adminCreateChallenge, adminUpdateChallenge, adminDeleteChallenge, adminGetLessons } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
+import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder";
+import "./AdminChallenges.css";
 
 const PAGE_SIZE = 10;
 const EMPTY_FORM = { title: "", description: "", xp_reward: "", lesson: "", start_date: "", end_date: "" };
@@ -20,6 +22,7 @@ export default function AdminChallenges() {
   const [saving, setSaving]   = useState(false);
   const [formErr, setFormErr] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
+  const [building, setBuilding] = useState(null);
 
   const load = () => {
     setLoading(true);
@@ -79,7 +82,7 @@ export default function AdminChallenges() {
 
       {!loading && !error && (
         <>
-          <div className="a-table-wrap">
+          <div className="a-table-wrap ac-table-wrap">
             <table className="a-table">
               <thead><tr><th>Title</th><th>XP</th><th>Lesson</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
@@ -87,16 +90,19 @@ export default function AdminChallenges() {
                 {paged.map((c) => {
                   const isActive = new Date(c.start_date) <= now && new Date(c.end_date) >= now;
                   return (
-                    <tr key={c.id}>
-                      <td><strong>{c.title}</strong></td>
-                      <td><span className="a-badge a-badge-green">+{c.xp_reward}</span></td>
-                      <td>{lessons.find((l) => l.id === c.lesson)?.title || "—"}</td>
-                      <td style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}</td>
-                      <td style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.end_date ? new Date(c.end_date).toLocaleDateString() : "—"}</td>
-                      <td><span className={`a-badge ${isActive ? "a-badge-green" : "a-badge-orange"}`}>{isActive ? "Active" : "Inactive"}</span></td>
-                      <td>
-                        <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.82rem", marginRight: 8 }} onClick={() => openEdit(c)}>Edit</button>
-                        <button className="btn btn-danger"    style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setConfirmDel(c)}>Delete</button>
+                    <tr key={c.id} className={isActive ? "ac-row-active" : ""}>
+                      <td data-label="Title"><strong>{c.title}</strong></td>
+                      <td data-label="XP"><span className="a-badge a-badge-green">+{c.xp_reward}</span></td>
+                      <td data-label="Lesson">{lessons.find((l) => l.id === c.lesson)?.title || "—"}</td>
+                      <td data-label="Start" style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}</td>
+                      <td data-label="End" style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.end_date ? new Date(c.end_date).toLocaleDateString() : "—"}</td>
+                      <td data-label="Status"><span className={`a-badge ${isActive ? "a-badge-green" : "a-badge-orange"}`}>{isActive ? "Active" : "Inactive"}</span></td>
+                      <td data-label="Actions">
+                        <div className="ac-row-actions">
+                          <button className="btn btn-secondary ac-questions-btn" onClick={() => setBuilding(c)}>🧩 Questions</button>
+                          <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => openEdit(c)}>Edit</button>
+                          <button className="btn btn-danger"    style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setConfirmDel(c)}>Delete</button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -116,19 +122,21 @@ export default function AdminChallenges() {
 
       {modal && (
         <div className="a-modal-overlay" onClick={closeModal}>
-          <div className="a-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="a-modal ac-modal" onClick={(e) => e.stopPropagation()}>
             <h2>{modal === "edit" ? "Edit Challenge" : "New Challenge"}</h2>
             <div className="form-group"><label>Title *</label><input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Challenge title" /></div>
             <div className="form-group"><label>Description</label><textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} style={{ resize: "vertical" }} /></div>
-            <div className="form-group">
-              <label>Lesson</label>
-              <select value={form.lesson} onChange={(e) => setForm((f) => ({ ...f, lesson: e.target.value }))}>
-                <option value="">— None —</option>
-                {lessons.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
-              </select>
-            </div>
-            <div className="form-group"><label>XP Reward *</label><input type="number" min="0" value={form.xp_reward} onChange={(e) => setForm((f) => ({ ...f, xp_reward: e.target.value }))} placeholder="100" /></div>
             <div className="form-row">
+              <div className="form-group">
+                <label>Lesson</label>
+                <select value={form.lesson} onChange={(e) => setForm((f) => ({ ...f, lesson: e.target.value }))}>
+                  <option value="">— None —</option>
+                  {lessons.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label>XP Reward *</label><input type="number" min="0" value={form.xp_reward} onChange={(e) => setForm((f) => ({ ...f, xp_reward: e.target.value }))} placeholder="100" /></div>
+            </div>
+            <div className="form-row ac-date-row">
               <div className="form-group"><label>Start Date *</label><input type="datetime-local" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} /></div>
               <div className="form-group"><label>End Date *</label><input type="datetime-local" value={form.end_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} /></div>
             </div>
@@ -153,6 +161,8 @@ export default function AdminChallenges() {
           </div>
         </div>
       )}
+
+      {building && <ChallengeQuestionBuilder challenge={building} toast={toast} onClose={() => setBuilding(null)} />}
 
       <ToastContainer toasts={toasts} />
     </AdminLayout>

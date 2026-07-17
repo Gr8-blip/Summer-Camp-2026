@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAdminDashboard } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import "./AdminLayout.css";
@@ -17,6 +18,7 @@ const STAT_CONFIG = [
 ];
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState("");
@@ -34,6 +36,7 @@ export default function AdminDashboard() {
       {error   && <div className="a-error">⚠️ {error}</div>}
 
       {!loading && !error && stats && (
+        <>
         <div className="a-grid">
           {STAT_CONFIG.map(({ key, label, emoji, color }) => (
             <div key={key} className={`a-stat-card ${color}`}>
@@ -42,6 +45,11 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+        <div className="a-confirm" style={{ marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          <div><strong>Build a Boss Battle</strong><p style={{ margin: "6px 0 0" }}>Create a playable challenge and add its questions.</p></div>
+          <button className="btn btn-primary" onClick={() => navigate("/camp-admin/challenges")}>Create Play Challenge →</button>
+        </div>
+        </>
       )}
     </AdminLayout>
   );

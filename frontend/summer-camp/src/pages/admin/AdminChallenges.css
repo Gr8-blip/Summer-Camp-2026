@@ -1,0 +1,160 @@
+/* ═══════════════════════════════════════════════════════════
+   ADMIN CHALLENGES  —  page-specific styling
+   Layers on top of AdminLayout.css. Handles: responsive table,
+   "active challenge" glow, and a sleeker modal/form treatment
+   for creating/editing Boss Battles.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Active challenge row — subtle live glow ─────────────────── */
+.ac-row-active td {
+  background: linear-gradient(90deg, rgba(139,92,246,0.05), transparent 40%);
+}
+.ac-row-active:hover td { background: linear-gradient(90deg, rgba(139,92,246,0.09), rgba(250,251,255,1) 60%); }
+.ac-row-active td:first-child {
+  border-left: 3px solid #8B5CF6;
+}
+
+/* ── Row action buttons ───────────────────────────────────────── */
+.ac-row-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ac-questions-btn {
+  padding: 7px 14px !important;
+  font-size: 0.82rem !important;
+  background: linear-gradient(135deg, #EDE9FE, #DDD6FE) !important;
+  color: #6D28D9 !important;
+  border: 1px solid #C4B5FD !important;
+  font-weight: 700 !important;
+}
+.ac-questions-btn:hover {
+  background: linear-gradient(135deg, #DDD6FE, #C4B5FD) !important;
+}
+
+/* ── Sleek modal ──────────────────────────────────────────────── */
+.ac-modal {
+  max-width: 560px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FBFAFF 100%);
+  border: 1px solid rgba(139,92,246,0.10);
+}
+
+.ac-modal h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  background: linear-gradient(135deg, #6D28D9, #8B5CF6 60%, #A78BFA);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ac-modal h2::before {
+  content: "⚡";
+  -webkit-text-fill-color: initial;
+  color: #F59E0B;
+  filter: drop-shadow(0 0 6px rgba(245,158,11,0.5));
+}
+
+/* Inputs: glassy, slightly larger radius, glow ring on focus */
+.ac-modal input,
+.ac-modal select,
+.ac-modal textarea {
+  border-radius: 14px;
+  border-width: 1.5px;
+  background: rgba(250,250,255,0.7);
+  box-shadow: inset 0 1px 2px rgba(36,28,63,0.03);
+}
+
+.ac-modal input:hover,
+.ac-modal select:hover,
+.ac-modal textarea:hover {
+  border-color: #C4B5FD;
+}
+
+.ac-modal input:focus,
+.ac-modal select:focus,
+.ac-modal textarea:focus {
+  border-color: #8B5CF6;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(139,92,246,0.16), 0 2px 8px rgba(139,92,246,0.08);
+}
+
+/* XP reward field gets a little sparkle accent */
+.ac-modal .form-row:first-of-type .form-group:last-child label::after {
+  content: " ✨";
+}
+
+/* Date row: visually link start → end with a connector on desktop */
+.ac-date-row {
+  position: relative;
+  align-items: center;
+}
+@media (min-width: 701px) {
+  .ac-date-row::before {
+    content: "→";
+    position: absolute;
+    left: 50%;
+    top: 38px;
+    transform: translateX(-50%);
+    color: #A78BFA;
+    font-weight: 700;
+    font-size: 1.1rem;
+    background: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 4px #FBFAFF;
+    z-index: 2;
+    pointer-events: none;
+  }
+}
+
+/* Save button on this modal — gradient + lift */
+.ac-modal .a-modal-actions .btn-primary {
+  background: linear-gradient(135deg, #7C3AED, #A78BFA);
+  border: none;
+  box-shadow: 0 6px 18px rgba(124,58,237,0.28);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.ac-modal .a-modal-actions .btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(124,58,237,0.34);
+}
+
+/* ── Responsive table ─────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .ac-table-wrap .a-table th:nth-child(3),
+  .ac-table-wrap .a-table td:nth-child(3) { display: none; } /* hide Lesson col on tablet */
+}
+
+@media (max-width: 700px) {
+  /* Card-view (inherits base rules from AdminLayout.css); just
+     add challenge-specific touches: status + XP badges float to
+     the top-right of the card. */
+  .ac-table-wrap .a-table tr {
+    position: relative;
+    padding-top: 14px;
+  }
+  .ac-table-wrap .a-table td[data-label="Status"] {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    border-bottom: none;
+    padding: 0;
+  }
+  .ac-table-wrap .a-table td[data-label="Status"]::before { content: none; }
+  .ac-table-wrap .a-table td[data-label="Title"] {
+    padding-right: 90px;
+  }
+  .ac-row-actions { justify-content: flex-start; }
+  .ac-questions-btn { flex: 1; text-align: center; }
+
+  .ac-date-row { grid-template-columns: 1fr; }
+}

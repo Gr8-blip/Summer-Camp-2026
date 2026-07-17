@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from users.serializers import StudentSerializer
-from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage
+from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage
 from users.models import Student, Family, Payment
 
 class MissionListSerializer(serializers.ModelSerializer):
@@ -56,7 +56,29 @@ class SubmissionUpdateSerializer(serializers.ModelSerializer):
 class ChallengeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Challenge
-        fields = ['id', 'title', 'description', 'xp_reward', 'start_date', 'end_date', 'lesson']
+        fields = ['id', 'title', 'description', 'xp_reward', 'start_date', 'end_date', 'lesson', 'mission', 'time_limit', 'is_active', 'created_at']
+
+class ChallengeQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ChallengeQuestion
+        fields = ['id', 'challenge', 'question_type', 'order', 'points', 'content']
+        read_only_fields = ['challenge']
+
+class StudentChallengeQuestionSerializer(ChallengeQuestionSerializer):
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        content = dict(data['content'])
+        for key in ('answer', 'answers', 'solution', 'example_solution'):
+            content.pop(key, None)
+        data['content'] = content
+        return data
+
+class ChallengeAttemptSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    class Meta:
+        model = ChallengeAttempt
+        fields = ['id', 'challenge', 'student', 'student_name', 'score', 'accuracy', 'xp_earned', 'time_taken', 'started_at', 'completed_at']
+        read_only_fields = fields
 
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:

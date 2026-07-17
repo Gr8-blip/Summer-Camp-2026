@@ -3,22 +3,22 @@ import { useAuth } from "../../context/AuthContext";
 import "./AdminLayout.css";
 
 const NAV_ITEMS = [
-  { to: "/admin",             label: "🏠 Dashboard",   end: true },
-  { to: "/admin/missions",    label: "🎯 Missions"          },
-  { to: "/admin/lessons",     label: "📖 Lessons"           },
-  { to: "/admin/assignments", label: "📝 Assignments"        },
-  { to: "/admin/submissions", label: "📬 Submissions"        },
-  { to: "/admin/challenges",  label: "⚡ Challenges"         },
-  { to: "/admin/attendance",  label: "📅 Attendance"         },
-  { to: "/admin/badges",      label: "🏅 Badges"             },
-  { to: "/admin/xp",          label: "✨ XP"                 },
+  { to: "/camp-admin",             label: "🏠 Dashboard",   end: true },
+  { to: "/camp-admin/missions",    label: "🎯 Missions"          },
+  { to: "/camp-admin/lessons",     label: "📖 Lessons"           },
+  { to: "/camp-admin/assignments", label: "📝 Assignments"        },
+  { to: "/camp-admin/submissions", label: "📬 Submissions"        },
+  { to: "/camp-admin/challenges",  label: "⚡ Challenges"         },
+  { to: "/camp-admin/attendance",  label: "📅 Attendance"         },
+  { to: "/camp-admin/badges",      label: "🏅 Badges"             },
+  { to: "/camp-admin/xp",          label: "✨ XP"                 },
 ];
 
 export default function AdminLayout({ children, title }) {
   const navigate = useNavigate();
   const { logoutAdmin, adminInfo } = useAuth();
 
-  const handleLogout = () => { logoutAdmin(); navigate("/admin/login"); };
+  const handleLogout = () => { logoutAdmin(); navigate("/camp-admin/login"); };
 
   return (
     <div className="al-shell">

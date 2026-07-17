@@ -18,7 +18,7 @@ export default function AdminLogin() {
     try {
       const data = await loginAdmin(email, password);
       loginAdminSession({ access: data.access, refresh: data.refresh }, data.admin);
-      navigate("/admin");
+      navigate("/camp-admin");
     } catch (err) {
       setError(err.data?.error || err.message || "Login failed.");
     } finally { setLoading(false); }

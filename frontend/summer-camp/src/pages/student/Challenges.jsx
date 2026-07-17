@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getChallenges } from "../../api/client";
 import StudentLayout from "./StudentLayout";
 import "./student.css";
 
 export default function Challenges() {
+  const navigate = useNavigate();
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState("");
@@ -26,7 +28,7 @@ export default function Challenges() {
         const isActive = new Date(c.start_date) <= now && new Date(c.end_date) >= now;
         return (
           <div key={c.id} className="s-card">
-            <div className="s-card-header">
+            <div className="s-card-header" role="button" tabIndex={0} onClick={() => navigate(`/challenges/${c.id}`)} onKeyDown={(e) => e.key === "Enter" && navigate(`/challenges/${c.id}`)}>
               <div>
                 <h3>{c.title}</h3><p>{c.description}</p>
                 <span className="s-meta-text">{new Date(c.start_date).toLocaleDateString()} – {new Date(c.end_date).toLocaleDateString()}</span>

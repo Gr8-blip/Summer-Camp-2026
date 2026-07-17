@@ -30,7 +30,7 @@ from .views.student.xp import (
 )
 
 from .views.student.challenge import (
-    ChallengeListView,
+    ChallengeListView, ChallengeDetailView as StudentChallengeDetailView, ChallengeStartView, ChallengeSubmitView, ChallengeLeaderboardView, StudentChallengeStatsView,
 )
 
 from .views.student.attendance import (
@@ -40,8 +40,11 @@ from .views.student.attendance import (
 
 from .views.parent.dashboard import ParentDashboardView
 from .views.parent.student import ParentStudentStatView
+from .views.parent.mission import ParentMissionListView
+from .views.parent.lesson import ParentLessonListView
 
 from .views.admin.dashboard import AdminDashboardView
+from .views.admin.students import AdminStudentListView
 from .views.admin.mission import MissionView, MissionDetailView
 from .views.admin.lesson import LessonView, LessonDetailView
 from .views.admin.assignment import AssignmentView, AssignmentDetailView
@@ -53,7 +56,8 @@ from .views.admin.attendance import (
 )
 from .views.admin.badge import BadgeView, BadgeDetailView
 from .views.admin.xp import XPLogView, AwardXPView
-from .views.admin.challenge import ChallengeView, ChallengeDetailView
+from .views.admin.challenge import ChallengeView, ChallengeDetailView as AdminChallengeDetailView
+from .views.admin.challenge_question import ChallengeQuestionListView, ChallengeQuestionDetailView, ChallengeAttemptListView
 
 urlpatterns = [
 
@@ -127,6 +131,11 @@ urlpatterns = [
         ChallengeListView.as_view(),
         name="challenge-list",
     ),
+    path("challenges/stats/", StudentChallengeStatsView.as_view(), name="challenge-stats"),
+    path("challenges/<int:pk>/", StudentChallengeDetailView.as_view(), name="challenge-detail"),
+    path("challenges/<int:pk>/start/", ChallengeStartView.as_view(), name="challenge-start"),
+    path("challenges/<int:pk>/submit/", ChallengeSubmitView.as_view(), name="challenge-submit"),
+    path("challenges/<int:pk>/leaderboard/", ChallengeLeaderboardView.as_view(), name="challenge-leaderboard"),
 
     # Attendance
     path(
@@ -158,14 +167,35 @@ urlpatterns = [
         name="parent-students",
     ),
 
+    path(
+        "parent/week-scheme/",
+        ParentMissionListView.as_view(),
+        name="parent-week-scheme"
+    ),
+    
+    path(
+        "parent/lessons/",
+        ParentLessonListView.as_view(),
+        name="parent-lesson"  
+    ),
+
     # ==========================
     # Admin Dashboard
     # ==========================
 
     path(
-        "admin/dashboard/",
+        "camp-admin/dashboard/",
         AdminDashboardView.as_view(),
         name="admin-dashboard",
+    ),
+
+    # ==========================
+    # Admin List Student
+    # ==========================
+    path(
+        "camp-admin/students/",
+        AdminStudentListView.as_view(),
+        name="students"
     ),
 
     # ==========================
@@ -173,13 +203,13 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/missions/",
+        "camp-admin/missions/",
         MissionView.as_view(),
         name="admin-missions",
     ),
 
     path(
-        "admin/missions/<int:pk>/",
+        "camp-admin/missions/<int:pk>/",
         MissionDetailView.as_view(),
         name="admin-mission-detail",
     ),
@@ -189,13 +219,13 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/lessons/",
+        "camp-admin/lessons/",
         LessonView.as_view(),
         name="admin-lessons",
     ),
 
     path(
-        "admin/lessons/<int:pk>/",
+        "camp-admin/lessons/<int:pk>/",
         LessonDetailView.as_view(),
         name="admin-lesson-detail",
     ),
@@ -205,13 +235,13 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/assignments/",
+        "camp-admin/assignments/",
         AssignmentView.as_view(),
         name="admin-assignments",
     ),
 
     path(
-        "admin/assignments/<int:pk>/",
+        "camp-admin/assignments/<int:pk>/",
         AssignmentDetailView.as_view(),
         name="admin-assignment-detail",
     ),
@@ -221,13 +251,13 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/submissions/",
+        "camp-admin/submissions/",
         SubmissionView.as_view(),
         name="admin-submissions",
     ),
 
     path(
-        "admin/submissions/<int:pk>/",
+        "camp-admin/submissions/<int:pk>/",
         GradeSubmissionView.as_view(),
         name="admin-grade-submission",
     ),
@@ -237,19 +267,19 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/attendance/",
+        "camp-admin/attendance/",
         StudentAttendanceView.as_view(),
         name="admin-attendance",
     ),
 
     path(
-        "admin/attendance/sessions/",
+        "camp-admin/attendance/sessions/",
         AttendanceSessionView.as_view(),
         name="admin-attendance-sessions",
     ),
 
     path(
-        "admin/attendance/sessions/<int:pk>/",
+        "camp-admin/attendance/sessions/<int:pk>/",
         AttendanceSessionDetailView.as_view(),
         name="admin-attendance-session-detail",
     ),
@@ -259,13 +289,13 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/xp/",
+        "camp-admin/xp/",
         XPLogView.as_view(),
         name="admin-xp",
     ),
 
     path(
-        "admin/xp/award/",
+        "camp-admin/xp/award/",
         AwardXPView.as_view(),
         name="admin-award-xp",
     ),
@@ -275,13 +305,13 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/badges/",
+        "camp-admin/badges/",
         BadgeView.as_view(),
         name="admin-badges",
     ),
 
     path(
-        "admin/badges/<int:pk>/",
+        "camp-admin/badges/<int:pk>/",
         BadgeDetailView.as_view(),
         name="admin-badge-detail",
     ),
@@ -291,14 +321,17 @@ urlpatterns = [
     # ==========================
 
     path(
-        "admin/challenges/",
+        "camp-admin/challenges/",
         ChallengeView.as_view(),
         name="admin-challenges",
     ),
 
     path(
-        "admin/challenges/<int:pk>/",
-        ChallengeDetailView.as_view(),
+        "camp-admin/challenges/<int:pk>/",
+        AdminChallengeDetailView.as_view(),
         name="admin-challenge-detail",
     ),
+    path("camp-admin/challenges/<int:pk>/questions/", ChallengeQuestionListView.as_view(), name="admin-challenge-questions"),
+    path("camp-admin/challenges/<int:pk>/attempts/", ChallengeAttemptListView.as_view(), name="admin-challenge-attempts"),
+    path("camp-admin/questions/<int:pk>/", ChallengeQuestionDetailView.as_view(), name="admin-question-detail"),
 ]

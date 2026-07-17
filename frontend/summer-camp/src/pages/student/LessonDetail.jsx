@@ -5,37 +5,67 @@ import StudentLayout from "./StudentLayout";
 import "./student.css";
 
 function AssignmentCard({ assignment }) {
-  const [open, setOpen]         = useState(false);
-  const [text, setText]         = useState("");
+  const [open, setOpen]             = useState(false);
+  const [text, setText]             = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted]   = useState(false);
-  const [err, setErr]           = useState("");
+  const [submitted, setSubmitted]   = useState(!!assignment.already_submitted);
+  const [err, setErr]               = useState("");
 
   const handleSubmit = async () => {
     if (!text.trim()) { setErr("Write something first!"); return; }
     setSubmitting(true); setErr("");
-    try { await submitAssignment(assignment.id, text); setSubmitted(true); setOpen(false); }
-    catch (e) { setErr(e.data?.error || "Submission failed."); }
-    finally { setSubmitting(false); }
+    try {
+      await submitAssignment(assignment.id, text);
+      setSubmitted(true);
+      setOpen(false);
+    } catch (e) {
+      // Handle case where backend also rejects a duplicate (belt + suspenders)
+      if (e.status === 400 && e.data?.error?.toLowerCase().includes("already")) {
+        setSubmitted(true);
+        setOpen(false);
+      } else {
+        setErr(e.data?.error || "Submission failed. Try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="s-card">
       <div className="s-card-header">
-        <div><h3>{assignment.title}</h3><p>{assignment.description}</p><span className="s-meta-text">Due: {new Date(assignment.deadline).toLocaleDateString()}</span></div>
+        <div>
+          <h3>{assignment.title}</h3>
+          <p>{assignment.description}</p>
+          <span className="s-meta-text">Due: {new Date(assignment.deadline).toLocaleDateString()}</span>
+        </div>
         <span className="s-badge s-badge-orange">+{assignment.xp_reward} XP</span>
       </div>
-      {submitted
-        ? <div className="s-submit-success">✅ Submitted!</div>
-        : <>
-            <button className="s-toggle-btn" onClick={() => setOpen((o) => !o)}>{open ? "Cancel" : "📝 Submit Answer"}</button>
-            {open && <div className="s-submit-form">
-              <textarea rows={5} placeholder="Write your answer here..." value={text} onChange={(e) => setText(e.target.value)} className="s-textarea" />
+
+      {submitted ? (
+        <div className="s-submit-success">✅ Already submitted — nice work!</div>
+      ) : (
+        <>
+          <button className="s-toggle-btn" onClick={() => setOpen((o) => !o)}>
+            {open ? "Cancel" : "📝 Submit Answer"}
+          </button>
+          {open && (
+            <div className="s-submit-form">
+              <textarea
+                rows={5}
+                placeholder="Write your answer here..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="s-textarea"
+              />
               {err && <span className="error-text">{err}</span>}
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>{submitting ? <span className="spinner" /> : "Submit →"}</button>
-            </div>}
-          </>
-      }
+              <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? <span className="spinner" /> : "Submit →"}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -57,22 +87,39 @@ export default function LessonDetail() {
   return (
     <StudentLayout title={lesson?.title || "Lesson"}>
       <button className="s-back-btn" onClick={() => navigate(-1)}>← Back</button>
+
       {loading && <div className="s-loading"><span className="spinner spinner-dark" /><span>Loading...</span></div>}
       {error   && <div className="s-error">⚠️ {error}</div>}
+
       {!loading && !error && lesson && (
         <>
           <div className="s-card"><p>{lesson.description}</p></div>
-          {lesson.assignments?.length > 0 && <><h2 className="s-section-heading">📝 Assignments</h2>{lesson.assignments.map((a) => <AssignmentCard key={a.id} assignment={a} />)}</>}
+
+          {lesson.assignments?.length > 0 && (
+            <>
+              <h2 className="s-section-heading">📝 Assignments</h2>
+              {lesson.assignments.map((a) => <AssignmentCard key={a.id} assignment={a} />)}
+            </>
+          )}
+
           {lesson.challenges?.length > 0 && (
-            <><h2 className="s-section-heading">⚡ Challenges</h2>
-            {lesson.challenges.map((c) => (
-              <div key={c.id} className="s-card">
-                <div className="s-card-header">
-                  <div><h3>{c.title}</h3><p>{c.description}</p><span className="s-meta-text">{new Date(c.start_date).toLocaleDateString()} – {new Date(c.end_date).toLocaleDateString()}</span></div>
-                  <span className="s-badge s-badge-pink">+{c.xp_reward} XP</span>
+            <>
+              <h2 className="s-section-heading">⚡ Challenges</h2>
+              {lesson.challenges.map((c) => (
+                <div key={c.id} className="s-card">
+                  <div className="s-card-header">
+                    <div>
+                      <h3>{c.title}</h3>
+                      <p>{c.description}</p>
+                      <span className="s-meta-text">
+                        {new Date(c.start_date).toLocaleDateString()} – {new Date(c.end_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <span className="s-badge s-badge-pink">+{c.xp_reward} XP</span>
+                  </div>
                 </div>
-              </div>
-            ))}</>
+              ))}
+            </>
           )}
         </>
       )}

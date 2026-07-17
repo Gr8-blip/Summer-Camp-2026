@@ -94,9 +94,43 @@ class Challenge(models.Model):
     )
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
+    mission = models.ForeignKey(Mission, on_delete=models.SET_NULL, null=True, blank=True, related_name="challenges")
+    time_limit = models.PositiveIntegerField(default=600, help_text="Time allowed in seconds")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.title} (XP: {self.xp_reward})"
+
+
+class ChallengeQuestion(models.Model):
+    QUESTION_TYPES = [
+        ("multiple_choice", "Multiple choice"), ("true_false", "True / false"),
+        ("drag_order", "Drag order"), ("match_pairs", "Match pairs"),
+        ("fill_blank", "Fill in the blank"), ("prompt_build", "Prompt build"),
+    ]
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="questions")
+    question_type = models.CharField(max_length=32, choices=QUESTION_TYPES)
+    order = models.PositiveIntegerField(default=0)
+    points = models.PositiveIntegerField(default=10)
+    content = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+
+class ChallengeAttempt(models.Model):
+    challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="attempts")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="challenge_attempts")
+    score = models.PositiveIntegerField(default=0)
+    accuracy = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    xp_earned = models.PositiveIntegerField(default=0)
+    time_taken = models.PositiveIntegerField(default=0, help_text="Seconds")
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["challenge", "student"], name="one_attempt_per_challenge")]
     
 class AttendanceSession(models.Model):
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, related_name='attendance_sessions')

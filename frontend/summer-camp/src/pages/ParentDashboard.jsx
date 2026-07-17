@@ -107,6 +107,14 @@ export default function ParentDashboard() {
       </div>
 
       {/* Countdown */}
+      <div className="pd-card pd-week-scheme-card">
+        <div>
+          <h3>Weekly Learning Plan</h3>
+          <p className="pd-muted">See each week’s lessons and activities in parent-friendly language.</p>
+        </div>
+        <button className="btn btn-primary" onClick={() => navigate("/parent/week-scheme")}>View Weekly Plan →</button>
+      </div>
+
       <div className="pd-card pd-countdown-card">
         <h3>⏳ Bootcamp Countdown</h3>
         <p className="pd-countdown-number">

@@ -4,37 +4,66 @@ import StudentLayout from "./StudentLayout";
 import "./student.css";
 
 function AssignmentRow({ assignment }) {
-  const [open, setOpen]         = useState(false);
-  const [text, setText]         = useState("");
+  const [open, setOpen]             = useState(false);
+  const [text, setText]             = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted]   = useState(false);
-  const [err, setErr]           = useState("");
+  const [submitted, setSubmitted]   = useState(!!assignment.already_submitted);
+  const [err, setErr]               = useState("");
 
   const handleSubmit = async () => {
     if (!text.trim()) { setErr("Write something first!"); return; }
     setSubmitting(true); setErr("");
-    try { await submitAssignment(assignment.id, text); setSubmitted(true); setOpen(false); }
-    catch (e) { setErr(e.data?.error || "Submission failed."); }
-    finally { setSubmitting(false); }
+    try {
+      await submitAssignment(assignment.id, text);
+      setSubmitted(true);
+      setOpen(false);
+    } catch (e) {
+      if (e.status === 400 && e.data?.error?.toLowerCase().includes("already")) {
+        setSubmitted(true);
+        setOpen(false);
+      } else {
+        setErr(e.data?.error || "Submission failed. Try again.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="s-card">
       <div className="s-card-header">
-        <div><h3>{assignment.title}</h3><p>{assignment.description}</p><span className="s-meta-text">Due: {new Date(assignment.deadline).toLocaleDateString()}</span></div>
+        <div>
+          <h3>{assignment.title}</h3>
+          <p>{assignment.description}</p>
+          <span className="s-meta-text">Due: {new Date(assignment.deadline).toLocaleDateString()}</span>
+        </div>
         <span className="s-badge s-badge-orange">+{assignment.xp_reward} XP</span>
       </div>
-      {submitted
-        ? <div className="s-submit-success">✅ Submitted!</div>
-        : <>
-            <button className="s-toggle-btn" onClick={() => setOpen((o) => !o)}>{open ? "Cancel" : "📝 Submit Answer"}</button>
-            {open && <div className="s-submit-form">
-              <textarea rows={5} placeholder="Write your answer here..." value={text} onChange={(e) => setText(e.target.value)} className="s-textarea" />
+
+      {submitted ? (
+        <div className="s-submit-success">✅ Already submitted — nice work!</div>
+      ) : (
+        <>
+          <button className="s-toggle-btn" onClick={() => setOpen((o) => !o)}>
+            {open ? "Cancel" : "📝 Submit Answer"}
+          </button>
+          {open && (
+            <div className="s-submit-form">
+              <textarea
+                rows={5}
+                placeholder="Write your answer here..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="s-textarea"
+              />
               {err && <span className="error-text">{err}</span>}
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>{submitting ? <span className="spinner" /> : "Submit →"}</button>
-            </div>}
-          </>
-      }
+              <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
+                {submitting ? <span className="spinner" /> : "Submit →"}
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -53,9 +82,11 @@ export default function Assignments() {
 
   return (
     <StudentLayout title="📝 Assignments">
-      {loading && <div className="s-loading"><span className="spinner spinner-dark" /><span>Loading...</span></div>}
+      {loading && <div className="s-loading"><span className="spinner spinner-dark" /><span>Loading assignments...</span></div>}
       {error   && <div className="s-error">⚠️ {error}</div>}
-      {!loading && !error && assignments.length === 0 && <div className="s-empty"><div className="s-empty-icon">📝</div><p>No assignments yet.</p></div>}
+      {!loading && !error && assignments.length === 0 && (
+        <div className="s-empty"><div className="s-empty-icon">📝</div><p>No assignments yet.</p></div>
+      )}
       {!loading && !error && assignments.map((a) => <AssignmentRow key={a.id} assignment={a} />)}
     </StudentLayout>
   );
