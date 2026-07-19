@@ -10,6 +10,7 @@ function AssignmentRow({ assignment }) {
   const [submitted, setSubmitted]   = useState(!!assignment.already_submitted);
   const [err, setErr]               = useState("");
 
+
   const handleSubmit = async () => {
     if (!text.trim()) { setErr("Write something first!"); return; }
     setSubmitting(true); setErr("");

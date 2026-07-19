@@ -41,6 +41,13 @@ function ProtectedRoute({ children }) {
   return children;
 }
 
+function RedirectRoute({ children }) {
+  const { isAuthenticated, isStudentAuthenticated } = useAuth();
+  if (isAuthenticated || isStudentAuthenticated) return <Navigate to="/dashboard" />
+
+  return children;
+}
+
 function StudentRoute({ children }) {
   const { isStudentAuthenticated } = useAuth();
   if (!isStudentAuthenticated) return <Navigate to="/student-login" replace />;
@@ -59,12 +66,12 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           {/* Public */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/register" element={<RegisterWizard />} />
-          <Route path="/plan/:familyId" element={<PlanReview />} />
+          <Route path="/" element={<RedirectRoute><LandingPage /></RedirectRoute>} />
+          <Route path="/register" element={<RedirectRoute><RegisterWizard /></RedirectRoute>} />
+          <Route path="/plan/:familyId" element={<RedirectRoute><PlanReview /></RedirectRoute>} />
           <Route path="/payment/callback/:reference" element={<PaymentCallback />} />
-          <Route path="/login" element={<ParentLogin />} />
-          <Route path="/student-login" element={<StudentLogin />} />
+          <Route path="/login" element={<RedirectRoute><ParentLogin /></RedirectRoute>} />
+          <Route path="/student-login" element={<RedirectRoute><StudentLogin /></RedirectRoute>} />
 
           {/* Parent + Student shared dashboard */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

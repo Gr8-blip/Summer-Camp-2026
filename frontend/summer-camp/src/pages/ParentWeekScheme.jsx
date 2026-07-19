@@ -82,7 +82,7 @@ export default function ParentWeekScheme() {
               <button className="pws-week-header" onClick={() => toggle(week.id)}>
                 <div className="pws-week-left">
                   <span className="pws-week-badge">Week {week.week}</span>
-                  <div>
+                  <div className="pws-week-text">
                     <h2 className="pws-week-title">{week.title}</h2>
                     {week.description && (
                       <p className="pws-week-desc">{week.description}</p>

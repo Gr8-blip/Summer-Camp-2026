@@ -71,7 +71,7 @@ class Assignment(models.Model):
         return f"{self.title} (Lesson: {self.lesson.title})"
     
 class Submission(models.Model):
-    assignment = models.ForeignKey(Assignment, on_delete=models.CASCADE, related_name='submissions')
+    assignment = models.OneToOneField(Assignment, on_delete=models.CASCADE, related_name='submission')
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='submissions')
     status = models.CharField(max_length=20, choices=[('pending', 'Pending'), ('graded', 'Graded')], default='pending')
     submission_text = models.TextField(blank=True)
@@ -108,6 +108,11 @@ class ChallengeQuestion(models.Model):
         ("multiple_choice", "Multiple choice"), ("true_false", "True / false"),
         ("drag_order", "Drag order"), ("match_pairs", "Match pairs"),
         ("fill_blank", "Fill in the blank"), ("prompt_build", "Prompt build"),
+
+        # Puzzle Games
+        ("memory_tiles", "Memory Tiles"),
+        ("word_search", "Word Search"),
+        ("image_reveal", "Image Reveal"),
     ]
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="questions")
     question_type = models.CharField(max_length=32, choices=QUESTION_TYPES)

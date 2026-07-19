@@ -1,7 +1,7 @@
+import random
 from rest_framework import serializers
 from users.serializers import StudentSerializer
 from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage
-from users.models import Student, Family, Payment
 
 class MissionListSerializer(serializers.ModelSerializer):
     lesson_count = serializers.SerializerMethodField()
@@ -19,9 +19,25 @@ class LessonSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'order', 'duration', 'mission']
 
 class AssignmentSerializer(serializers.ModelSerializer):
+    already_submitted = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'description', 'xp_reward', 'deadline', 'lesson']
+        fields = ['id', 'title', 'description', 'xp_reward', 'deadline', 'lesson', 'already_submitted']
+
+    def get_already_submitted(self, obj):
+        request = self.context.get("request")
+
+        if not request:
+            return False
+        
+        if not hasattr(request.user, "student"):
+            return False
+
+        return Submission.objects.filter(
+            assignment=obj,
+            student=request.user.student
+        ).exists()
 
 class SubmissionListSerializer(serializers.ModelSerializer):
     assignment = AssignmentSerializer(read_only=True)
@@ -68,8 +84,29 @@ class StudentChallengeQuestionSerializer(ChallengeQuestionSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         content = dict(data['content'])
+ 
         for key in ('answer', 'answers', 'solution', 'example_solution'):
             content.pop(key, None)
+ 
+
+        if instance.question_type == 'match_pairs':
+            pairs = instance.content.get('pairs', {})
+            left = list(pairs.keys())
+            right = list(pairs.values())
+            random.shuffle(right)
+            content.pop('pairs', None)
+            content['left'] = left
+            content['right'] = right
+ 
+
+        elif instance.question_type == 'drag_order':
+            items = list(instance.content.get('items', []))
+            shuffled_items = items[:]
+            random.shuffle(shuffled_items)
+            if len(shuffled_items) > 1 and shuffled_items == items:
+                shuffled_items.reverse()
+            content['items'] = shuffled_items
+ 
         data['content'] = content
         return data
 

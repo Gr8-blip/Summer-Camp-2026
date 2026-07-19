@@ -41,8 +41,6 @@ export default function AdminSubmissions() {
   const handleGrade = async () => {
     setSaving(true);
     try {
-      console.log(grading)
-      console.log(grading.id)
       await adminGradeSubmission(grading.id, { feedback, status: "graded" });
       toast("Submission graded!");
       closeGrading(); load();

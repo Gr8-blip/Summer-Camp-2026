@@ -25,10 +25,3 @@ class GradeSubmissionView(RetrieveUpdateAPIView):
         was_graded = submission.status == "graded"
 
         submission = serializer.save()
-
-        if not was_graded and submission.status == "graded":
-            award_xp(
-                submission.student,
-                submission.assignment.xp_reward,
-                f"Completed: {submission.assignment.title}"
-            )

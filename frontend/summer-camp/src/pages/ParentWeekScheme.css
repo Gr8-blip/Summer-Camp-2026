@@ -1,1 +1,113 @@
-.pws-shell{max-width:1000px;margin:auto}.pws-header{margin:18px 0 28px}.pws-back{border:0;background:none;color:var(--color-primary,#6047d8);cursor:pointer}.pws-title{margin-bottom:6px}.pws-subtitle,.pws-week-desc,.pws-lesson-desc{color:var(--color-text-soft,#6c6880)}.pws-week{background:#fff;border:1px solid #eeeaf8;border-radius:16px;margin-bottom:14px;overflow:hidden}.pws-week-header{width:100%;display:flex;justify-content:space-between;align-items:center;padding:20px;border:0;background:transparent;text-align:left;cursor:pointer}.pws-week-left,.pws-week-right{display:flex;align-items:center;gap:14px}.pws-week-badge,.pws-lesson-count{background:#eee9ff;color:#5136c7;border-radius:999px;padding:7px 11px;font-weight:700;font-size:.82rem}.pws-week-title{margin:0}.pws-lessons{border-top:1px solid #eeeaf8;padding:8px 20px}.pws-lesson{display:flex;gap:15px;padding:17px 0}.pws-lesson-num{width:28px;height:28px;display:grid;place-items:center;border-radius:50%;background:#f0edff;color:#5136c7;font-weight:800}.pws-lesson-title{margin:0}.pws-lesson-duration{font-size:.8rem;color:#6c6880}.pws-loading,.pws-empty,.pws-error{text-align:center;padding:45px}.pws-error{color:#b42318}
+.pws-shell {
+    max-width: 1000px;
+    margin: auto
+}
+
+.pws-header {
+    margin: 18px 0 28px
+}
+
+.pws-back {
+    border: 0;
+    background: none;
+    color: var(--color-primary, #6047d8);
+    cursor: pointer
+}
+
+.pws-title {
+    margin-bottom: 6px
+}
+
+.pws-subtitle,
+.pws-week-desc,
+.pws-lesson-desc {
+    color: var(--color-text-soft, #6c6880)
+}
+
+.pws-week {
+    background: #fff;
+    border: 1px solid #eeeaf8;
+    border-radius: 16px;
+    margin-bottom: 14px;
+    overflow: hidden
+}
+
+.pws-week-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer
+}
+
+.pws-week-left,
+.pws-week-right {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px
+}
+
+.pws-week-badge,
+.pws-lesson-count {
+    background: #eee9ff;
+    color: #5136c7;
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-weight: 700;
+    font-size: .82rem
+}
+
+.pws-week-title {
+    margin: 0
+}
+
+.pws-week-text {
+    max-width: 700px;
+}
+
+.pws-lessons {
+    border-top: 1px solid #eeeaf8;
+    padding: 8px 20px
+}
+
+.pws-lesson {
+    display: flex;
+    gap: 15px;
+    padding: 17px 0
+}
+
+.pws-lesson-num {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: #f0edff;
+    color: #5136c7;
+    font-weight: 800
+}
+
+.pws-lesson-title {
+    margin: 0
+}
+
+.pws-lesson-duration {
+    font-size: .8rem;
+    color: #6c6880
+}
+
+.pws-loading,
+.pws-empty,
+.pws-error {
+    text-align: center;
+    padding: 45px
+}
+
+.pws-error {
+    color: #b42318
+}

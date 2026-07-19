@@ -36,7 +36,7 @@
 
 /* ── Sleek modal ──────────────────────────────────────────────── */
 .ac-modal {
-  max-width: 560px;
+  max-width: 660px;
   background: linear-gradient(180deg, #FFFFFF 0%, #FBFAFF 100%);
   border: 1px solid rgba(139,92,246,0.10);
 }
@@ -92,28 +92,6 @@
 .ac-date-row {
   position: relative;
   align-items: center;
-}
-@media (min-width: 701px) {
-  .ac-date-row::before {
-    content: "→";
-    position: absolute;
-    left: 50%;
-    top: 38px;
-    transform: translateX(-50%);
-    color: #A78BFA;
-    font-weight: 700;
-    font-size: 1.1rem;
-    background: white;
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 0 0 4px #FBFAFF;
-    z-index: 2;
-    pointer-events: none;
-  }
 }
 
 /* Save button on this modal — gradient + lift */
