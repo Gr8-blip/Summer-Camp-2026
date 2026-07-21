@@ -2,28 +2,57 @@ import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext(null);
 
+function isTokenExpired(token) {
+  if (!token) return true;
+  try {
+    const base64Url = token.split('.')[1]; // Great catch adding [1] here!
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    const { exp } = JSON.parse(jsonPayload);
+    return Date.now() >= exp * 1000;
+  } catch (err) {
+    return true; 
+  }
+}
+
 export function AuthProvider({ children }) {
-  const [accessToken,   setAccessToken]   = useState(localStorage.getItem("access_token"));
-  const [parentEmail,   setParentEmail]   = useState(localStorage.getItem("parent_email"));
-  const [studentToken,  setStudentToken]  = useState(localStorage.getItem("student_access_token"));
-  const [adminToken,    setAdminToken]    = useState(localStorage.getItem("admin_access_token"));
-  const [adminInfo,     setAdminInfo]     = useState(() => {
+  const [accessToken, setAccessToken] = useState(() => {
+    const token = localStorage.getItem("access_token");
+    return isTokenExpired(token) ? null : token;
+  });
+  
+  const [parentEmail, setParentEmail] = useState(localStorage.getItem("parent_email"));
+  
+  const [studentToken, setStudentToken] = useState(() => {
+    const token = localStorage.getItem("student_access_token");
+    return isTokenExpired(token) ? null : token;
+  });
+  
+  const [adminToken, setAdminToken] = useState(() => {
+    const token = localStorage.getItem("admin_access_token");
+    return isTokenExpired(token) ? null : token;
+  });
+  
+  const [adminInfo, setAdminInfo] = useState(() => {
     try { return JSON.parse(localStorage.getItem("admin_info") || "null"); } catch { return null; }
   });
 
   useEffect(() => {
     if (accessToken) localStorage.setItem("access_token", accessToken);
-    else             localStorage.removeItem("access_token");
+    else localStorage.removeItem("access_token");
   }, [accessToken]);
 
   useEffect(() => {
     if (studentToken) localStorage.setItem("student_access_token", studentToken);
-    else              localStorage.removeItem("student_access_token");
+    else localStorage.removeItem("student_access_token");
   }, [studentToken]);
 
   useEffect(() => {
     if (adminToken) localStorage.setItem("admin_access_token", adminToken);
-    else            localStorage.removeItem("admin_access_token");
+    else localStorage.removeItem("admin_access_token");
   }, [adminToken]);
 
   // Parent login
@@ -82,9 +111,9 @@ export function AuthProvider({ children }) {
       logout,
       logoutStudent,
       logoutAdmin,
-      isAuthenticated:        !!accessToken,
+      isAuthenticated: !!accessToken,
       isStudentAuthenticated: !!studentToken,
-      isAdminAuthenticated:   !!adminToken,
+      isAdminAuthenticated: !!adminToken,
     }}>
       {children}
     </AuthContext.Provider>
