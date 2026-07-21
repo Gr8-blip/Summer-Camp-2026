@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
-import { BadgeQueueProvider } from './components/BadgeQueueprovider'
+import { BadgeQueueProvider } from './components/Badgequeueprovider'
 
 import LandingPage from "./pages/LandingPage";
 import RegisterWizard from "./pages/RegisterWizard";
