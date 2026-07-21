@@ -64,6 +64,30 @@ export default function AdminLessons() {
     catch (err) { toast(err.data?.error || "Delete failed.", "error"); setConfirmDel(null); }
   };
 
+  const togglePublish = async (item) => {
+    const updatedStatus = !item.is_published;
+
+    // 1. Optimistic update so button text flips INSTANTLY
+    setItems((prev) =>
+      prev.map((l) => (l.id === item.id ? { ...l, is_published: updatedStatus } : l))
+    );
+
+    try {
+      // 2. Send request to backend
+      await adminUpdateLesson(item.id, {
+        ...item,
+        is_published: updatedStatus,
+      });
+      toast(updatedStatus ? "Lesson published!" : "Lesson unpublished.");
+    } catch (e) {
+      // Revert back if request fails
+      setItems((prev) =>
+        prev.map((l) => (l.id === item.id ? { ...l, is_published: item.is_published } : l))
+      );
+      toast(e.data?.detail || e.data?.error || "Couldn't update status.", "error");
+    }
+  };
+
   return (
     <AdminLayout title="📖 Lessons">
       <div className="a-action-bar">
@@ -78,15 +102,33 @@ export default function AdminLessons() {
         <>
           <div className="a-table-wrap">
             <table className="a-table">
-              <thead><tr><th>#</th><th>Title</th><th>Mission</th><th>Duration</th><th>Actions</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Title</th>
+                  <th>Mission</th>
+                  <th>Duration</th>
+                  <th>Published</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody>
-                {paged.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No lessons found.</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No lessons found.</td></tr>}
                 {paged.map((l) => (
                   <tr key={l.id}>
                     <td><span className="a-badge a-badge-purple">{l.order}</span></td>
                     <td><strong>{l.title}</strong><div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)" }}>{l.description?.slice(0, 60)}...</div></td>
                     <td>{missions.find((m) => m.id === l.mission)?.title || "—"}</td>
                     <td>{l.duration}</td>
+                    <td>
+                      <button
+                        className={`a-badge ${l.is_published ? "a-badge-green" : "a-badge-orange"}`}
+                        style={{ border: "none", cursor: "pointer" }}
+                        onClick={() => togglePublish(l)}
+                      >
+                        {l.is_published ? "Published" : "Draft"}
+                      </button>
+                    </td>
                     <td>
                       <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.82rem", marginRight: 8 }} onClick={() => openEdit(l)}>Edit</button>
                       <button className="btn btn-danger"    style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setConfirmDel(l)}>Delete</button>

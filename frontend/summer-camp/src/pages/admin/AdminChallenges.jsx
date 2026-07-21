@@ -1,17 +1,17 @@
 import { useEffect, useState, useMemo } from "react";
-import { adminGetChallenges, adminCreateChallenge, adminUpdateChallenge, adminDeleteChallenge, adminGetLessons } from "../../api/client";
+import { adminGetChallenges, adminCreateChallenge, adminUpdateChallenge, adminDeleteChallenge, adminGetMissions } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder";
 import "./AdminChallenges.css";
 
 const PAGE_SIZE = 10;
-const EMPTY_FORM = { title: "", description: "", xp_reward: "", lesson: "", start_date: "", end_date: "" };
+const EMPTY_FORM = { title: "", description: "", xp_reward: "", mission: "", start_date: "", end_date: "" };
 
 export default function AdminChallenges() {
   const { toasts, toast } = useToast();
   const [items, setItems]     = useState([]);
-  const [lessons, setLessons] = useState([]);
+  const [missions, setMissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
   const [search, setSearch]   = useState("");
@@ -23,11 +23,12 @@ export default function AdminChallenges() {
   const [formErr, setFormErr] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
   const [building, setBuilding] = useState(null);
+  const [togglingId, setTogglingId] = useState(null);
 
   const load = () => {
     setLoading(true);
-    Promise.all([adminGetChallenges(), adminGetLessons()])
-      .then(([chals, les]) => { setItems(chals); setLessons(les); })
+    Promise.all([adminGetChallenges(), adminGetMissions()])
+      .then(([chals, les]) => { setItems(chals); setMissions(les); })
       .catch((err) => setError(err.data?.error || "Couldn't load challenges."))
       .finally(() => setLoading(false));
   };
@@ -39,7 +40,7 @@ export default function AdminChallenges() {
 
   const openCreate = () => { setForm(EMPTY_FORM); setEditing(null); setFormErr(""); setModal("create"); };
   const openEdit = (item) => {
-    setForm({ title: item.title, description: item.description, xp_reward: item.xp_reward, lesson: item.lesson || "", start_date: item.start_date?.slice(0, 16) || "", end_date: item.end_date?.slice(0, 16) || "" });
+    setForm({ title: item.title, description: item.description, xp_reward: item.xp_reward, mission: item.mission || "", start_date: item.start_date?.slice(0, 16) || "", end_date: item.end_date?.slice(0, 16) || "" });
     setEditing(item); setFormErr(""); setModal("edit");
   };
   const closeModal = () => setModal(null);
@@ -53,7 +54,7 @@ export default function AdminChallenges() {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true); setFormErr("");
-    const body = { title: form.title, description: form.description, xp_reward: Number(form.xp_reward), lesson: form.lesson || null, start_date: form.start_date, end_date: form.end_date };
+    const body = { title: form.title, description: form.description, xp_reward: Number(form.xp_reward), mission: form.mission || null, start_date: form.start_date, end_date: form.end_date };
     try {
       if (modal === "edit") { await adminUpdateChallenge(editing.id, body); toast("Challenge updated!"); }
       else                  { await adminCreateChallenge(body);              toast("Challenge created!"); }
@@ -68,7 +69,18 @@ export default function AdminChallenges() {
     catch (err) { toast(err.data?.error || "Delete failed.", "error"); setConfirmDel(null); }
   };
 
-  const now = new Date();
+  const handleTogglePublish = async (item) => {
+    setTogglingId(item.id);
+    try {
+      await adminUpdateChallenge(item.id, { is_published: !item.is_published });
+      setItems((prev) => prev.map((c) => (c.id === item.id ? { ...c, is_published: !c.is_published } : c)));
+      toast(item.is_published ? "Challenge unpublished." : "Challenge published!");
+    } catch (err) {
+      toast(err.data?.error || "Couldn't update status.", "error");
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   return (
     <AdminLayout title="⚡ Challenges">
@@ -88,15 +100,23 @@ export default function AdminChallenges() {
               <tbody>
                 {paged.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No challenges found.</td></tr>}
                 {paged.map((c) => {
-                  const isActive = new Date(c.start_date) <= now && new Date(c.end_date) >= now;
                   return (
-                    <tr key={c.id} className={isActive ? "ac-row-active" : ""}>
+                    <tr key={c.id} className={c.is_published ? "ac-row-active" : ""}>
                       <td data-label="Title"><strong>{c.title}</strong></td>
                       <td data-label="XP"><span className="a-badge a-badge-green">+{c.xp_reward}</span></td>
-                      <td data-label="Lesson">{lessons.find((l) => l.id === c.lesson)?.title || "—"}</td>
+                      <td data-label="Lesson">{missions.find((m) => m.id === c.mission)?.title || "—"}</td>
                       <td data-label="Start" style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}</td>
                       <td data-label="End" style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.end_date ? new Date(c.end_date).toLocaleDateString() : "—"}</td>
-                      <td data-label="Status"><span className={`a-badge ${isActive ? "a-badge-green" : "a-badge-orange"}`}>{isActive ? "Active" : "Inactive"}</span></td>
+                      <td data-label="Status">
+                        <button
+                          className={`a-badge ac-status-toggle ${c.is_published ? "a-badge-green" : "a-badge-orange"}`}
+                          onClick={() => handleTogglePublish(c)}
+                          disabled={togglingId === c.id}
+                          title="Click to toggle published status"
+                        >
+                          {togglingId === c.id ? <span className="spinner" /> : c.is_published ? "True" : "False"}
+                        </button>
+                      </td>
                       <td data-label="Actions">
                         <div className="ac-row-actions">
                           <button className="btn btn-secondary ac-questions-btn" onClick={() => setBuilding(c)}>🧩 Questions</button>
@@ -128,10 +148,10 @@ export default function AdminChallenges() {
             <div className="form-group"><label>Description</label><textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} style={{ resize: "vertical" }} /></div>
             <div className="form-row">
               <div className="form-group">
-                <label>Lesson</label>
-                <select value={form.lesson} onChange={(e) => setForm((f) => ({ ...f, lesson: e.target.value }))}>
+                <label>Mission</label>
+                <select value={form.mission} onChange={(e) => setForm((f) => ({ ...f, mission: e.target.value }))}>
                   <option value="">— None —</option>
-                  {lessons.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                  {missions.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
                 </select>
               </div>
               <div className="form-group"><label>XP Reward *</label><input type="number" min="0" value={form.xp_reward} onChange={(e) => setForm((f) => ({ ...f, xp_reward: e.target.value }))} placeholder="100" /></div>

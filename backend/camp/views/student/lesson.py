@@ -6,5 +6,5 @@ from ...serializers import LessonDetailSerializer
 
 class LessonDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
-    queryset = Lesson.objects.filter(mission__is_active=True)
+    queryset = Lesson.objects.all()
     serializer_class = LessonDetailSerializer

@@ -1,6 +1,8 @@
 const BASE_URL = import.meta.env.VITE_API_URL;
 const CAMP_URL = import.meta.env.VITE_API_CAMP_URL;
 
+import { publishBadges } from "./badgeQueueStore";
+
 async function request(baseUrl, path, { method = "GET", body, auth = false, studentAuth = false, adminAuth = false } = {}) {
   const headers = { "Content-Type": "application/json" };
 
@@ -22,6 +24,9 @@ async function request(baseUrl, path, { method = "GET", body, auth = false, stud
     error.data   = data;
     throw error;
   }
+
+  if (data?.new_badges?.length) publishBadges(data.new_badges);
+
   return data;
 }
 
@@ -52,6 +57,7 @@ export const submitAssignment    = (id, text) => camp(`/assignments/${id}/submit
 export const getSubmissions      = ()         => camp("/submissions/",             { method: "GET",  studentAuth: true });
 export const getXPLog            = ()         => camp("/xp/",                      { method: "GET",  studentAuth: true });
 export const getBadges           = ()         => camp("/badges/",                  { method: "GET",  studentAuth: true });
+export const getBadgeGrid        = ()         => camp("/badges/grid/",             { method: "GET",  studentAuth: true });
 export const getChallenges       = ()         => camp("/challenges/",              { method: "GET",  studentAuth: true });
 export const getChallenge        = (id)       => camp(`/challenges/${id}/`,         { method: "GET", studentAuth: true });
 export const startChallenge      = (id)       => camp(`/challenges/${id}/start/`,   { method: "POST", studentAuth: true });
@@ -105,3 +111,21 @@ export const adminGetChallengeQuestions = (id) => camp(`/camp-admin/challenges/$
 export const adminCreateChallengeQuestion = (id, body) => camp(`/camp-admin/challenges/${id}/questions/`, { method: "POST", adminAuth: true, body });
 export const adminUpdateChallengeQuestion = (id, body) => camp(`/camp-admin/questions/${id}/`, { method: "PATCH", adminAuth: true, body });
 export const adminDeleteChallengeQuestion = (id) => camp(`/camp-admin/questions/${id}/`, { method: "DELETE", adminAuth: true });
+
+// ── Quests (student-facing, mirrors the Challenge play functions above) ─────────
+export const getQuest        = (id)       => camp(`/quests/${id}/`,        { method: "GET",  studentAuth: true });
+export const startQuest      = (id)       => camp(`/quests/${id}/start/`,  { method: "POST", studentAuth: true });
+export const submitQuest     = (id, body) => camp(`/quests/${id}/submit/`, { method: "POST", studentAuth: true, body });
+
+// ── Quest questions (admin builder — mirrors the Challenge question functions above) ──
+export const adminGetAssignmentQuestions    = (id)       => camp(`/camp-admin/assignments/${id}/questions/`,       { method: "GET",    adminAuth: true });
+export const adminCreateAssignmentQuestion  = (id, body) => camp(`/camp-admin/assignments/${id}/questions/`,       { method: "POST",   adminAuth: true, body });
+export const adminUpdateAssignmentQuestion  = (id, body) => camp(`/camp-admin/assignment-questions/${id}/`,        { method: "PATCH",  adminAuth: true, body });
+export const adminDeleteAssignmentQuestion  = (id)       => camp(`/camp-admin/assignment-questions/${id}/`,        { method: "DELETE", adminAuth: true });
+
+// ── Camp Control ─────────────────────────────────────────────────────────────
+// Admin reads/writes the switch. Students don't need a separate call — the
+// dashboard/mission/quest/challenge serializers already embed `camp_started`
+// / `locked` inline, so the student app never hits this endpoint directly.
+export const adminGetCampSettings    = ()     => camp("/camp-admin/camp-settings/", { method: "GET",   adminAuth: true });
+export const adminUpdateCampSettings = (body) => camp("/camp-admin/camp-settings/", { method: "PATCH", adminAuth: true, body });

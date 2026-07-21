@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/camp-admin/attendance",  label: "📅 Attendance"         },
   { to: "/camp-admin/badges",      label: "🏅 Badges"             },
   { to: "/camp-admin/xp",          label: "✨ XP"                 },
+  { to: "/admin/camp-control",     label: "🎮 Camp Control" },
 ];
 
 export default function AdminLayout({ children, title }) {

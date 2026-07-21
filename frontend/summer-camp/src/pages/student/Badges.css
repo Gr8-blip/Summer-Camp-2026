@@ -1,0 +1,19 @@
+.bd-collection-card{background:white;border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:18px 22px;margin-bottom:20px;}
+.bd-collection-label{font-weight:800;font-size:1.05rem;display:block;margin-bottom:10px;}
+.bd-collection-track{height:14px;}
+
+.bd-badge-card{border:2px solid var(--color-border);position:relative;transition:transform 0.15s,box-shadow 0.15s;}
+.bd-badge-card.bd-unlocked.s-badge-common{border-color:#22C55E;}
+.bd-badge-card.bd-unlocked.s-badge-rare{border-color:#3B82F6;}
+.bd-badge-card.bd-unlocked.s-badge-epic{border-color:#8B5CF6;}
+.bd-badge-card.bd-unlocked.s-badge-legendary{border-color:#F59E0B;box-shadow:0 0 0 1px #F59E0B33,var(--shadow-card);}
+.bd-badge-card.bd-locked{opacity:0.55;filter:grayscale(0.6);}
+.bd-badge-card.bd-unlocked:hover{transform:translateY(-3px);}
+
+.bd-requirement{font-size:0.82rem;color:var(--color-text-soft);margin:4px 0 10px;min-height:2.2em;}
+.bd-earned-date{font-size:0.78rem;color:var(--color-text-soft);font-weight:600;}
+
+.bd-progress{margin-top:8px;}
+.bd-progress-track{height:8px;background:var(--color-border);border-radius:99px;overflow:hidden;}
+.bd-progress-fill{height:100%;background:var(--gradient-cta);border-radius:99px;transition:width 0.6s ease;}
+.bd-progress-label{display:block;margin-top:4px;font-size:0.75rem;color:var(--color-text-soft);font-weight:600;}

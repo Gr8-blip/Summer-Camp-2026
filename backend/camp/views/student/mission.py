@@ -6,7 +6,7 @@ from ...serializers import MissionListSerializer, MissionDetailSerializer
 class StudentMissionListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     
-    queryset = Mission.objects.filter(is_active=True).order_by('week')
+    queryset = Mission.objects.order_by('week')
     serializer_class = MissionListSerializer
 
 

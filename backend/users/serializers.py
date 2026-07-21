@@ -78,7 +78,7 @@ class RegistrationSerializer(serializers.Serializer):
         for student_data in students_data:
             student_user = User.objects.create(
                 username=f"student-{uuid.uuid4().hex}",
-                email=student_data["email"]
+                email=student_data.get("email") or ""
             )
 
             student_user.set_unusable_password()

@@ -1,38 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { getLessonDetail, submitAssignment } from "../../api/client";
+import { getLessonDetail } from "../../api/client";
 import StudentLayout from "./StudentLayout";
 import "./student.css";
 
-function AssignmentCard({ assignment }) {
-  const [open, setOpen]             = useState(false);
-  const [text, setText]             = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted]   = useState(!!assignment.already_submitted);
-  const [err, setErr]               = useState("");
-
-  const handleSubmit = async () => {
-    if (!text.trim()) { setErr("Write something first!"); return; }
-    setSubmitting(true); setErr("");
-    try {
-      await submitAssignment(assignment.id, text);
-      setSubmitted(true);
-      setOpen(false);
-    } catch (e) {
-      // Handle case where backend also rejects a duplicate (belt + suspenders)
-      if (e.status === 400 && e.data?.error?.toLowerCase().includes("already")) {
-        setSubmitted(true);
-        setOpen(false);
-      } else {
-        setErr(e.data?.error || "Submission failed. Try again.");
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
+function QuestCard({ assignment }) {
+  const navigate = useNavigate();
+  const locked = assignment.locked;
 
   return (
-    <div className="s-card">
+    <div className="s-card s-quest-card">
       <div className="s-card-header">
         <div>
           <h3>{assignment.title}</h3>
@@ -41,30 +18,17 @@ function AssignmentCard({ assignment }) {
         </div>
         <span className="s-badge s-badge-orange">+{assignment.xp_reward} XP</span>
       </div>
-
-      {submitted ? (
-        <div className="s-submit-success">✅ Already submitted — nice work!</div>
+      {locked ? (
+        <div className="s-empty" style={{ padding: 16 }}>
+          <p>🔒 Quest Locked</p>
+          <span className="s-meta-text">Complete required items to unlock.</span>
+        </div>
+      ) : assignment.already_submitted ? (
+        <div className="s-submit-success">✅ Quest complete — nice work!</div>
       ) : (
-        <>
-          <button className="s-toggle-btn" onClick={() => setOpen((o) => !o)}>
-            {open ? "Cancel" : "📝 Submit Answer"}
-          </button>
-          {open && (
-            <div className="s-submit-form">
-              <textarea
-                rows={5}
-                placeholder="Write your answer here..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                className="s-textarea"
-              />
-              {err && <span className="error-text">{err}</span>}
-              <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
-                {submitting ? <span className="spinner" /> : "Submit →"}
-              </button>
-            </div>
-          )}
-        </>
+        <button className="btn btn-primary s-start-btn" onClick={() => navigate(`/quests/${assignment.id}`)}>
+          🗺️ Start Quest
+        </button>
       )}
     </div>
   );
@@ -97,28 +61,8 @@ export default function LessonDetail() {
 
           {lesson.assignments?.length > 0 && (
             <>
-              <h2 className="s-section-heading">📝 Assignments</h2>
-              {lesson.assignments.map((a) => <AssignmentCard key={a.id} assignment={a} />)}
-            </>
-          )}
-
-          {lesson.challenges?.length > 0 && (
-            <>
-              <h2 className="s-section-heading">⚡ Challenges</h2>
-              {lesson.challenges.map((c) => (
-                <div key={c.id} className="s-card">
-                  <div className="s-card-header">
-                    <div>
-                      <h3>{c.title}</h3>
-                      <p>{c.description}</p>
-                      <span className="s-meta-text">
-                        {new Date(c.start_date).toLocaleDateString()} – {new Date(c.end_date).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <span className="s-badge s-badge-pink">+{c.xp_reward} XP</span>
-                  </div>
-                </div>
-              ))}
+              <h2 className="s-section-heading">🗺️ Mission Quests</h2>
+              {lesson.assignments.map((a) => <QuestCard key={a.id} assignment={a} />)}
             </>
           )}
         </>

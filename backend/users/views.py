@@ -12,6 +12,11 @@ from rest_framework import status
 from .serializers import RegistrationSerializer
 from .models import Family, Payment, Student
 from .emails import send_payment_confirmation_email
+from rest_framework.exceptions import ValidationError
+from camp.utils import achievements
+
+def _serialize_badges(badges):
+    return [{"name": b.name, "icon": b.icon, "rarity": b.rarity} for b in badges]
 
 class Me(APIView):
     permission_classes = [IsAuthenticated]
@@ -29,7 +34,13 @@ class Me(APIView):
 class RegistrationView(APIView):
     def post(self, request):
         serializer = RegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as e:
+            print("--- VALIDATION ERROR ---")
+            print(e.detail)
+            print("------------------------")
+            raise e
         family = serializer.save()
         
         return Response({"message": "Registration successful", "family_id": family.id})
@@ -64,6 +75,11 @@ class StudentLoginView(APIView):
 
         refresh = RefreshToken.for_user(student.user)
 
+        new_badges = []
+        new_badges += achievements.check_login(student)
+        new_badges += achievements.check_xp(student)
+        new_badges += achievements.check_legend(student)
+
         return Response(
             {
                 "refresh": str(refresh),
@@ -73,6 +89,7 @@ class StudentLoginView(APIView):
                     "name": student.full_name,
                     "family_id": student.family.id,
                 },
+                "new_badges": _serialize_badges(new_badges),
             },
             status=status.HTTP_200_OK,
         )

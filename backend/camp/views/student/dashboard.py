@@ -8,7 +8,7 @@ class StudentDashboardView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
         student = request.user.student
-        missions =  Mission.objects.filter(is_active=True).order_by('week')
+        missions =  Mission.objects.filter(is_published=True).order_by('week')
 
 
         recent_badges = StudentBadge.objects.filter(student=student).order_by('-earned_at')[:5]

@@ -1,5 +1,5 @@
 .sl-shell{display:flex;min-height:100vh;background:var(--color-bg);}
-.sl-sidebar{width:230px;flex-shrink:0;background:white;border-right:2px solid var(--color-border);display:flex;flex-direction:column;padding:28px 18px;position:sticky;top:0;height:100vh;overflow-y:auto;}
+.sl-sidebar{width:230px;flex-shrink:0;background:white;border-right:2px solid var(--color-border);display:flex;flex-direction:column;padding:28px 18px;position:fixed;top:0;left:0;height:100vh;overflow-y:auto;z-index:20;}
 .sl-logo{font-family:var(--font-display);font-size:1.15rem;font-weight:700;color:var(--color-purple);margin-bottom:30px;padding:0 8px;}
 .sl-nav{display:flex;flex-direction:column;gap:4px;flex:1;}
 .sl-nav-item{display:block;padding:11px 14px;border-radius:var(--radius-sm);font-weight:600;font-size:0.92rem;color:var(--color-text-soft);transition:background 0.15s ease,color 0.15s ease;}
@@ -7,6 +7,14 @@
 .sl-nav-item.active{background:var(--color-border);color:var(--color-purple);}
 .sl-logout{background:none;border:2px solid var(--color-border);border-radius:var(--radius-pill);padding:10px 14px;font-weight:600;font-size:0.85rem;color:var(--color-text-soft);margin-top:20px;transition:background 0.15s ease;}
 .sl-logout:hover{background:var(--color-bg);}
-.sl-main{flex:1;padding:40px 36px;overflow-y:auto;max-width:900px;}
+.sl-main{flex:1;padding:40px 36px;overflow-y:auto;max-width:900px;margin-left:230px;}
 .sl-page-title{font-size:1.7rem;margin-bottom:28px;}
-@media(max-width:700px){.sl-shell{flex-direction:column;}.sl-sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:14px 16px;gap:8px;border-right:none;border-bottom:2px solid var(--color-border);}.sl-logo{width:100%;margin-bottom:8px;}.sl-nav{flex-direction:row;flex-wrap:wrap;gap:6px;flex:none;}.sl-nav-item{padding:7px 12px;font-size:0.8rem;}.sl-logout{margin-top:0;padding:7px 12px;font-size:0.8rem;}.sl-main{padding:24px 18px;}}
+@media(max-width:700px){
+  .sl-shell{flex-direction:column;}
+  .sl-sidebar{width:100%;height:auto;position:static;flex-direction:row;flex-wrap:wrap;padding:14px 16px;gap:8px;border-right:none;border-bottom:2px solid var(--color-border);}
+  .sl-logo{width:100%;margin-bottom:8px;}
+  .sl-nav{flex-direction:row;flex-wrap:wrap;gap:6px;flex:none;}
+  .sl-nav-item{padding:7px 12px;font-size:0.8rem;}
+  .sl-logout{margin-top:0;padding:7px 12px;font-size:0.8rem;}
+  .sl-main{padding:24px 18px;margin-left:0;}
+}

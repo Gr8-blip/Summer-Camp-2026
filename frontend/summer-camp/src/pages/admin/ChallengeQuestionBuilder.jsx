@@ -4,6 +4,10 @@ import {
   adminDeleteChallengeQuestion,
   adminGetChallengeQuestions,
   adminUpdateChallengeQuestion,
+  adminCreateAssignmentQuestion,
+  adminDeleteAssignmentQuestion,
+  adminGetAssignmentQuestions,
+  adminUpdateAssignmentQuestion,
 } from "./../../api/client";
 import ActivityTypePicker from "./../../components/ActivityTypePicker";
 import QuestionEditorPanel from "../../editors/QuestionEditorPanel";
@@ -13,7 +17,27 @@ import { blankContent } from "./../../components/activityTypes";
 import "./../../components/builder.css";
 
 // view = "map" | "pick" | "edit"
-export default function ChallengeQuestionBuilder({ challenge, onClose, toast }) {
+// `resource` picks which backend this builder talks to — "challenge" (default,
+// unchanged behavior) or "assignment" (Quests). AssignmentQuestion has the
+// exact same shape/content JSON as ChallengeQuestion, so nothing else here
+// needs to change — just which four functions get called.
+const API = {
+  challenge: {
+    getQuestions: adminGetChallengeQuestions,
+    createQuestion: adminCreateChallengeQuestion,
+    updateQuestion: adminUpdateChallengeQuestion,
+    deleteQuestion: adminDeleteChallengeQuestion,
+  },
+  assignment: {
+    getQuestions: adminGetAssignmentQuestions,
+    createQuestion: adminCreateAssignmentQuestion,
+    updateQuestion: adminUpdateAssignmentQuestion,
+    deleteQuestion: adminDeleteAssignmentQuestion,
+  },
+};
+
+export default function ChallengeQuestionBuilder({ challenge, resource = "challenge", onClose, toast }) {
+  const api = API[resource];
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState("map");
@@ -24,7 +48,7 @@ export default function ChallengeQuestionBuilder({ challenge, onClose, toast }) 
   const [dragIndex, setDragIndex] = useState(null);
 
   const load = () =>
-    adminGetChallengeQuestions(challenge.id)
+    api.getQuestions(challenge.id)
       .then((data) => setQuestions([...data].sort((a, b) => a.order - b.order)))
       .catch(() => toast("Could not load questions.", "error"))
       .finally(() => setLoading(false));
@@ -40,10 +64,10 @@ export default function ChallengeQuestionBuilder({ challenge, onClose, toast }) 
     setSaving(true);
     try {
       if (editingQuestion) {
-        await adminUpdateChallengeQuestion(editingQuestion.id, { question_type, content, points });
+        await api.updateQuestion(editingQuestion.id, { question_type, content, points });
         toast("Activity updated.");
       } else {
-        await adminCreateChallengeQuestion(challenge.id, {
+        await api.createQuestion(challenge.id, {
           question_type, content, points, order: questions.length,
         });
         toast("Activity added to the level.");
@@ -59,7 +83,7 @@ export default function ChallengeQuestionBuilder({ challenge, onClose, toast }) 
 
   const handleDuplicate = async (q) => {
     try {
-      await adminCreateChallengeQuestion(challenge.id, {
+      await api.createQuestion(challenge.id, {
         question_type: q.question_type,
         content: q.content,
         points: q.points,
@@ -75,7 +99,7 @@ export default function ChallengeQuestionBuilder({ challenge, onClose, toast }) 
   const handleDelete = async (q) => {
     if (!window.confirm("Remove this activity from the level?")) return;
     try {
-      await adminDeleteChallengeQuestion(q.id);
+      await api.deleteQuestion(q.id);
       toast("Activity removed.");
       load();
     } catch {
@@ -92,7 +116,7 @@ export default function ChallengeQuestionBuilder({ challenge, onClose, toast }) 
 
     try {
       await Promise.all(
-        next.map((q, i) => (q.order === i ? null : adminUpdateChallengeQuestion(q.id, { order: i })))
+        next.map((q, i) => (q.order === i ? null : api.updateQuestion(q.id, { order: i })))
       );
     } catch {
       toast("Could not save the new order.", "error");

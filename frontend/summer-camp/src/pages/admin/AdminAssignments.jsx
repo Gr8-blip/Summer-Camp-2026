@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { adminGetAssignments, adminCreateAssignment, adminUpdateAssignment, adminDeleteAssignment, adminGetLessons } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
+import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder"; // reused as-is; pass resource="assignment"
 
 const PAGE_SIZE = 10;
 const EMPTY_FORM = { lesson: "", title: "", description: "", xp_reward: "", deadline: "" };
@@ -20,6 +21,15 @@ export default function AdminAssignments() {
   const [saving, setSaving]   = useState(false);
   const [formErr, setFormErr] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
+  const [building, setBuilding] = useState(null);
+
+  const togglePublish = async (item) => {
+    try {
+      await adminUpdateAssignment(item.id, { is_published: !item.is_published });
+      toast(item.is_published ? "Quest unpublished." : "Quest published!");
+      load();
+    } catch (e) { toast(e.data?.detail || "Couldn't update.", "error"); }
+  };
 
   const load = () => {
     setLoading(true);
@@ -66,10 +76,10 @@ export default function AdminAssignments() {
   };
 
   return (
-    <AdminLayout title="📝 Assignments">
+    <AdminLayout title="🗺️ Mission Quests">
       <div className="a-action-bar">
-        <input className="a-search" placeholder="Search assignments..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
-        <button className="btn btn-primary" onClick={openCreate} style={{ padding: "12px 22px", fontSize: "0.9rem" }}>+ New Assignment</button>
+        <input className="a-search" placeholder="Search quests..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        <button className="btn btn-primary" onClick={openCreate} style={{ padding: "12px 22px", fontSize: "0.9rem" }}>+ New Quest</button>
       </div>
 
       {loading && <div className="a-loading"><span className="spinner spinner-dark" /><span>Loading...</span></div>}
@@ -79,9 +89,9 @@ export default function AdminAssignments() {
         <>
           <div className="a-table-wrap">
             <table className="a-table">
-              <thead><tr><th>Title</th><th>Lesson</th><th>XP</th><th>Deadline</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Title</th><th>Lesson</th><th>XP</th><th>Deadline</th><th>Published</th><th>Actions</th></tr></thead>
               <tbody>
-                {paged.length === 0 && <tr><td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No assignments found.</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No quests found.</td></tr>}
                 {paged.map((a) => (
                   <tr key={a.id}>
                     <td><strong>{a.title}</strong></td>
@@ -89,6 +99,16 @@ export default function AdminAssignments() {
                     <td><span className="a-badge a-badge-green">+{a.xp_reward} XP</span></td>
                     <td style={{ fontSize: "0.85rem", color: "var(--color-text-soft)" }}>{a.deadline ? new Date(a.deadline).toLocaleDateString() : "—"}</td>
                     <td>
+                      <button
+                        className={`a-badge ${a.is_published ? "a-badge-green" : "a-badge-orange"}`}
+                        style={{ border: "none", cursor: "pointer" }}
+                        onClick={() => togglePublish(a)}
+                      >
+                        {a.is_published ? "Published" : "Draft"}
+                      </button>
+                    </td>
+                    <td>
+                      <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.82rem", marginRight: 8 }} onClick={() => setBuilding(a)}>🧩 Questions</button>
                       <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.82rem", marginRight: 8 }} onClick={() => openEdit(a)}>Edit</button>
                       <button className="btn btn-danger"    style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setConfirmDel(a)}>Delete</button>
                     </td>
@@ -110,7 +130,7 @@ export default function AdminAssignments() {
       {modal && (
         <div className="a-modal-overlay" onClick={closeModal}>
           <div className="a-modal" onClick={(e) => e.stopPropagation()}>
-            <h2>{modal === "edit" ? "Edit Assignment" : "New Assignment"}</h2>
+            <h2>{modal === "edit" ? "Edit Quest" : "New Quest"}</h2>
             <div className="form-group">
               <label>Lesson</label>
               <select value={form.lesson} onChange={(e) => setForm((f) => ({ ...f, lesson: e.target.value }))}>
@@ -136,7 +156,7 @@ export default function AdminAssignments() {
       {confirmDel && (
         <div className="a-modal-overlay" onClick={() => setConfirmDel(null)}>
           <div className="a-modal" style={{ maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <h2>Delete Assignment?</h2>
+            <h2>Delete Quest?</h2>
             <div className="a-confirm"><p>Permanently delete <strong>"{confirmDel.title}"</strong>? This can't be undone.</p></div>
             <div className="a-modal-actions">
               <button className="btn btn-secondary" onClick={() => setConfirmDel(null)}>Cancel</button>
@@ -144,6 +164,15 @@ export default function AdminAssignments() {
             </div>
           </div>
         </div>
+      )}
+
+      {building && (
+        <ChallengeQuestionBuilder
+          challenge={building}
+          resource="assignment"
+          toast={toast}
+          onClose={() => setBuilding(null)}
+        />
       )}
 
       <ToastContainer toasts={toasts} />

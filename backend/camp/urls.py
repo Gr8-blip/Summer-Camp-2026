@@ -16,6 +16,12 @@ from .views.student.assignment import (
     AssignmentSubmitView,
 )
 
+from .views.student.quest import (
+    QuestDetailView,
+    QuestStartView,
+    QuestSubmitView
+)
+
 from .views.student.submission import (
     SubmissionListView,
     SubmissionGradingView,
@@ -23,6 +29,7 @@ from .views.student.submission import (
 
 from .views.student.badge import (
     StudentBadgeListView,
+    StudentBadgeGridView
 )
 
 from .views.student.xp import (
@@ -58,6 +65,8 @@ from .views.admin.badge import BadgeView, BadgeDetailView
 from .views.admin.xp import XPLogView, AwardXPView
 from .views.admin.challenge import ChallengeView, ChallengeDetailView as AdminChallengeDetailView
 from .views.admin.challenge_question import ChallengeQuestionListView, ChallengeQuestionDetailView, ChallengeAttemptListView
+from .views.admin.assignment_question import AssignmentQuestionListView, AssignmentQuestionDetailView, AssignmentAttemptListView
+from .views.admin.camp_settings import AdminCampSettingsView
 
 urlpatterns = [
 
@@ -118,6 +127,12 @@ urlpatterns = [
         name="badge-list",
     ),
 
+    path(
+        "badges/grid/",
+        StudentBadgeGridView.as_view(),
+        name='badge-grid'
+    ),
+
     # XP
     path(
         "xp/",
@@ -136,6 +151,9 @@ urlpatterns = [
     path("challenges/<int:pk>/start/", ChallengeStartView.as_view(), name="challenge-start"),
     path("challenges/<int:pk>/submit/", ChallengeSubmitView.as_view(), name="challenge-submit"),
     path("challenges/<int:pk>/leaderboard/", ChallengeLeaderboardView.as_view(), name="challenge-leaderboard"),
+    path('quests/<int:pk>/', QuestDetailView.as_view()),
+    path('quests/<int:pk>/start/', QuestStartView.as_view()),
+    path('quests/<int:pk>/submit/', QuestSubmitView.as_view()),
 
     # Attendance
     path(
@@ -334,4 +352,11 @@ urlpatterns = [
     path("camp-admin/challenges/<int:pk>/questions/", ChallengeQuestionListView.as_view(), name="admin-challenge-questions"),
     path("camp-admin/challenges/<int:pk>/attempts/", ChallengeAttemptListView.as_view(), name="admin-challenge-attempts"),
     path("camp-admin/questions/<int:pk>/", ChallengeQuestionDetailView.as_view(), name="admin-question-detail"),
+
+    path("camp-admin/assignments/<int:pk>/questions/", AssignmentQuestionListView.as_view(), name="admin-assignment-questions"),
+    path("camp-admin/assignments/<int:pk>/attempts/", AssignmentAttemptListView.as_view(), name="admin-assignment-attempts"),
+    path("camp-admin/assignments/questions/<int:pk>/", AssignmentQuestionDetailView.as_view(), name="admin-assignment-question-detail"),
+    
+
+    path("camp-admin/camp-settings/", AdminCampSettingsView.as_view(), name='admin-camp-settings-view'),
 ]

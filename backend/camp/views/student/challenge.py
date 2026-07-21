@@ -7,64 +7,29 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ...models import Challenge, ChallengeAttempt, XPLog
+from ...models import Challenge, ChallengeAttempt, XPLog, PuzzleCompletion
 from ...serializers import ChallengeSerializer, StudentChallengeQuestionSerializer, ChallengeAttemptSerializer
+from ...utils import achievements
+from ...utils.achievements import PUZZLE_TYPES
+from ...utils.scoring import score_fraction
 
 def student_for(request):
     return request.user.student
 
-def score_fraction(question, response):
-    content = question.content
-    qtype = question.question_type
-    expected = content.get('answer', content.get('answers'))
- 
-    if qtype == 'prompt_build':
-        return 1.0 if str(response or '').strip() else 0.0
- 
-    if qtype == 'drag_order':
-        items = content.get('items', [])
-        if not items or not isinstance(response, list) or len(response) != len(items):
-            return 0.0
-        matches = sum(1 for a, b in zip(response, items) if a == b)
-        return matches / len(items)
- 
-    if qtype == 'match_pairs':
-        pairs = content.get('pairs', content.get('answer', {}))
-        if not pairs or not isinstance(response, dict):
-            return 0.0
-        matched = sum(1 for k, v in pairs.items() if response.get(k) == v)
-        return matched / len(pairs)
- 
-    if qtype == 'memory_tiles':
-        return 1.0 if isinstance(response, dict) and response.get('completed') else 0.0
- 
-    if qtype == 'word_search':
-        words = {w.strip().upper() for w in content.get('words', [])}
-        found = {str(w).strip().upper() for w in response} if isinstance(response, list) else set()
-        if not words:
-            return 0.0
-        return len(words & found) / len(words)
- 
-    if qtype == 'image_reveal':
-        got = str(response or '').strip().lower()
-        want = str(expected or '').strip().lower()
-        return 1.0 if got == want else 0.0
- 
-    if isinstance(expected, bool):
-        return 1.0 if (response is expected or str(response).lower() == str(expected).lower()) else 0.0
- 
-    return 1.0 if response == expected else 0.0
+
+def _serialize_badges(badges):
+    return [{"name": b.name, "icon": b.icon, "rarity": b.rarity} for b in badges]
 
 
 class ChallengeListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChallengeSerializer
-    def get_queryset(self): return Challenge.objects.filter(is_active=True).order_by('mission__week', 'id')
+    def get_queryset(self): return Challenge.objects.order_by('mission__week', 'id')
 
 class ChallengeDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChallengeSerializer
-    queryset = Challenge.objects.filter(is_active=True)
+    queryset = Challenge.objects.filter(is_published=True)
     def retrieve(self, request, *args, **kwargs):
         challenge = self.get_object(); data = self.get_serializer(challenge).data
         data['questions'] = StudentChallengeQuestionSerializer(challenge.questions.all(), many=True).data
@@ -74,7 +39,7 @@ class ChallengeDetailView(RetrieveAPIView):
 class ChallengeStartView(APIView):
     permission_classes = [IsAuthenticated]
     def post(self, request, pk):
-        challenge = Challenge.objects.filter(pk=pk, is_active=True).first()
+        challenge = Challenge.objects.filter(pk=pk, is_published=True).first()
         if not challenge: return Response({'detail': 'Challenge not found.'}, status=404)
         attempt, created = ChallengeAttempt.objects.get_or_create(challenge=challenge, student=student_for(request))
         if attempt.completed_at: return Response({'detail': 'This boss battle has already been completed.'}, status=409)
@@ -100,7 +65,41 @@ class ChallengeSubmitView(APIView):
         student = attempt.student
         student.xp = F('xp') + attempt.xp_earned; student.save(update_fields=['xp'])
         XPLog.objects.create(student=student, amount=attempt.xp_earned, reason=f'Boss battle: {attempt.challenge.title}')
-        return Response(ChallengeAttemptSerializer(attempt).data)
+        student.refresh_from_db(fields=['xp'])
+
+        new_badges = []
+        new_badges += achievements.check_challenge(student, attempt)
+
+        # A fully-correct answer on a puzzle-type question completes that
+        # puzzle type for the student — record it (first time only) so
+        # check_puzzle_master can later tell which types are done.
+        newly_completed_puzzle_types = set()
+        for q in questions:
+            if q.question_type not in PUZZLE_TYPES:
+                continue
+            if score_fraction(q, answers.get(str(q.id), answers.get(q.id))) != 1.0:
+                continue
+            _, created = PuzzleCompletion.objects.get_or_create(
+                student=student,
+                puzzle_type=q.question_type,
+                defaults={"question": q},
+            )
+            if created:
+                newly_completed_puzzle_types.add(q.question_type)
+
+        if newly_completed_puzzle_types:
+            new_badges += achievements.check_puzzle(student)
+        if "prompt_build" in newly_completed_puzzle_types:
+            new_badges += achievements.check_prompt_apprentice(student)
+        new_badges += achievements.check_puzzle_master(student)
+
+        new_badges += achievements.check_xp(student)
+        new_badges += achievements.check_legend(student)
+
+        data = ChallengeAttemptSerializer(attempt).data
+        data['xp_gained'] = attempt.xp_earned
+        data['new_badges'] = _serialize_badges(new_badges)
+        return Response(data)
 
 class ChallengeLeaderboardView(APIView):
     permission_classes = [IsAuthenticated]
@@ -108,6 +107,9 @@ class ChallengeLeaderboardView(APIView):
         attempts = ChallengeAttempt.objects.filter(challenge_id=pk, completed_at__isnull=False).select_related('student').order_by('-score', 'time_taken', '-accuracy')[:10]
         rows = ChallengeAttemptSerializer(attempts, many=True).data
         for index, row in enumerate(rows, 1): row['rank'] = index; row['is_current_student'] = row['student'] == student_for(request).id
+        if rows and rows[0]['is_current_student']:
+            achievements.check_hall_of_fame(student_for(request), student_for(request))
+            achievements.check_legend(student_for(request))
         return Response(rows)
 
 

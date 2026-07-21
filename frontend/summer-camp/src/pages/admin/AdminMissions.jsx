@@ -8,16 +8,16 @@ const EMPTY_FORM = { week: "", title: "", description: "", xp_reward: "" };
 
 export default function AdminMissions() {
   const { toasts, toast } = useToast();
-  const [items, setItems]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
-  const [search, setSearch]     = useState("");
-  const [page, setPage]         = useState(1);
-  const [modal, setModal]       = useState(null); // null | "create" | "edit"
-  const [editing, setEditing]   = useState(null);
-  const [form, setForm]         = useState(EMPTY_FORM);
-  const [saving, setSaving]     = useState(false);
-  const [formErr, setFormErr]   = useState("");
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [modal, setModal] = useState(null); // null | "create" | "edit"
+  const [editing, setEditing] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
+  const [formErr, setFormErr] = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
 
   const load = () => {
@@ -52,7 +52,7 @@ export default function AdminMissions() {
     const body = { week: Number(form.week), title: form.title, description: form.description, xp_reward: Number(form.xp_reward) };
     try {
       if (modal === "edit") { await adminUpdateMission(editing.id, body); toast("Mission updated!"); }
-      else                  { await adminCreateMission(body);              toast("Mission created!"); }
+      else { await adminCreateMission(body); toast("Mission created!"); }
       closeModal(); load();
     } catch (err) { setFormErr(err.data?.error || "Save failed."); }
     finally { setSaving(false); }
@@ -66,6 +66,30 @@ export default function AdminMissions() {
     } catch (err) { toast(err.data?.error || "Delete failed.", "error"); setConfirmDel(null); }
   };
 
+  const togglePublish = async (item) => {
+    const updatedStatus = !item.is_published;
+
+    // 1. Optimistically update local state so the badge text changes INSTANTLY
+    setItems((prev) =>
+      prev.map((m) => (m.id === item.id ? { ...m, is_published: updatedStatus } : m))
+    );
+
+    try {
+      // 2. Send full payload (or just status) depending on backend API structure
+      await adminUpdateMission(item.id, {
+        ...item,
+        is_published: updatedStatus,
+      });
+      toast(updatedStatus ? "Mission published!" : "Mission unpublished.");
+    } catch (e) {
+      // Revert state back if backend failed
+      setItems((prev) =>
+        prev.map((m) => (m.id === item.id ? { ...m, is_published: item.is_published } : m))
+      );
+      toast(e.data?.detail || e.data?.error || "Couldn't update status.", "error");
+    }
+  };
+
   return (
     <AdminLayout title="🎯 Missions">
       <div className="a-action-bar">
@@ -74,16 +98,25 @@ export default function AdminMissions() {
       </div>
 
       {loading && <div className="a-loading"><span className="spinner spinner-dark" /><span>Loading...</span></div>}
-      {error   && <div className="a-error">⚠️ {error}</div>}
+      {error && <div className="a-error">⚠️ {error}</div>}
 
       {!loading && !error && (
         <>
           <div className="a-table-wrap">
             <table className="a-table">
-              <thead><tr><th>Week</th><th>Title</th><th>Description</th><th>XP</th><th>Actions</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th>Title</th>
+                  <th>Description</th>
+                  <th>XP</th>
+                  <th>Published</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
               <tbody>
                 {paged.length === 0 && (
-                  <tr><td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No missions found.</td></tr>
+                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No missions found.</td></tr>
                 )}
                 {paged.map((m) => (
                   <tr key={m.id}>
@@ -92,8 +125,17 @@ export default function AdminMissions() {
                     <td style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--color-text-soft)" }}>{m.description}</td>
                     <td><span className="a-badge a-badge-green">+{m.xp_reward} XP</span></td>
                     <td>
+                      <button
+                        className={`a-badge ${m.is_published ? "a-badge-green" : "a-badge-orange"}`}
+                        style={{ border: "none", cursor: "pointer" }}
+                        onClick={() => togglePublish(m)}
+                      >
+                        {m.is_published ? "Published" : "Draft"}
+                      </button>
+                    </td>
+                    <td>
                       <button className="btn btn-secondary" style={{ padding: "7px 14px", fontSize: "0.82rem", marginRight: 8 }} onClick={() => openEdit(m)}>Edit</button>
-                      <button className="btn btn-danger"    style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setConfirmDel(m)}>Delete</button>
+                      <button className="btn btn-danger" style={{ padding: "7px 14px", fontSize: "0.82rem" }} onClick={() => setConfirmDel(m)}>Delete</button>
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
+import { BadgeQueueProvider } from "./components/BadgeQueueProvider";
+
 import LandingPage from "./pages/LandingPage";
 import RegisterWizard from "./pages/RegisterWizard";
 import PlanReview from "./pages/PlanReview";
@@ -22,6 +24,7 @@ import Challenges from "./pages/student/Challenges";
 import ChallengePlay from "./pages/student/ChallengePlay";
 import ChallengeStats from "./pages/student/ChallengeStats";
 import Attendance from "./pages/student/Attendance";
+import QuestPlay from "./pages/student/QuestPlay";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -34,6 +37,7 @@ import AdminAttendance from "./pages/admin/AdminAttendance";
 import AdminXP from "./pages/admin/AdminXP";
 import AdminBadges from "./pages/admin/AdminBadges";
 import AdminChallenges from "./pages/admin/AdminChallenges";
+import AdminCampControl from "./pages/admin/Admincampcontrol";
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isStudentAuthenticated } = useAuth();
@@ -93,6 +97,8 @@ export default function App() {
           <Route path="/challenges/stats" element={<StudentRoute><ChallengeStats /></StudentRoute>} />
           <Route path="/challenges/:id" element={<StudentRoute><ChallengePlay /></StudentRoute>} />
           <Route path="/attendance" element={<StudentRoute><Attendance /></StudentRoute>} />
+          <Route path="/quests/:id" element={<StudentRoute><QuestPlay /></StudentRoute>} />  
+
 
           {/* Admin */}
           <Route path="/camp-admin/login" element={<AdminLogin />} />
@@ -105,6 +111,7 @@ export default function App() {
           <Route path="/camp-admin/xp" element={<AdminRoute><AdminXP /></AdminRoute>} />
           <Route path="/camp-admin/badges" element={<AdminRoute><AdminBadges /></AdminRoute>} />
           <Route path="/camp-admin/challenges" element={<AdminRoute><AdminChallenges /></AdminRoute>} />
+          <Route path="/admin/camp-control" element={<AdminCampControl />} />  // admin router
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAttendance, checkInAttendance } from "../../api/client";
 import StudentLayout from "./StudentLayout";
+import MissionCompleteCelebration from "../../components/MissionCompleteCelebration"; 
 import "./student.css";
 
 function CheckInModal({ onClose, onSuccess }) {
@@ -12,7 +13,10 @@ function CheckInModal({ onClose, onSuccess }) {
     e.preventDefault();
     if (!code.trim()) { setError("Enter a code first!"); return; }
     setLoading(true); setError("");
-    try { await checkInAttendance(code.trim().toUpperCase()); onSuccess(); }
+    try {
+      const res = await checkInAttendance(code.trim().toUpperCase());
+      onSuccess(res); // pass the full response up (xp_gained, new_badges, mission_complete)
+    }
     catch (err) { setError(err.data?.error || "Check-in failed. Double-check the code!"); }
     finally { setLoading(false); }
   };
@@ -36,11 +40,12 @@ function CheckInModal({ onClose, onSuccess }) {
 }
 
 export default function Attendance() {
-  const [records, setRecords]     = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [error, setError]         = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [success, setSuccess]     = useState(false);
+  const [records, setRecords]         = useState([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState("");
+  const [showModal, setShowModal]     = useState(false);
+  const [success, setSuccess]         = useState(false);
+  const [celebration, setCelebration] = useState(null); // { mission_title, xp_awarded, badges }
 
   const load = () => {
     setLoading(true);
@@ -51,9 +56,17 @@ export default function Attendance() {
   };
   useEffect(() => { load(); }, []);
 
-  const handleSuccess = () => {
+  const handleSuccess = (res) => {
     setShowModal(false); setSuccess(true); load();
     setTimeout(() => setSuccess(false), 3000);
+
+    if (res?.mission_complete) {
+      // Delay slightly so the "Attendance recorded!" toast isn't fighting
+      // the celebration modal for attention on the same frame.
+      setTimeout(() => {
+        setCelebration({ ...res.mission_complete, badges: res.new_badges || [] });
+      }, 400);
+    }
   };
 
   return (
@@ -70,6 +83,15 @@ export default function Attendance() {
         <div key={i} className="s-card s-attendance-row">✅ {r.lesson?.title || "Class session"}</div>
       ))}
       {showModal && <CheckInModal onClose={() => setShowModal(false)} onSuccess={handleSuccess} />}
+
+      {celebration && (
+        <MissionCompleteCelebration
+          missionTitle={celebration.mission_title}
+          xpAwarded={celebration.xp_awarded}
+          newBadges={celebration.badges}
+          onDone={() => setCelebration(null)}
+        />
+      )}
     </StudentLayout>
   );
 }
