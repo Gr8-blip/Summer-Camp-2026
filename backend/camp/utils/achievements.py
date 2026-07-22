@@ -62,7 +62,7 @@ def check_attendance(student):
     if attendance_count >= 1:
         results.append(award_badge(student, "Present & Ready"))
 
-    total_lessons = Lesson.objects.filter(mission__is_published=True).count()
+    total_lessons = Lesson.objects.all().count()
     attended_lessons = _distinct_attended_lesson_count(student)
 
     if total_lessons and attended_lessons >= total_lessons:
@@ -94,7 +94,7 @@ def check_challenge(student, attempt=None):
     # run correctly during backfill (attempt=None).
     if (
         student.challenge_attempts.filter(completed_at__isnull=False).count()
-        >= Challenge.objects.filter(is_published=True).count()
+        >= Challenge.objects.filter().count()
     ):
         results.append(award_badge(student, "Challenge Champion"))
 
@@ -184,15 +184,13 @@ def check_ai_master(student):
     Award after every lesson has been attended and every
     assignment has been submitted.
     """
-    total_lessons = Lesson.objects.filter(mission__is_published=True).count()
+    total_lessons = Lesson.objects.all().count()
     attended_lessons = _distinct_attended_lesson_count(student)
 
-    total_assignments = Assignment.objects.filter(
-        lesson__mission__is_published=True
-    ).count()
+    total_assignments = Assignment.objects.all().count()
     submitted_assignments = (
         Submission.objects.filter(
-            student=student, assignment__lesson__mission__is_published=True
+            student=student
         )
         .values("assignment")
         .distinct()
