@@ -646,3 +646,19 @@
 
   .a-modal { padding: 26px 20px; border-radius: 18px; }
 }
+
+.al-sidebar{
+  position:fixed;
+  top:0;
+  left:0;
+  height:100vh;
+  overflow-y:auto;
+  z-index:20;
+}
+.al-main{
+  margin-left:230px; /* match .al-sidebar's actual width from your existing CSS */
+}
+@media(max-width:700px){
+  .al-sidebar{position:static;height:auto;}
+  .al-main{margin-left:0;}
+}

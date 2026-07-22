@@ -268,3 +268,27 @@
   .s-quest-tile-icon{width:44px;height:44px;font-size:1.3rem;}
 }
 @media(max-width:400px){.s-badges-grid{grid-template-columns:1fr;}}
+
+.s-quest-lock-banner{
+  margin-top:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:10px;
+  background:#FFFBEB;
+  border:1px dashed #FCD34D;
+  border-radius:var(--radius-sm);
+  padding:12px 14px;
+}
+.s-quest-lock-banner span{font-size:0.85rem;font-weight:600;color:#92400E;}
+.s-quest-lock-btn{
+  margin-top:0;
+  white-space:nowrap;
+  background:white;
+  border:1px solid #FCD34D;
+  color:#92400E;
+  padding:7px 14px;
+  font-size:0.8rem;
+}
+.s-quest-lock-btn:hover{background:#FEF3C7;color:#92400E;}

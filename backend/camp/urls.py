@@ -355,7 +355,7 @@ urlpatterns = [
 
     path("camp-admin/assignments/<int:pk>/questions/", AssignmentQuestionListView.as_view(), name="admin-assignment-questions"),
     path("camp-admin/assignments/<int:pk>/attempts/", AssignmentAttemptListView.as_view(), name="admin-assignment-attempts"),
-    path("camp-admin/assignments/questions/<int:pk>/", AssignmentQuestionDetailView.as_view(), name="admin-assignment-question-detail"),
+    path("camp-admin/assignment-questions/<int:pk>/", AssignmentQuestionDetailView.as_view(), name="admin-assignment-question-detail"),
     
 
     path("camp-admin/camp-settings/", AdminCampSettingsView.as_view(), name='admin-camp-settings-view'),

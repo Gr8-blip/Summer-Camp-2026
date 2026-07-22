@@ -24,7 +24,18 @@ def _serialize_badges(badges):
 class ChallengeListView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = ChallengeSerializer
-    def get_queryset(self): return Challenge.objects.order_by('mission__week', 'id')
+
+    def get_queryset(self):
+        student = student_for(self.request)
+        return (
+            Challenge.objects
+            .filter(
+                is_published=True,
+                mission__is_published=True,   # only the current (published) mission's challenges
+            )
+            .exclude(attempts__student=student, attempts__completed_at__isnull=False)  # hide completed
+            .order_by('mission__week', 'id')
+        )
 
 class ChallengeDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
@@ -70,9 +81,6 @@ class ChallengeSubmitView(APIView):
         new_badges = []
         new_badges += achievements.check_challenge(student, attempt)
 
-        # A fully-correct answer on a puzzle-type question completes that
-        # puzzle type for the student — record it (first time only) so
-        # check_puzzle_master can later tell which types are done.
         newly_completed_puzzle_types = set()
         for q in questions:
             if q.question_type not in PUZZLE_TYPES:

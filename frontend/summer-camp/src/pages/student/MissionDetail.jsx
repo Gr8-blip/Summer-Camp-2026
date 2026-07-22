@@ -24,10 +24,7 @@ export default function MissionDetail() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const now = new Date();
-
-  // progress = { total, completed, is_complete }
-  const progress = mission?.progress;
+  const progress = mission?.progress; // { total, completed, is_complete }
   const pct = progress?.total ? Math.round((progress.completed / progress.total) * 100) : 0;
 
   return (
@@ -58,7 +55,7 @@ export default function MissionDetail() {
           {mission.lessons?.length === 0 && <div className="s-empty"><div className="s-empty-icon">📖</div><p>No lessons yet.</p></div>}
           {mission.lessons?.map((l, i) => {
             const locked = l.locked;
-            const completed = l.completed;
+            const completed = l.completed; // attendance recorded for this lesson (LessonSerializer)
             return (
               <div
                 key={l.id}
@@ -69,7 +66,7 @@ export default function MissionDetail() {
                 <div className="s-card-header">
                   <div><h3>{locked && "🔒 "}{i + 1}. {l.title}</h3><p>{l.description}</p></div>
                   <div className="s-card-badges">
-                    {completed && <span className="s-badge s-badge-green">✅ Completed</span>}
+                    {completed && <span className="s-badge s-badge-green">✅ Attended</span>}
                     <span className="s-meta-text">⏱ {fmt(l.duration)}</span>
                   </div>
                 </div>
@@ -79,39 +76,33 @@ export default function MissionDetail() {
 
           {mission.challenges?.length > 0 && (
             <>
-              <h2 className="s-section-heading">⚡ Challenges</h2>
+              <h2 className="s-section-heading">⚡ Mission Challenge</h2>
               {mission.challenges.map((c) => {
                 const locked = c.locked;
-                const isActive = new Date(c.start_date) <= now && new Date(c.end_date) >= now;
-                const completed = c.already_completed;
+                const completed = c.already_completed; // ChallengeSerializer
                 return (
-                  <div key={c.id} className="s-card s-quest-card">
-                    <div className="s-card-header">
-                      <div>
-                        <h3>{locked && "🔒 "}{c.title}</h3>
-                        <p>{c.description}</p>
-                        <span className="s-meta-text">
-                          {new Date(c.start_date).toLocaleDateString()} – {new Date(c.end_date).toLocaleDateString()}
-                        </span>
+                  <div key={c.id} className={`s-quest-tile ${locked ? "s-quest-tile-locked" : ""} ${completed ? "s-quest-tile-done" : ""}`}>
+                    <div className="s-quest-tile-icon">{completed ? "🏆" : "⚡"}</div>
+                    <div className="s-quest-tile-body">
+                      <div className="s-quest-tile-top">
+                        <h3>{c.title}</h3>
+                        {completed
+                          ? <span className="s-pill s-pill-done">✅ Completed</span>
+                          : locked
+                            ? <span className="s-pill s-pill-locked">🔒 Locked</span>
+                            : <span className="s-pill s-pill-open">🟢 Open</span>}
                       </div>
-                      <div className="s-card-badges">
+                      <p>{c.description}</p>
+                      <div className="s-quest-tile-meta">
+                        <span className="s-meta-text">📅 {new Date(c.start_date).toLocaleDateString()} – {new Date(c.end_date).toLocaleDateString()}</span>
                         <span className="s-badge s-badge-pink">+{c.xp_reward} XP</span>
-                        {!locked && isActive && !completed && <span className="s-badge s-badge-green">🟢 Active</span>}
-                        {completed && <span className="s-badge s-badge-green">✅ Completed</span>}
                       </div>
+                      {!locked && !completed && (
+                        <button className="btn btn-primary s-start-btn" onClick={() => navigate(`/challenges/${c.id}`)}>
+                          ⚡ Start Challenge
+                        </button>
+                      )}
                     </div>
-                    {locked ? (
-                      <div className="s-empty" style={{ padding: 16 }}>
-                        <p>🔒 Challenge Locked</p>
-                        <span className="s-meta-text">Complete required items to unlock.</span>
-                      </div>
-                    ) : completed ? (
-                      <div className="s-submit-success">✅ Challenge complete — nice work!</div>
-                    ) : (
-                      <button className="btn btn-primary s-start-btn" onClick={() => navigate(`/challenges/${c.id}`)}>
-                        ⚡ Start Challenge
-                      </button>
-                    )}
                   </div>
                 );
               })}

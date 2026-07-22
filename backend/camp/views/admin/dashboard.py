@@ -39,7 +39,7 @@ class AdminDashboardView(APIView):
             "total_lessons": Lesson.objects.count(),
             "total_badges": Badge.objects.count(),
             "total_challenges": Challenge.objects.count(),
-            "active_challenges": Challenge.objects.filter(is_active=True).count(),
+            "active_challenges": Challenge.objects.filter(is_published=True).count(),
             "completed_challenge_attempts": challenge_attempts.count(),
             "challenge_xp_awarded": challenge_attempts.aggregate(total=Sum('xp_earned'))['total'] or 0,
             "today_attendance": today_count,

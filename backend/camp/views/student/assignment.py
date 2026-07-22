@@ -2,13 +2,12 @@ from rest_framework.generics import ListAPIView, CreateAPIView, get_object_or_40
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from ...models import Assignment
+from django.db.models import Q
+from ...models import Assignment, AssignmentAttempt
 from ...serializers import AssignmentSerializer, SubmissionCreateSerializer
 from ...utils.xp import award_xp
 from ...utils import achievements
 
-# XP awarded for turning in an assignment. Pull this from a per-assignment
-# field instead if one exists on the Assignment model.
 ASSIGNMENT_SUBMIT_XP = 20
 
 
@@ -21,7 +20,24 @@ class StudentAssignmentListView(ListAPIView):
     serializer_class = AssignmentSerializer
 
     def get_queryset(self):
-        return Assignment.objects.filter(lesson__mission__is_published=True)
+        student = self.request.user.student
+
+        completed_quest_ids = AssignmentAttempt.objects.filter(
+            student=student,
+            completed_at__isnull=False,
+        ).values_list("assignment_id", flat=True)
+
+        return (
+            Assignment.objects
+            .filter(
+                is_published=True,
+                lesson__mission__is_published=True,
+            )
+            .exclude(submission__student=student)     # hide completed legacy assignments
+            .exclude(id__in=completed_quest_ids)       # hide completed quests
+            .select_related("lesson", "lesson__mission")
+            .order_by("lesson__mission__week", "lesson__order", "id")
+        )
 
 
 class AssignmentSubmitView(CreateAPIView):
