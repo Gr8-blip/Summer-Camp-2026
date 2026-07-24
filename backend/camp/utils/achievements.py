@@ -3,8 +3,8 @@ from camp.models import (
     Challenge,
     Lesson,
     Assignment,
-    Submission,
     PuzzleCompletion, 
+    AssignmentAttempt
 )
 from .badges import award_badge
 
@@ -42,15 +42,6 @@ def check_xp(student):
 
     return _awarded(*results)
 
-
-def check_submission(student):
-    submissions = student.submissions.count()
-
-    if submissions >= 1:
-        return _awarded(award_badge(student, "First Submission"))
-    return []
-
-
 def _distinct_attended_lesson_count(student):
     return student.attendances.values("lesson").distinct().count()
 
@@ -81,7 +72,6 @@ def check_challenge(student, attempt=None):
 
     if attempts >= 5:
         results.append(award_badge(student, "Challenge Conqueror"))
-        results.append(award_badge(student, "Boss Slayer"))
 
     if attempt:
         if attempt.accuracy == 100:
@@ -149,15 +139,21 @@ def check_learning(student):
     return []
 
 
+def check_quest_completion(student):
+    """Award after the student completes their first quest (any assignment
+    with a completed AssignmentAttempt)."""
+    completed = student.assignment_attempts.filter(completed_at__isnull=False).count()
+
+    if completed >= 1:
+        return _awarded(award_badge(student, "Quest Complete"))
+    return []
+
+
 def check_coding_cadet(student):
-    """
-    Award after the student completes every assignment in any
-    single mission.
-    """
-    submitted_assignment_ids = set(
-        Submission.objects.filter(student=student).values_list(
-            "assignment_id", flat=True
-        )
+    completed_assignment_ids = set(
+        AssignmentAttempt.objects.filter(
+            student=student, completed_at__isnull=False
+        ).values_list("assignment_id", flat=True)
     )
 
     mission_ids = (
@@ -172,33 +168,24 @@ def check_coding_cadet(student):
                 lesson__mission_id=mission_id
             ).values_list("id", flat=True)
         )
-
-        if mission_assignment_ids and mission_assignment_ids <= submitted_assignment_ids:
+        if mission_assignment_ids and mission_assignment_ids <= completed_assignment_ids:
             return _awarded(award_badge(student, "Coding Cadet"))
 
     return []
 
 
 def check_ai_master(student):
-    """
-    Award after every lesson has been attended and every
-    assignment has been submitted.
-    """
     total_lessons = Lesson.objects.all().count()
     attended_lessons = _distinct_attended_lesson_count(student)
 
     total_assignments = Assignment.objects.all().count()
-    submitted_assignments = (
-        Submission.objects.filter(
-            student=student
-        )
-        .values("assignment")
-        .distinct()
-        .count()
+    completed_assignments = (
+        AssignmentAttempt.objects.filter(student=student, completed_at__isnull=False)
+        .values("assignment").distinct().count()
     )
 
     lessons_done = total_lessons > 0 and attended_lessons >= total_lessons
-    assignments_done = total_assignments > 0 and submitted_assignments >= total_assignments
+    assignments_done = total_assignments > 0 and completed_assignments >= total_assignments
 
     if lessons_done and assignments_done:
         return _awarded(award_badge(student, "AI Master"))

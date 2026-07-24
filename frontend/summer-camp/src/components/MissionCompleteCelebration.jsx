@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+
+
 const CONFETTI_COLORS = ["#7c5cfc", "#14b8a6", "#f59e0b", "#ec4899", "#3b82f6", "#f43f5e"];
  
 function Confetti() {

@@ -12,7 +12,9 @@ function QuestStatusPill({ locked, completed }) {
 
 function AssignmentRow({ assignment }) {
   const navigate = useNavigate();
-  const isQuest = assignment.has_questions; // add this bool to AssignmentSerializer (obj.questions.exists())
+  const isQuest = assignment.has_questions;
+
+  const lessonName = assignment.lesson_title || assignment.lesson?.title;
 
   if (isQuest) {
     const locked = assignment.locked;
@@ -27,6 +29,9 @@ function AssignmentRow({ assignment }) {
           </div>
           <p>{assignment.description}</p>
           <div className="s-quest-tile-meta">
+            {lessonName && (
+              <span className="s-badge s-badge-purple">📖 {lessonName}</span>
+            )}
             <span className="s-meta-text">📅 Due {new Date(assignment.deadline).toLocaleDateString()}</span>
             <span className="s-badge s-badge-orange">+{assignment.xp_reward} XP</span>
           </div>
@@ -37,7 +42,9 @@ function AssignmentRow({ assignment }) {
           )}
           {locked && (
             <div className="s-quest-lock-banner">
-              <span>🔑 Enter today's attendance code to unlock this quest</span>
+              <span>
+                🔑 Enter attendance code for this lesson to unlock this quest
+              </span>
               <button className="s-toggle-btn s-quest-lock-btn" onClick={() => navigate("/attendance")}>
                 Go to Attendance →
               </button>
@@ -48,10 +55,10 @@ function AssignmentRow({ assignment }) {
     );
   }
 
-  return <LegacyAssignmentRow assignment={assignment} />;
+  return <LegacyAssignmentRow assignment={assignment} lessonName={lessonName} />;
 }
 
-function LegacyAssignmentRow({ assignment }) {
+function LegacyAssignmentRow({ assignment, lessonName }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +84,7 @@ function LegacyAssignmentRow({ assignment }) {
     }
   };
 
-  if (submitted) return null; // completed legacy assignments are hidden from this list too
+  if (submitted) return null;
 
   return (
     <div className="s-quest-tile">
@@ -88,7 +95,17 @@ function LegacyAssignmentRow({ assignment }) {
         </div>
         <p>{assignment.description}</p>
         <div className="s-quest-tile-meta">
-          <span className="s-meta-text">📅 Due {new Date(assignment.deadline).toLocaleDateString()}</span>
+          <div className="s-quest-tile-info">
+            {lessonName && (
+              <span className="s-badge s-badge-lesson">
+                📖 {lessonName}
+              </span>
+            )}
+            <span className="s-meta-text">
+              📅 Due {new Date(assignment.deadline).toLocaleDateString()}
+            </span>
+          </div>
+
           <span className="s-badge s-badge-orange">+{assignment.xp_reward} XP</span>
         </div>
 
@@ -134,7 +151,13 @@ export default function Assignments() {
       {!loading && !error && assignments.length === 0 && (
         <div className="s-empty"><div className="s-empty-icon">🗺️</div><p>No quests yet.</p></div>
       )}
-      {!loading && !error && <div className="s-quest-grid">{assignments.map((a) => <AssignmentRow key={a.id} assignment={a} />)}</div>}
+      {!loading && !error && (
+        <div className="s-quest-grid">
+          {assignments.map((a) => (
+            <AssignmentRow key={a.id} assignment={a} />
+          ))}
+        </div>
+      )}
     </StudentLayout>
   );
 }

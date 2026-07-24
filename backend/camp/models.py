@@ -219,6 +219,7 @@ class PuzzleCompletion(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="puzzle_completions")
     puzzle_type = models.CharField(max_length=32, choices=ChallengeQuestion.QUESTION_TYPES)
     question = models.ForeignKey(ChallengeQuestion, on_delete=models.SET_NULL, null=True, blank=True)
+    assignment_question = models.ForeignKey(AssignmentQuestion, on_delete=models.SET_NULL, null=True, blank=True)
     completed_at = models.DateTimeField(auto_now_add=True)
  
     def __str__(self):

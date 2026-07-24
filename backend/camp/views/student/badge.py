@@ -4,7 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ...models import (
-    Badge, StudentBadge, Lesson, Assignment, Submission, Challenge,
+    Badge, StudentBadge, Lesson, Assignment, AssignmentAttempt, Challenge, Submission,
     ChallengeAttempt,
 )
 from ...serializers import StudentBadgeSerializer
@@ -17,7 +17,7 @@ BADGE_REQUIREMENTS = {
     "First Steps": "Log in for the first time.",
     "Class Explorer": "Visit every lesson page at least once.",
     "Learning Begins": "Complete your first lesson (attendance for one lesson).",
-    "First Submission": "Submit your first assignment.",
+    "Quest Complete": "Complete your first quest.",
     "Challenge Accepted": "Complete your first challenge.",
     "Puzzle Solver": "Complete your first puzzle game of any type.",
     "Prompt Apprentice": "Complete your first Prompt Builder puzzle.",
@@ -92,12 +92,6 @@ def _progress_for(badge, student, ctx):
             "label": "Attendance",
         }
 
-    if name == "First Submission":
-        return {
-            "current": min(ctx["submission_count"], 1),
-            "target": 1,
-            "label": "Submissions",
-        }
     if name == "Coding Cadet":
         return {
             "current": min(ctx["best_mission_submission_ratio"][0], ctx["best_mission_submission_ratio"][1]),
@@ -164,20 +158,19 @@ class StudentBadgeGridView(APIView):
         attended_lessons = student.attendances.values("lesson").distinct().count()
         attendance_count = student.attendances.count()
 
-        submission_count = student.submissions.count()
         total_assignments = Assignment.objects.filter(lesson__mission__is_published=True).count()
-        submitted_assignment_count = (
-            Submission.objects.filter(student=student, assignment__lesson__mission__is_published=True)
-            .values("assignment").distinct().count()
-        )
 
         mission_ids = (
             Assignment.objects.filter(lesson__mission__is_published=True)
             .values_list("lesson__mission_id", flat=True).distinct()
         )
         submitted_ids = set(
-            Submission.objects.filter(student=student).values_list("assignment_id", flat=True)
+            AssignmentAttempt.objects.filter(
+                student=student, completed_at__isnull=False
+            ).values_list("assignment_id", flat=True)
         )
+        submitted_assignment_count = len(submitted_ids)  # or requery filtered to published, same idea
+
         best_ratio = (0, 1)
         for mission_id in mission_ids:
             mission_assignment_ids = set(
@@ -203,7 +196,6 @@ class StudentBadgeGridView(APIView):
             "total_lessons": total_lessons,
             "attended_lessons": attended_lessons,
             "attendance_count": attendance_count,
-            "submission_count": submission_count,
             "total_assignments": total_assignments,
             "submitted_assignment_count": submitted_assignment_count,
             "best_mission_submission_ratio": best_ratio,

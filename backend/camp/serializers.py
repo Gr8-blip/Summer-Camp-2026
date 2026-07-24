@@ -42,39 +42,65 @@ class MissionListSerializer(serializers.ModelSerializer):
 class LessonSerializer(serializers.ModelSerializer):
     locked = serializers.SerializerMethodField()
     completed = serializers.SerializerMethodField()
+    quests_completed = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'description', 'order', 'duration', 'mission', 'is_published', 'locked', 'completed']
+        fields = [
+            'id', 'title', 'description', 'order', 'duration', 
+            'mission', 'is_published', 'locked', 'completed', 'quests_completed'
+        ]
 
     def get_locked(self, obj):
-        # A lesson inherits its mission's lock state — if the mission is
-        # locked (unpublished or camp not started), every lesson under it
-        # is locked regardless of the lesson's own is_published flag.
-        # If the mission is published/unlocked, fall back to the lesson's
-        # own is_published flag.
         if _mission_locked(obj.mission):
             return True
         return not obj.is_published
 
     def get_completed(self, obj):
-        # A lesson counts as "completed" once attendance has been recorded
-        # for it — same signal that unlocks that lesson's quests.
         request = self.context.get("request")
         if not request or not hasattr(request.user, "student"):
             return False
         student = request.user.student
         return StudentAttendance.objects.filter(student=student, lesson=obj).exists()
 
+    def get_quests_completed(self, obj):
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return False
+        
+        student = request.user.student
+        assignments = obj.assignments.filter(is_published=True)
+        if not assignments.exists():
+            return True
+
+        for assignment in assignments:
+            if assignment.questions.exists():
+                done = AssignmentAttempt.objects.filter(
+                    assignment=assignment, student=student, completed_at__isnull=False
+                ).exists()
+            else:
+                done = Submission.objects.filter(
+                    assignment=assignment, student=student
+                ).exists()
+            if not done:
+                return False
+
+        return True
+
 
 class AssignmentSerializer(serializers.ModelSerializer):
     already_submitted = serializers.SerializerMethodField(read_only=True)
     has_questions = serializers.SerializerMethodField()
     locked = serializers.SerializerMethodField()
+    lesson_title = serializers.CharField(source='lesson.title', read_only=True)
 
     class Meta:
         model = Assignment
-        fields = ['id', 'title', 'description', 'xp_reward', 'deadline', 'lesson', 'already_submitted', 'is_published', 'locked', 'has_questions']
+        fields = [
+            'id', 'title', 'description', 'xp_reward', 'deadline', 
+            'lesson', 'lesson_title', 'already_submitted', 'is_published', 
+            'locked', 'has_questions'
+        ]
 
     def get_already_submitted(self, obj):
         request = self.context.get("request")

@@ -13,7 +13,7 @@ BADGES = [
         "rarity": "common",
     },
     {
-        "name": "First Submission",
+        "name": "Quest Complete",
         "icon": "📝",
         "rarity": "common",
     },
