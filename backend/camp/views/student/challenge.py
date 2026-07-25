@@ -7,11 +7,16 @@ from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from ...models import Challenge, ChallengeAttempt, XPLog, PuzzleCompletion
+from ...models import Challenge, ChallengeAttempt, XPLog, PuzzleCompletion, ChallengeWin
 from ...serializers import ChallengeSerializer, StudentChallengeQuestionSerializer, ChallengeAttemptSerializer
 from ...utils import achievements
 from ...utils.achievements import PUZZLE_TYPES
 from ...utils.scoring import score_fraction
+from ...utils.challenge_finalize import (
+    challenge_is_finalized,
+    finalize_challenge_if_ready,
+    get_ranked_attempts,
+)
 
 def student_for(request):
     return request.user.student
@@ -52,6 +57,11 @@ class ChallengeStartView(APIView):
     def post(self, request, pk):
         challenge = Challenge.objects.filter(pk=pk, is_published=True).first()
         if not challenge: return Response({'detail': 'Challenge not found.'}, status=404)
+        now = timezone.now()
+        if now < challenge.start_date:
+            return Response({'detail': 'This challenge hasn\'t opened yet.'}, status=403)
+        if now >= challenge.end_date:
+            return Response({'detail': 'This challenge has ended and can no longer be started.'}, status=403)
         attempt, created = ChallengeAttempt.objects.get_or_create(challenge=challenge, student=student_for(request))
         if attempt.completed_at: return Response({'detail': 'This boss battle has already been completed.'}, status=409)
         return Response(ChallengeAttemptSerializer(attempt).data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
@@ -104,6 +114,10 @@ class ChallengeSubmitView(APIView):
         new_badges += achievements.check_xp(student)
         new_badges += achievements.check_legend(student)
 
+        win, finalize_badges = finalize_challenge_if_ready(attempt.challenge)
+        if win and win.student_id == student.id and finalize_badges:
+            new_badges += finalize_badges
+
         data = ChallengeAttemptSerializer(attempt).data
         data['xp_gained'] = attempt.xp_earned
         data['new_badges'] = _serialize_badges(new_badges)
@@ -112,13 +126,36 @@ class ChallengeSubmitView(APIView):
 class ChallengeLeaderboardView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request, pk):
-        attempts = ChallengeAttempt.objects.filter(challenge_id=pk, completed_at__isnull=False).select_related('student').order_by('-score', 'time_taken', '-accuracy')[:10]
-        rows = ChallengeAttemptSerializer(attempts, many=True).data
-        for index, row in enumerate(rows, 1): row['rank'] = index; row['is_current_student'] = row['student'] == student_for(request).id
-        if rows and rows[0]['is_current_student']:
-            achievements.check_hall_of_fame(student_for(request), student_for(request))
-            achievements.check_legend(student_for(request))
-        return Response(rows)
+        challenge = Challenge.objects.filter(pk=pk).first()
+        if not challenge:
+            return Response({'detail': 'Challenge not found.'}, status=404)
+
+
+        win, finalize_badges = finalize_challenge_if_ready(challenge)
+        is_finalized = challenge_is_finalized(challenge)
+        
+        ranked = get_ranked_attempts(challenge)[:10]
+        rows = ChallengeAttemptSerializer(ranked, many=True).data
+        current_student_id = student_for(request).id
+
+        for index, row in enumerate(rows, 1):
+            row['rank'] = index
+            row['is_current_student'] = row['student'] == current_student_id
+            row['is_champion'] = bool(win) and row['student'] == win.student_id
+
+        
+        current_student = student_for(request)
+        response_data = {
+            'is_finalized': is_finalized,
+            'current_leader_id': rows[0]['student'] if (rows and not is_finalized) else None,
+            'champion_id': win.student_id if win else None,
+            'champion_name': win.student.full_name if win else None,
+            'results': rows,
+        }
+        if win and win.student_id == current_student.id and finalize_badges:
+            response_data['new_badges'] = _serialize_badges(finalize_badges)
+
+        return Response(response_data)
 
 
 class StudentChallengeStatsView(APIView):
@@ -127,10 +164,12 @@ class StudentChallengeStatsView(APIView):
     def get(self, request):
         attempts = ChallengeAttempt.objects.filter(student=student_for(request), completed_at__isnull=False)
         totals = attempts.aggregate(score=Sum('score'), xp=Sum('xp_earned'), accuracy=Avg('accuracy'))
+        wins = ChallengeWin.objects.filter(student=student_for(request)).count()
         return Response({
             'completed': attempts.count(),
             'score_total': totals['score'] or 0,
             'xp_earned': totals['xp'] or 0,
             'average_accuracy': round(float(totals['accuracy'] or 0), 1),
+            'challenges_won': wins,
             'recent_attempts': ChallengeAttemptSerializer(attempts.select_related('challenge').order_by('-completed_at')[:6], many=True).data,
         })

@@ -321,13 +321,22 @@ export default function QuestPlay() {
           <h1>{quest.title}</h1>
           <p>{quest.description}</p>
           <div><b>+{quest.xp_reward} XP</b></div>
-          <button
-            className="btn btn-primary"
-            style={{ background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", border: "none" }}
-            onClick={begin}
-          >
-            Start Quest
-          </button>
+          {quest.deadline && new Date(quest.deadline) <= new Date() ? (
+            <>
+              <p style={{ opacity: 0.85, marginTop: 8 }}>
+                ⏰ This quest's deadline passed on {new Date(quest.deadline).toLocaleString()} — it can no longer be started.
+              </p>
+              <button className="btn" onClick={() => navigate("/assignments")}>Back to Quests</button>
+            </>
+          ) : (
+            <button
+              className="btn btn-primary"
+              style={{ background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", border: "none" }}
+              onClick={begin}
+            >
+              Start Quest
+            </button>
+          )}
         </section>
       )}
 
@@ -345,10 +354,10 @@ export default function QuestPlay() {
           <span>🎉 QUEST COMPLETE!</span>
           <h1>{quest.title}</h1>
           {result && (
-            <div className="result-grid">
-              <b>{result.score}<small>Score</small></b>
-              <b>{result.accuracy}%<small>Accuracy</small></b>
+            <div className="result-grid result-grid-3">
+              <b>{result.accuracy}%<small>Score</small></b>
               <b>+{result.xp_gained}<small>XP earned</small></b>
+              <b>{result.attempt_count}<small>Attempts</small></b>
             </div>
           )}
           <button className="btn btn-primary" onClick={() => navigate("/assignments")}>Continue</button>
@@ -562,17 +571,17 @@ export default function QuestPlay() {
                 )}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                {puzzle.placements.map((p) => (
+                {(puzzle.words || [...new Set(puzzle.placements.map((p) => p.word))]).map((word) => (
                   <span
-                    key={p.word}
+                    key={word}
                     style={{
                       fontWeight: 700, fontSize: ".78rem", padding: "6px 12px", borderRadius: 999,
-                      background: foundWords.has(p.word) ? "#06b6d4" : "#f3f2ee",
-                      color: foundWords.has(p.word) ? "white" : "#7a7568",
-                      textDecoration: foundWords.has(p.word) ? "line-through" : "none",
+                      background: foundWords.has(word) ? "#06b6d4" : "#f3f2ee",
+                      color: foundWords.has(word) ? "white" : "#7a7568",
+                      textDecoration: foundWords.has(word) ? "line-through" : "none",
                     }}
                   >
-                    {p.word}
+                    {word}
                   </span>
                 ))}
               </div>

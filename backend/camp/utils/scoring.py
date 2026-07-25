@@ -35,6 +35,14 @@ def score_fraction(question, response):
         want = str(expected or '').strip().lower()
         return 1.0 if got == want else 0.0
  
+    if qtype == 'fill_blank':
+        got = str(response or '').strip().lower()
+        if isinstance(expected, (list, tuple, set)):
+            accepted = {str(w).strip().lower() for w in expected}
+            return 1.0 if got in accepted else 0.0
+        want = str(expected or '').strip().lower()
+        return 1.0 if got == want else 0.0
+ 
     if isinstance(expected, bool):
         return 1.0 if (response is expected or str(response).lower() == str(expected).lower()) else 0.0
  

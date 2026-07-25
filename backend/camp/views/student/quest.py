@@ -1,5 +1,5 @@
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Avg, Sum
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.generics import RetrieveAPIView
@@ -49,6 +49,8 @@ class QuestStartView(APIView):
         assignment = Assignment.objects.filter(pk=pk, is_published=True).first()
         if not assignment:
             return Response({'detail': 'Quest not found.'}, status=404)
+        if timezone.now() >= assignment.deadline:
+            return Response({'detail': 'This quest\'s deadline has passed and it can no longer be started.'}, status=403)
         attempt, created = AssignmentAttempt.objects.get_or_create(
             assignment=assignment, student=student_for(request)
         )
@@ -143,3 +145,21 @@ class QuestSubmitView(APIView):
         data['is_complete'] = is_complete
         data['new_badges'] = _serialize_badges(new_badges)
         return Response(data)
+
+
+class StudentQuestStatsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        attempts = AssignmentAttempt.objects.filter(student=student_for(request), completed_at__isnull=False)
+        totals = attempts.aggregate(xp=Sum('xp_earned'), avg_attempts=Avg('attempt_count'), total_attempts=Sum('attempt_count'))
+        return Response({
+            'completed': attempts.count(),
+            'xp_earned': totals['xp'] or 0,
+            'average_attempts': round(float(totals['avg_attempts'] or 0), 1),
+            'total_attempts': totals['total_attempts'] or 0,
+            'recent_attempts': AssignmentAttemptSerializer(
+                attempts.select_related('assignment', 'assignment__lesson', 'assignment__lesson__mission').order_by('-completed_at')[:6],
+                many=True,
+            ).data,
+        })

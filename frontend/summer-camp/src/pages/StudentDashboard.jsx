@@ -28,7 +28,7 @@ export default function StudentDashboard({ data }) {
       </div>
       {daysLeft > 0 && <div className="sd-card sd-countdown-card"><h3>⏳ Bootcamp Starts In</h3><p className="sd-countdown-number">{daysLeft} {daysLeft === 1 ? "Day" : "Days"}</p></div>}
       <div className="sd-quick-nav">
-        {[["🎯 Missions","/missions"],["📝 Assignments","/assignments"],["⚡ Challenges","/challenges"],["📅 Attendance","/attendance"],["🏅 Badges","/badges"],["✨ XP History","/xp"]].map(([label,to]) => (
+        {[["🎯 Missions","/missions"],["📝 Assignments","/assignments"],["⚡ Challenges","/challenges"],["🏆 Leaderboard","/challenges/stats"],["📅 Attendance","/attendance"],["🏅 Badges","/badges"],["✨ XP History","/xp"]].map(([label,to]) => (
           <button key={to} className="sd-quick-btn" onClick={() => navigate(to)}>{label}</button>
         ))}
       </div>
@@ -56,4 +56,4 @@ export default function StudentDashboard({ data }) {
       </div>
     </div>
   );
-}
+} 

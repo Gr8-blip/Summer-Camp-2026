@@ -37,6 +37,53 @@ function place(grid, word, row, col, [dr, dc]) {
   return cells;
 }
 
+function readWordAt(grid, row, col, [dr, dc], length) {
+  const size = grid.length;
+  let result = "";
+  for (let i = 0; i < length; i++) {
+    const r = row + dr * i;
+    const c = col + dc * i;
+    if (r < 0 || r >= size || c < 0 || c >= size) return null;
+    result += grid[r][c];
+  }
+  return result;
+}
+
+// After the grid is fully filled (real words + random letters), the random
+// fill can accidentally spell a target word again elsewhere — especially
+// short words like "AI" in a dense grid. Rather than trying to prevent
+// that (hard to guarantee without wrecking placement), we scan the
+// finished grid for every valid straight-line occurrence of each word and
+// treat all of them as correct, so a student never gets marked wrong for
+// dragging over a real, visually-identical match.
+function findAllOccurrences(grid, word) {
+  const size = grid.length;
+  const found = [];
+  const seen = new Set();
+
+  for (let r = 0; r < size; r++) {
+    for (let c = 0; c < size; c++) {
+      for (const dir of DIRECTIONS) {
+        const candidate = readWordAt(grid, r, c, dir, word.length);
+        if (candidate !== word) continue;
+
+        const cells = [];
+        for (let i = 0; i < word.length; i++) cells.push([r + dir[0] * i, c + dir[1] * i]);
+
+        const fwdKey = cells.map(([rr, cc]) => `${rr}:${cc}`).join("|");
+        const revKey = [...cells].reverse().map(([rr, cc]) => `${rr}:${cc}`).join("|");
+        const canonical = fwdKey < revKey ? fwdKey : revKey;
+        if (seen.has(canonical)) continue;
+        seen.add(canonical);
+
+        found.push({ word, cells });
+      }
+    }
+  }
+
+  return found;
+}
+
 /**
  * Builds a square word-search grid.
  * @param {string[]} rawWords
@@ -50,7 +97,6 @@ export function generateWordSearch(rawWords) {
   const size = Math.max(longest + 2, Math.ceil(Math.sqrt(words.join("").length * 2.2)), 8);
 
   const grid = Array.from({ length: size }, () => Array(size).fill(null));
-  const placements = [];
 
   for (const word of words) {
     let placed = false;
@@ -59,8 +105,7 @@ export function generateWordSearch(rawWords) {
       const row = Math.floor(Math.random() * size);
       const col = Math.floor(Math.random() * size);
       if (canPlace(grid, word, row, col, dir)) {
-        const cells = place(grid, word, row, col, dir);
-        placements.push({ word, cells });
+        place(grid, word, row, col, dir);
         placed = true;
       }
     }
@@ -74,7 +119,15 @@ export function generateWordSearch(rawWords) {
     }
   }
 
-  return { grid, size, placements };
+  // Scan the finished grid rather than trusting only the placement made
+  // above — this is what makes accidental duplicate occurrences (e.g. a
+  // second "AI" spelled by chance) count as valid too.
+  const placements = words.flatMap((word) => findAllOccurrences(grid, word));
+
+  // `words` is the deduped target list — use this (not `placements`) for
+  // rendering a word bank/chip list, since `placements` can now contain
+  // more than one entry per word.
+  return { grid, size, placements, words };
 }
 
 // A drag selection is valid if the cells it covers are a straight line

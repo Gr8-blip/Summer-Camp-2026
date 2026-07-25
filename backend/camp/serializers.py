@@ -92,6 +92,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
     already_submitted = serializers.SerializerMethodField(read_only=True)
     has_questions = serializers.SerializerMethodField()
     locked = serializers.SerializerMethodField()
+    is_expired = serializers.SerializerMethodField()
     lesson_title = serializers.CharField(source='lesson.title', read_only=True)
 
     class Meta:
@@ -99,8 +100,12 @@ class AssignmentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'xp_reward', 'deadline', 
             'lesson', 'lesson_title', 'already_submitted', 'is_published', 
-            'locked', 'has_questions'
+            'locked', 'has_questions', 'is_expired'
         ]
+
+    def get_is_expired(self, obj):
+        from django.utils import timezone
+        return timezone.now() >= obj.deadline
 
     def get_already_submitted(self, obj):
         request = self.context.get("request")
@@ -187,10 +192,20 @@ class SubmissionUpdateSerializer(serializers.ModelSerializer):
 class ChallengeSerializer(serializers.ModelSerializer):
     locked = serializers.SerializerMethodField()
     already_completed = serializers.SerializerMethodField()
+    is_expired = serializers.SerializerMethodField()
+    is_not_yet_open = serializers.SerializerMethodField()
 
     class Meta:
         model = Challenge
-        fields = ['id', 'title', 'description', 'xp_reward', 'start_date', 'end_date', 'mission', 'time_limit', 'created_at', 'is_published', 'locked', 'already_completed']
+        fields = ['id', 'title', 'description', 'xp_reward', 'start_date', 'end_date', 'mission', 'time_limit', 'created_at', 'is_published', 'locked', 'already_completed', 'is_expired', 'is_not_yet_open']
+
+    def get_is_expired(self, obj):
+        from django.utils import timezone
+        return timezone.now() >= obj.end_date
+
+    def get_is_not_yet_open(self, obj):
+        from django.utils import timezone
+        return timezone.now() < obj.start_date
 
     def get_locked(self, obj):
         from .utils.camp import camp_is_started
@@ -261,10 +276,16 @@ class StudentChallengeQuestionSerializer(ChallengeQuestionSerializer):
 
 class ChallengeAttemptSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
+    challenge_title = serializers.CharField(source='challenge.title', read_only=True)
+    mission_title = serializers.SerializerMethodField()
+
     class Meta:
         model = ChallengeAttempt
-        fields = ['id', 'challenge', 'student', 'student_name', 'score', 'accuracy', 'xp_earned', 'time_taken', 'started_at', 'completed_at']
+        fields = ['id', 'challenge', 'challenge_title', 'mission_title', 'student', 'student_name', 'score', 'accuracy', 'xp_earned', 'time_taken', 'started_at', 'completed_at']
         read_only_fields = fields
+
+    def get_mission_title(self, obj):
+        return obj.challenge.mission.title if obj.challenge.mission_id else None
 
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -330,12 +351,18 @@ class StudentAssignmentQuestionSerializer(AssignmentQuestionSerializer):
 
 class AssignmentAttemptSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
+    assignment_title = serializers.CharField(source='assignment.title', read_only=True)
+    mission_title = serializers.SerializerMethodField()
 
     class Meta:
         model = AssignmentAttempt
-        fields = ['id', 'assignment', 'student', 'student_name', 'score', 'accuracy',
+        fields = ['id', 'assignment', 'assignment_title', 'mission_title', 'student', 'student_name', 'score', 'accuracy',
                   'xp_earned', 'attempt_count', 'time_taken', 'started_at', 'completed_at']
         read_only_fields = fields
+
+    def get_mission_title(self, obj):
+        lesson = obj.assignment.lesson
+        return lesson.mission.title if lesson and lesson.mission_id else None
 
 
 class CampSettingsSerializer(serializers.ModelSerializer):

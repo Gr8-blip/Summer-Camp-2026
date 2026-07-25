@@ -133,6 +133,17 @@ class ChallengeAttempt(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["challenge", "student"], name="one_attempt_per_challenge")]
+
+
+class ChallengeWin(models.Model):
+    challenge = models.OneToOneField(Challenge, on_delete=models.CASCADE, related_name="win")
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="challenge_wins")
+    score = models.PositiveIntegerField()
+    time_taken = models.PositiveIntegerField(help_text="Seconds, snapshot at finalization")
+    awarded_at = models.DateTimeField(auto_now_add=True)
+ 
+    def __str__(self):
+        return f"{self.student.full_name} won {self.challenge.title}"
     
 
 class AssignmentQuestion(models.Model):

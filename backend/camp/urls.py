@@ -19,7 +19,8 @@ from .views.student.assignment import (
 from .views.student.quest import (
     QuestDetailView,
     QuestStartView,
-    QuestSubmitView
+    QuestSubmitView,
+    StudentQuestStatsView
 )
 
 from .views.student.submission import (
@@ -154,6 +155,7 @@ urlpatterns = [
     path('quests/<int:pk>/', QuestDetailView.as_view()),
     path('quests/<int:pk>/start/', QuestStartView.as_view()),
     path('quests/<int:pk>/submit/', QuestSubmitView.as_view()),
+    path('quests/stats/', StudentQuestStatsView.as_view(), name='quest-stats'),
 
     # Attendance
     path(

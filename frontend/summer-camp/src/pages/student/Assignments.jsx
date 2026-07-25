@@ -4,9 +4,10 @@ import { getAssignments, submitAssignment } from "../../api/client";
 import StudentLayout from "./StudentLayout";
 import "./student.css";
 
-function QuestStatusPill({ locked, completed }) {
+function QuestStatusPill({ locked, completed, isExpired }) {
   if (locked) return <span className="s-pill s-pill-locked">🔒 Locked</span>;
   if (completed) return <span className="s-pill s-pill-done">✅ Completed</span>;
+  if (isExpired) return <span className="s-pill s-pill-ended">⏰ Ended</span>;
   return <span className="s-pill s-pill-open">🟢 Open</span>;
 }
 
@@ -19,15 +20,22 @@ function AssignmentRow({ assignment }) {
   if (isQuest) {
     const locked = assignment.locked;
     const completed = assignment.already_submitted;
+    const isExpired = assignment.is_expired ?? (new Date(assignment.deadline) < new Date());
     return (
-      <div className={`s-quest-tile ${locked ? "s-quest-tile-locked" : ""} ${completed ? "s-quest-tile-done" : ""}`}>
+      <div className={`s-quest-tile ${locked ? "s-quest-tile-locked" : ""} ${completed ? "s-quest-tile-done" : ""} ${isExpired && !locked && !completed ? "s-quest-tile-ended" : ""}`}>
         <div className="s-quest-tile-icon">🗺️</div>
         <div className="s-quest-tile-body">
           <div className="s-quest-tile-top">
             <h3>{assignment.title}</h3>
-            <QuestStatusPill locked={locked} completed={completed} />
+            <QuestStatusPill locked={locked} completed={completed} isExpired={isExpired} />
           </div>
-          <p>{assignment.description}</p>
+          <p>
+            {locked
+              ? assignment.description
+              : isExpired && !completed
+              ? "This quest's deadline has passed — it can no longer be started."
+              : assignment.description}
+          </p>
           <div className="s-quest-tile-meta">
             {lessonName && (
               <span className="s-badge s-badge-purple">📖 {lessonName}</span>
@@ -35,9 +43,14 @@ function AssignmentRow({ assignment }) {
             <span className="s-meta-text">📅 Due {new Date(assignment.deadline).toLocaleDateString()}</span>
             <span className="s-badge s-badge-orange">+{assignment.xp_reward} XP</span>
           </div>
-          {!locked && !completed && (
+          {!locked && !completed && !isExpired && (
             <button className="btn btn-primary s-start-btn" onClick={() => navigate(`/quests/${assignment.id}`)}>
               🗺️ Start Quest
+            </button>
+          )}
+          {!locked && !completed && isExpired && (
+            <button className="btn s-start-btn" disabled style={{ opacity: 0.6, cursor: "not-allowed" }}>
+              ⏰ Deadline Passed
             </button>
           )}
           {locked && (
@@ -133,6 +146,7 @@ function LegacyAssignmentRow({ assignment, lessonName }) {
 }
 
 export default function Assignments() {
+  const navigate = useNavigate();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -146,6 +160,23 @@ export default function Assignments() {
 
   return (
     <StudentLayout title="🗺️ Quests">
+      <div
+        className="chal-stats-banner"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate("/quests/stats")}
+        onKeyDown={(e) => e.key === "Enter" && navigate("/quests/stats")}
+      >
+        <div className="chal-stats-banner-left">
+          <span className="chal-stats-banner-icon">🗺️</span>
+          <div>
+            <div className="chal-stats-banner-title">Quest Stats</div>
+            <div className="chal-stats-banner-sub">See your completions, XP, and quest history</div>
+          </div>
+        </div>
+        <span className="chal-stats-banner-cta">View Stats →</span>
+      </div>
+
       {loading && <div className="s-loading"><span className="spinner spinner-dark" /><span>Loading quests...</span></div>}
       {error && <div className="s-error">⚠️ {error}</div>}
       {!loading && !error && assignments.length === 0 && (

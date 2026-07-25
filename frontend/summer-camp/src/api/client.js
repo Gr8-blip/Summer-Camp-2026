@@ -116,6 +116,7 @@ export const adminDeleteChallengeQuestion = (id) => camp(`/camp-admin/questions/
 export const getQuest        = (id)       => camp(`/quests/${id}/`,        { method: "GET",  studentAuth: true });
 export const startQuest      = (id)       => camp(`/quests/${id}/start/`,  { method: "POST", studentAuth: true });
 export const submitQuest     = (id, body) => camp(`/quests/${id}/submit/`, { method: "POST", studentAuth: true, body });
+export const getQuestStats   = ()         => camp("/quests/stats/",        { method: "GET",  studentAuth: true });
 
 // ── Quest questions (admin builder — mirrors the Challenge question functions above) ──
 export const adminGetAssignmentQuestions    = (id)       => camp(`/camp-admin/assignments/${id}/questions/`,       { method: "GET",    adminAuth: true });

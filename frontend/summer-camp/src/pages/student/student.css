@@ -255,6 +255,10 @@
 .s-pill-done{background:#DCFCE7;color:#15803D;}
 .s-pill-locked{background:#F3F4F6;color:#6B7280;}
 .s-pill-upcoming{background:#DBEAFE;color:#1D4ED8;}
+.s-pill-ended{background:#FEE2E2;color:#B91C1C;}
+
+.s-quest-tile-ended{opacity:0.75;}
+.s-quest-tile-ended .s-quest-tile-icon{background:var(--color-bg);}
 
 .s-start-btn{margin-top:6px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;font-size:0.88rem;border-radius:var(--radius-pill);box-shadow:0 8px 20px rgba(124,58,237,0.18);transition:transform 0.15s ease,box-shadow 0.15s ease;}
 .s-start-btn:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(124,58,237,0.26);}
@@ -338,4 +342,389 @@
 .s-badge-lesson:hover {
   transform: translateY(-1px);
   border-color: var(--color-purple);
+}
+
+/* ============================================================
+   Spiced Up Leaderboard Styling
+   ============================================================ */
+.lb-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lb-header-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f6ff 100%);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.lb-subtitle {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--color-purple);
+  text-transform: uppercase;
+}
+
+.lb-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.lb-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  font-size: 0.9rem;
+}
+
+.lb-banner-icon {
+  font-size: 1.8rem;
+  flex-shrink: 0;
+}
+
+.lb-banner-champion {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 1px solid #f59e0b;
+  color: #78350f;
+}
+
+.lb-banner-live {
+  background: linear-gradient(135deg, #e0e7ff 0%, #eef2ff 100%);
+  border: 1px solid #818cf8;
+  color: #312e81;
+}
+
+.lb-banner-ended {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.lb-table-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.lb-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.lb-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.lb-table th {
+  background: #f9fafb;
+  padding: 14px 18px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-soft);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.lb-tr {
+  transition: background 0.15s ease;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.lb-tr:hover {
+  background: #f8fafc;
+}
+
+.lb-tr td {
+  padding: 14px 18px;
+  font-size: 0.92rem;
+  vertical-align: middle;
+}
+
+/* Rank Badges */
+.lb-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-weight: 800;
+  font-size: 0.8rem;
+}
+
+.lb-rank-1 {
+  background: linear-gradient(135deg, #fef08a, #f59e0b);
+  color: #78350f;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.lb-rank-2 {
+  background: linear-gradient(135deg, #e2e8f0, #94a3b8);
+  color: #1e293b;
+}
+
+.lb-rank-3 {
+  background: linear-gradient(135deg, #fed7aa, #d97706);
+  color: #7c2d12;
+}
+
+.lb-rank-other {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Rows & Tags */
+.lb-row-me {
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.lb-row-champion {
+  background: linear-gradient(90deg, #fffbebe6, #ffffff);
+}
+
+.lb-student-name {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.lb-you-tag {
+  margin-left: 8px;
+  background: var(--color-purple);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.lb-hof-tag {
+  margin-left: 8px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+}
+
+.lb-score-val {
+  font-weight: 800;
+  color: var(--color-purple);
+}
+
+.lb-acc-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+}
+
+/* ============================================================
+   Leaderboard / Stats — sleeker spacing pass
+   ============================================================ */
+.lb-wrapper {
+  gap: 20px;
+}
+
+.lb-header-card {
+  padding: 26px 28px;
+}
+
+.lb-banner {
+  padding: 16px 20px;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.lb-banner p {
+  margin-top: 3px;
+  line-height: 1.45;
+  opacity: 0.9;
+}
+
+.lb-table th {
+  padding: 16px 20px;
+  letter-spacing: 0.06em;
+}
+
+.lb-tr td {
+  padding: 18px 20px;
+}
+
+.lb-table-card .s-card-top {
+  padding: 22px 22px 18px;
+}
+
+/* Stacked challenge name + mission badge inside a table cell */
+.lb-cell-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lb-mission-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border);
+  color: var(--color-purple);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   Challenges page → stats banner
+   ============================================================ */
+.chal-stats-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #21194b, #39308a);
+  color: white;
+  box-shadow: var(--shadow-card);
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chal-stats-banner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(33, 25, 75, 0.35);
+}
+
+.chal-stats-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.chal-stats-banner-icon {
+  font-size: 1.7rem;
+  flex-shrink: 0;
+}
+
+.chal-stats-banner-title {
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+
+.chal-stats-banner-sub {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.chal-stats-banner-cta {
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: #ffffff1f;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+}
+
+@media (max-width: 600px) {
+  .chal-stats-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ============================================================
+   s-card-top — was completely unstyled (title block + action
+   button were just stacking on top of each other with no gap)
+   ============================================================ */
+.s-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.lb-header-card .s-card-top {
+  margin-bottom: 6px;
+}
+
+.lb-subtitle {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.lb-title {
+  margin-top: 4px;
+}
+
+.s-back-btn {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Challenge stats grid — this class had NO matching CSS rule
+   anywhere (only the old unused .result-grid existed), so it
+   was rendering completely unstyled.
+   ============================================================ */
+.challenge-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.challenge-stats-grid article {
+  background: var(--color-bg, #f8f6ff);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 20px 14px;
+  text-align: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.challenge-stats-grid article:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+.challenge-stats-grid strong {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--color-purple);
+  line-height: 1.2;
+}
+
+.challenge-stats-grid small {
+  display: block;
+  margin-top: 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 700px) {
+  .challenge-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }

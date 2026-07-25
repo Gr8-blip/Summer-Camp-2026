@@ -91,7 +91,7 @@ export default function ChallengePlay() {
   const [answers, setAnswers] = useState({});
   const [left, setLeft] = useState(0);
   const [result, setResult] = useState(null);
-  const [board, setBoard] = useState([]);
+  const [board, setBoard] = useState({ results: [], is_finalized: false, champion_id: null, champion_name: null });
   const [error, setError] = useState("");
   const [confettiKey, setConfettiKey] = useState(0);
   const [xpFlash, setXpFlash] = useState(0);
@@ -163,10 +163,20 @@ export default function ChallengePlay() {
   }, [question?.id]);
   const leftKeys = content.left || [];
   const matches = answers[question?.id] || {};
-  const [selectedRight, setSelectedRight] = useState(null);
+  const [selectedRightIndex, setSelectedRightIndex] = useState(null);
   const usedRight = new Set(Object.values(matches));
-  const assign = (leftKey, rightVal) => { answer({ ...matches, [leftKey]: rightVal }); setSelectedRight(null); };
-  const unassign = (leftKey) => { const n = { ...matches }; delete n[leftKey]; answer(n); };
+  // 1. Assign using the INDEX (rightIdx)
+  const assign = (leftKey, rightIdx) => {
+    const newMatches = { ...matches, [leftKey]: rightIdx };
+    answer(newMatches);
+    setSelectedRightIndex(null);
+  };
+
+  const unassign = (leftKey) => {
+    const n = { ...matches };
+    delete n[leftKey];
+    answer(n);
+  };
 
   // ── memory tiles ─────────────────────────────────────────────────
   const tiles = useMemo(() => {
@@ -272,13 +282,14 @@ export default function ChallengePlay() {
   };
 
   // reset all per-question interactive state when moving to a new question
+// reset all per-question interactive state when moving to a new question
   useEffect(() => {
     setFlipped([]); setMatchedPairs(new Set()); setWrongIds([]);
     setFoundWords(new Set()); setFoundCells(new Set()); setSelCells([]); setSelStart(null);
     setBlur(20); setGuess(""); setGuessState(null);
+    setSelectedRightIndex(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
-
 
   useEffect(() => {
     const leaderboard = async () => {
@@ -288,6 +299,14 @@ export default function ChallengePlay() {
     leaderboard();
   }, [id])
 
+
+  useEffect(() => {
+    if (step !== "done" || board.is_finalized) return;
+    const interval = setInterval(() => {
+      getChallengeLeaderboard(id).then(setBoard).catch(() => {});
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [step, id, board.is_finalized]);
 
   const begin = async () => {
     try {
@@ -350,13 +369,27 @@ export default function ChallengePlay() {
             <b>+{challenge.xp_reward} XP</b>
             <b>{Math.ceil(challenge.time_limit / 60)} min</b>
           </div>
-          <button
-            className="btn btn-primary"
-            style={{ background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", border: "none" }}
-            onClick={begin}
-          >
-            Start Challenge
-          </button>
+          {challenge.end_date && new Date(challenge.end_date) <= new Date() ? (
+            <>
+              <p style={{ opacity: 0.85, marginTop: 8 }}>
+                ⏰ This challenge's deadline passed on {new Date(challenge.end_date).toLocaleString()} — it can no longer be started.
+              </p>
+              <button
+                className="btn"
+                onClick={() => navigate(`/challenges/${id}/leaderboard`)}
+              >
+                View Leaderboard Instead
+              </button>
+            </>
+          ) : (
+            <button
+              className="btn btn-primary"
+              style={{ background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", border: "none" }}
+              onClick={begin}
+            >
+              Start Challenge
+            </button>
+          )}
         </section>
       )}
 
@@ -366,24 +399,32 @@ export default function ChallengePlay() {
           <h1>Boss battle complete</h1>
 
           {result && (
-            <div className="result-grid">
-              <b>{result.score}<small>Score</small></b>
-              <b>{result.accuracy}%<small>Accuracy</small></b>
+            <div className="result-grid result-grid-3">
+              <b>{result.accuracy}%<small>Score</small></b>
               <b>+{result.xp_earned}<small>XP earned</small></b>
               <b>{seconds(result.time_taken)}<small>Time</small></b>
             </div>
           )}
 
           <h2>Top players</h2>
+          <p className="leaderboard-status">
+            {board.is_finalized
+              ? (board.champion_name ? `🏆 Finalized — ${board.champion_name} is the Challenge Champion` : "🏆 Finalized")
+              : `🔴 Live — the Hall of Fame badge isn't awarded yet. It locks in once the challenge ends${challenge?.end_date ? ` (${new Date(challenge.end_date).toLocaleString()})` : ""}.`}
+          </p>
           <ol className="leaderboard">
-            {board.map((row, i) => (
-              <li className={row.is_current_student ? "mine" : ""} key={`${row.student_name}-${i}`}>
-                <span>#{row.rank ?? i + 1} {row.student_name}</span>
-                <span>{row.score} pts · {seconds(row.time_taken)}</span>
+            {(board.results || []).map((row, i) => (
+              <li
+                className={`${row.is_current_student ? "mine" : ""} ${row.is_champion ? "champion" : ""}`}
+                key={`${row.student_name}-${i}`}
+              >
+                <span>{row.is_champion ? "🏆 " : ""}#{row.rank ?? i + 1} {row.student_name}</span>
+                <span>{row.accuracy}% · {seconds(row.time_taken)}</span>
               </li>
             ))}
           </ol>
-          <button className="btn btn-primary" onClick={() => navigate("/challenges")}>Continue</button>
+          <button className="btn btn-primary" onClick={() => navigate(`/challenges/${id}/leaderboard`)}>View Full Leaderboard</button>
+          <button className="btn" onClick={() => navigate("/challenges")}>Continue</button>
         </section>
       )}
 
@@ -471,45 +512,84 @@ export default function ChallengePlay() {
           {question.question_type === "match_pairs" && (
             <>
               <p className="game-hint">
-                {selectedRight ? `Tap the left item that matches "${selectedRight}".` : "Tap an item on the right, then tap its match on the left — or drag it over."}
+                {selectedRightIndex !== null
+                  ? `Tap the left item that matches "${matchRightPool[selectedRightIndex]}".`
+                  : "Tap an item on the right, then tap its match on the left — or drag it over."}
               </p>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+                {/* LEFT COLUMN */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {leftKeys.map((leftKey) => (
                     <div
                       key={leftKey}
                       onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => { const val = e.dataTransfer.getData("text/plain"); if (val) assign(leftKey, val); }}
-                      onClick={() => selectedRight && assign(leftKey, selectedRight)}
+                      onDrop={(e) => {
+                        // Extract the index from the drag payload
+                        const rightIdx = e.dataTransfer.getData("text/plain");
+                        if (rightIdx !== "") assign(leftKey, parseInt(rightIdx, 10));
+                      }}
+                      onClick={() => selectedRightIndex !== null && assign(leftKey, selectedRightIndex)}
                       style={{
-                        padding: "14px 16px", borderRadius: 12, cursor: selectedRight ? "pointer" : "default",
+                        padding: "14px 16px",
+                        borderRadius: 12,
+                        cursor: selectedRightIndex !== null ? "pointer" : "default",
                         border: matches[leftKey] ? "2px solid var(--color-purple, #7c5cfc)" : "2px dashed var(--color-border, #ddd)",
                         background: matches[leftKey] ? "rgba(124,92,252,.08)" : "#fff",
-                        display: "flex", flexDirection: "column", gap: 4,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 4,
                       }}
                     >
                       <strong>{leftKey}</strong>
-                      {matches[leftKey] ? (
+                      {matches[leftKey] !== undefined ? (
                         <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".85rem", color: "var(--color-purple, #7c5cfc)" }}>
-                          ↔ {matches[leftKey]}
-                          <button onClick={(e) => { e.stopPropagation(); unassign(leftKey); }} style={{ border: "none", background: "none", cursor: "pointer", color: "#c7473f" }}>✕</button>
+                          {/* matches[leftKey] now stores the RIGHT VALUE or INDEX */}
+                          ↔ {matchRightPool[matches[leftKey]]}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              unassign(leftKey);
+                            }}
+                            style={{ border: "none", background: "none", cursor: "pointer", color: "#c7473f" }}
+                          >
+                            ✕
+                          </button>
                         </span>
-                      ) : <span style={{ fontSize: ".8rem", opacity: 0.5 }}>Drop or tap a match here</span>}
+                      ) : (
+                        <span style={{ fontSize: ".8rem", opacity: 0.5 }}>Drop or tap a match here</span>
+                      )}
                     </div>
                   ))}
                 </div>
+
+                {/* RIGHT COLUMN */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {matchRightPool.map((val, i) => {
-                    const used = usedRight.has(val);
+                    // Check if THIS SPECIFIC INDEX is used (usedRight should be a Set of indices!)
+                    const used = usedRight.has(i);
+                    const isSelected = selectedRightIndex === i;
+
                     return (
                       <div
-                        key={val + i} draggable={!used}
-                        onDragStart={(e) => e.dataTransfer.setData("text/plain", val)}
-                        onClick={() => !used && setSelectedRight(val === selectedRight ? null : val)}
+                        key={val + "-" + i}
+                        draggable={!used}
+                        onDragStart={(e) => {
+                          // Transfer the INDEX, not the text string!
+                          e.dataTransfer.setData("text/plain", i.toString());
+                        }}
+                        onClick={() => {
+                          if (!used) {
+                            setSelectedRightIndex(isSelected ? null : i);
+                          }
+                        }}
                         style={{
-                          padding: "14px 16px", borderRadius: 12, cursor: used ? "default" : "grab",
-                          border: selectedRight === val ? "2px solid var(--color-purple, #7c5cfc)" : "2px solid var(--color-border, #ddd)",
-                          background: used ? "#f3f2ee" : "#fff", opacity: used ? 0.4 : 1, fontWeight: 600,
+                          padding: "14px 16px",
+                          borderRadius: 12,
+                          cursor: used ? "default" : "grab",
+                          border: isSelected ? "2px solid var(--color-purple, #7c5cfc)" : "2px solid var(--color-border, #ddd)",
+                          background: used ? "#f3f2ee" : "#fff",
+                          opacity: used ? 0.4 : 1,
+                          fontWeight: 600,
                         }}
                       >
                         {val}
@@ -595,17 +675,17 @@ export default function ChallengePlay() {
                 )}
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                {puzzle.placements.map((p) => (
+                {(puzzle.words || [...new Set(puzzle.placements.map((p) => p.word))]).map((word) => (
                   <span
-                    key={p.word}
+                    key={word}
                     style={{
                       fontWeight: 700, fontSize: ".78rem", padding: "6px 12px", borderRadius: 999,
-                      background: foundWords.has(p.word) ? "#06b6d4" : "#f3f2ee",
-                      color: foundWords.has(p.word) ? "white" : "#7a7568",
-                      textDecoration: foundWords.has(p.word) ? "line-through" : "none",
+                      background: foundWords.has(word) ? "#06b6d4" : "#f3f2ee",
+                      color: foundWords.has(word) ? "white" : "#7a7568",
+                      textDecoration: foundWords.has(word) ? "line-through" : "none",
                     }}
                   >
-                    {p.word}
+                    {word}
                   </span>
                 ))}
               </div>

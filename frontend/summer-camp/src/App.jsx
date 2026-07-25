@@ -25,6 +25,8 @@ import ChallengePlay from "./pages/student/ChallengePlay";
 import ChallengeStats from "./pages/student/ChallengeStats";
 import Attendance from "./pages/student/Attendance";
 import QuestPlay from "./pages/student/QuestPlay";
+import QuestStats from "./pages/student/QuestStats";
+import ChallengeLeaderboard from "./pages/student/ChallengeLeaderboard";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -95,8 +97,10 @@ export default function App() {
           <Route path="/xp" element={<StudentRoute><XPLog /></StudentRoute>} />
           <Route path="/challenges" element={<StudentRoute><Challenges /></StudentRoute>} />
           <Route path="/challenges/stats" element={<StudentRoute><ChallengeStats /></StudentRoute>} />
+          <Route path="/challenges/:id/leaderboard" element={<StudentRoute><ChallengeLeaderboard /></StudentRoute>} />
           <Route path="/challenges/:id" element={<StudentRoute><ChallengePlay /></StudentRoute>} />
           <Route path="/attendance" element={<StudentRoute><Attendance /></StudentRoute>} />
+          <Route path="/quests/stats" element={<StudentRoute><QuestStats /></StudentRoute>} />
           <Route path="/quests/:id" element={<StudentRoute><QuestPlay /></StudentRoute>} />  
 
 
