@@ -26,7 +26,7 @@ import ChallengeStats from "./pages/student/ChallengeStats";
 import Attendance from "./pages/student/Attendance";
 import QuestPlay from "./pages/student/QuestPlay";
 import QuestStats from "./pages/student/QuestStats";
-import ChallengeLeaderboard from "./pages/student/ChallengeLeaderboard";
+import ChallengeLeaderboard from "./pages/student/Challengeleaderboard";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
