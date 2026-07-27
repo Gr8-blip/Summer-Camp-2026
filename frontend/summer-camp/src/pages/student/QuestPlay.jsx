@@ -78,6 +78,7 @@ const GAME_KEYFRAMES = `
 export default function QuestPlay() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const STORAGE_KEY = `quest-progress-${id}`;
 
   const [quest, setQuest] = useState(null);
   const [step, setStep] = useState("intro"); // intro | locked | game | submitting | done
@@ -98,11 +99,37 @@ export default function QuestPlay() {
     getQuest(id)
       .then((q) => {
         setQuest(q);
-        if (!q.camp_started) setStep("locked");
-        else if (q.completed) setStep("done");
+        if (!q.camp_started) { setStep("locked"); return; }
+        if (q.completed) {
+          setStep("done");
+          localStorage.removeItem(STORAGE_KEY);
+          return;
+        }
+
+        // Resume in-progress answers after a refresh, instead of forcing
+        // the student to start over from question 1. Quests have no
+        // timer, so there's no elapsed-time math needed — just restore
+        // straight into the game.
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+          if (saved) {
+            setAnswers(saved.answers || {});
+            setIndex(saved.index || 0);
+            setStep("game");
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
       })
       .catch(() => setError("This quest is unavailable."));
   }, [id]);
+
+  // Persist progress on every change while actively playing, so a refresh
+  // (or accidental tab close) doesn't wipe out answered questions.
+  useEffect(() => {
+    if (step !== "game") return;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, index }));
+  }, [answers, index, step]);
 
   const question = quest?.questions?.[index];
   const content = question?.content || {};
@@ -246,15 +273,64 @@ export default function QuestPlay() {
   };
 
   useEffect(() => {
-    setFlipped([]); setMatchedPairs(new Set()); setWrongIds([]);
-    setFoundWords(new Set()); setFoundCells(new Set()); setSelCells([]); setSelStart(null);
-    setBlur(20); setGuess(""); setGuessState(null);
+    setFlipped([]); setWrongIds([]);
+    setSelCells([]); setSelStart(null);
+
+    // word_search: rebuild highlighted cells from the already-persisted
+    // found-words list instead of wiping the board on refresh.
+    if (question?.question_type === "word_search") {
+      const savedWords = new Set(answers[question.id] || []);
+      const cells = new Set();
+      (puzzle?.placements || []).forEach((p) => {
+        if (savedWords.has(p.word)) p.cells.forEach(([r, c]) => cells.add(cellKey(r, c)));
+      });
+      setFoundWords(savedWords);
+      setFoundCells(cells);
+    } else {
+      setFoundWords(new Set());
+      setFoundCells(new Set());
+    }
+
+    // image_reveal: restore guess/blur/correct state from the saved
+    // answer instead of re-blurring an already-solved image.
+    if (question?.question_type === "image_reveal") {
+      const savedGuess = answers[question.id];
+      const isCorrect = savedGuess && String(savedGuess).trim().toLowerCase() === String(content.answer || "").trim().toLowerCase();
+      setGuess(savedGuess || "");
+      setGuessState(isCorrect ? "correct" : null);
+      setBlur(isCorrect ? 0 : 20);
+    } else {
+      setBlur(20); setGuess(""); setGuessState(null);
+    }
+
+    // Restore in-progress memory-tile matches for this question, if any
+    // were saved before a refresh.
+    let savedTiles = [];
+    if (question?.question_type === "memory_tiles") {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        savedTiles = saved?.tileProgress?.[question.id] || [];
+      } catch {}
+    }
+    setMatchedPairs(new Set(savedTiles));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
+
+  // Persist memory-tile match progress as it happens.
+  useEffect(() => {
+    if (step !== "game" || question?.question_type !== "memory_tiles") return;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch {}
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...saved,
+      tileProgress: { ...(saved.tileProgress || {}), [question.id]: [...matchedPairs] },
+    }));
+  }, [matchedPairs, step, question?.id, question?.question_type]);
 
   const begin = async () => {
     try {
       await startQuest(id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers: {}, index: 0 }));
       setStep("game");
       setIndex(0);
     } catch (e) {
@@ -269,6 +345,7 @@ export default function QuestPlay() {
       const data = await submitQuest(id, { answers });
       setResult(data);
       if (data.is_complete) {
+        localStorage.removeItem(STORAGE_KEY);
         setStep("done");
         setConfettiKey((k) => k + 1);
       } else {
@@ -282,10 +359,18 @@ export default function QuestPlay() {
   };
 
   const tryAgain = () => {
+    localStorage.removeItem(STORAGE_KEY);
     setAnswers({});
     setIndex(0);
     setResult(null);
     setStep("game");
+  };
+
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const handleExit = () => setShowExitConfirm(true);
+  const confirmExit = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    navigate("/assignments");
   };
 
   if (error) {
@@ -372,6 +457,13 @@ export default function QuestPlay() {
         <section className="game-card">
           <header>
             <span>Question {index + 1} / {quest.questions.length}</span>
+            <button
+              type="button"
+              onClick={handleExit}
+              style={{ border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", color: "#c7473f", fontWeight: 700 }}
+            >
+              Exit Quest ✕
+            </button>
           </header>
 
           <div className="game-progress"><i style={{ width: `${progress}%` }} /></div>
@@ -634,6 +726,43 @@ export default function QuestPlay() {
             </button>
           </footer>
         </section>
+      )}
+
+      {showExitConfirm && (
+        <div
+          onClick={() => setShowExitConfirm(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(20,15,45,.55)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000, padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 20, padding: "28px 26px", maxWidth: 380,
+              width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(20,15,45,.35)",
+            }}
+          >
+            <div style={{ fontSize: "2rem", marginBottom: 8 }}>⚠️</div>
+            <h3 style={{ margin: "0 0 8px" }}>Exit this quest?</h3>
+            <p style={{ fontSize: ".88rem", color: "#7a7568", margin: "0 0 22px", lineHeight: 1.5 }}>
+              Your answers on this page will be cleared — you'll need to start over from question 1 next time.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowExitConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: "#c7473f", color: "#fff", border: "none" }}
+                onClick={confirmExit}
+              >
+                Exit Quest
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </StudentLayout>
   );

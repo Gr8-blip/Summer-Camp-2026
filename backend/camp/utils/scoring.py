@@ -1,3 +1,10 @@
+def _norm(x):
+    """Trim whitespace and lowercase for tolerant comparisons — protects
+    against admin data-entry typos (stray spaces, inconsistent casing)
+    silently zeroing out an otherwise-correct answer."""
+    return str(x).strip().lower()
+
+
 def score_fraction(question, response):
     content = question.content
     qtype = question.question_type
@@ -10,15 +17,17 @@ def score_fraction(question, response):
         items = content.get('items', [])
         if not items or not isinstance(response, list) or len(response) != len(items):
             return 0.0
-        matches = sum(1 for a, b in zip(response, items) if a == b)
+        matches = sum(1 for a, b in zip(response, items) if _norm(a) == _norm(b))
         return matches / len(items)
  
     if qtype == 'match_pairs':
         pairs = content.get('pairs', content.get('answer', {}))
         if not pairs or not isinstance(response, dict):
             return 0.0
-        matched = sum(1 for k, v in pairs.items() if response.get(k) == v)
-        return matched / len(pairs)
+        norm_pairs = {_norm(k): _norm(v) for k, v in pairs.items()}
+        norm_response = {_norm(k): _norm(v) for k, v in response.items()}
+        matched = sum(1 for k, v in norm_pairs.items() if norm_response.get(k) == v)
+        return matched / len(norm_pairs)
  
     if qtype == 'memory_tiles':
         return 1.0 if isinstance(response, dict) and response.get('completed') else 0.0
@@ -44,6 +53,10 @@ def score_fraction(question, response):
         return 1.0 if got == want else 0.0
  
     if isinstance(expected, bool):
-        return 1.0 if (response is expected or str(response).lower() == str(expected).lower()) else 0.0
+        return 1.0 if (response is expected or _norm(response) == _norm(expected)) else 0.0
  
-    return 1.0 if response == expected else 0.0
+    # multiple_choice, true_false stored as a string instead of a real bool,
+    # and any other exact-match type: normalize both sides so a stray space
+    # or case difference (e.g. "B" vs "b", "1" vs " 1") doesn't zero out an
+    # otherwise-correct answer.
+    return 1.0 if _norm(response) == _norm(expected) else 0.0

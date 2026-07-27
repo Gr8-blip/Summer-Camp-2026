@@ -84,6 +84,7 @@ const GAME_KEYFRAMES = `
 export default function ChallengePlay() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const STORAGE_KEY = `challenge-progress-${id}`;
 
   const [challenge, setChallenge] = useState(null);
   const [step, setStep] = useState("intro");
@@ -106,11 +107,51 @@ export default function ChallengePlay() {
     getChallenge(id)
       .then((c) => {
         setChallenge(c);
+        if (c.completed) {
+          setStep("done");
+          localStorage.removeItem(STORAGE_KEY);
+          return;
+        }
+
+        // Resume in-progress answers after a refresh, instead of forcing
+        // the student to start over from question 1. `startedAt` lets us
+        // recompute remaining time accurately (the backend independently
+        // caps real elapsed time at time_limit anyway, so this can't be
+        // gamed by clearing/editing localStorage — it just affects the
+        // client-side display).
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+          if (saved && saved.startedAt) {
+            const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
+            const remaining = Math.max(c.time_limit - elapsed, 0);
+            setAnswers(saved.answers || {});
+            setIndex(saved.index || 0);
+            setLeft(remaining);
+            setStep("game");
+            return;
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+
         setLeft(c.time_limit);
-        if (c.completed) setStep("done");
       })
       .catch(() => setError("This challenge is unavailable."));
   }, [id]);
+
+  // Persist progress on every change while actively playing, so a refresh
+  // (or accidental tab close) doesn't wipe out answered questions.
+  useEffect(() => {
+    if (step !== "game") return;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch {}
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...saved,
+      answers,
+      index,
+      startedAt: saved.startedAt || Date.now(),
+    }));
+  }, [answers, index, step]);
 
   useEffect(() => {
     if (step !== "game") return;
@@ -162,20 +203,54 @@ export default function ChallengePlay() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
   const leftKeys = content.left || [];
-  const matches = answers[question?.id] || {};
+  // matchIdx is LOCAL, per-question UI bookkeeping only (which right-pool
+  // index is assigned to which left key) — needed because right-side
+  // values can repeat (e.g. two different tiles both labeled "BOTH"), so
+  // tracking by index (not text) is the only reliable way to know which
+  // specific tile is "used". This never gets submitted directly.
+  const [matchIdx, setMatchIdx] = useState({});
+  useEffect(() => {
+    if (question?.question_type !== "match_pairs") { setMatchIdx({}); return; }
+    // The scored answer (text-based) already survives a refresh via the
+    // persisted `answers`, but the visual "which right-tile is connected"
+    // state doesn't — matchIdx is local-only. Rebuild it here by mapping
+    // each saved text value back to a matching index in matchRightPool.
+    const savedTextMatches = answers[question.id] || {};
+    const usedIdx = new Set();
+    const rebuilt = {};
+    for (const [leftKey, rightText] of Object.entries(savedTextMatches)) {
+      const idx = matchRightPool.findIndex((v, i) => v === rightText && !usedIdx.has(i));
+      if (idx !== -1) { rebuilt[leftKey] = idx; usedIdx.add(idx); }
+    }
+    setMatchIdx(rebuilt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question?.id, matchRightPool]);
+
   const [selectedRightIndex, setSelectedRightIndex] = useState(null);
-  const usedRight = new Set(Object.values(matches));
-  // 1. Assign using the INDEX (rightIdx)
+  const usedRight = new Set(Object.values(matchIdx));
+
+  // Resolves the index-based UI state into the real text values the
+  // backend actually stores in `content.pairs` — this is what gets
+  // submitted. The backend has no idea what shuffle order the frontend
+  // used, so submitting a raw index (as this used to do) could never
+  // match the stored answer text, no matter what the student picked.
+  const toTextMatches = (idxMap) =>
+    Object.fromEntries(Object.entries(idxMap).map(([lk, idx]) => [lk, matchRightPool[idx]]));
+
+  // 1. Assign using the INDEX (rightIdx) for local UI state...
   const assign = (leftKey, rightIdx) => {
-    const newMatches = { ...matches, [leftKey]: rightIdx };
-    answer(newMatches);
+    const newIdx = { ...matchIdx, [leftKey]: rightIdx };
+    setMatchIdx(newIdx);
+    // ...but submit the resolved TEXT value.
+    answer(toTextMatches(newIdx));
     setSelectedRightIndex(null);
   };
 
   const unassign = (leftKey) => {
-    const n = { ...matches };
+    const n = { ...matchIdx };
     delete n[leftKey];
-    answer(n);
+    setMatchIdx(n);
+    answer(toTextMatches(n));
   };
 
   // ── memory tiles ─────────────────────────────────────────────────
@@ -282,14 +357,67 @@ export default function ChallengePlay() {
   };
 
   // reset all per-question interactive state when moving to a new question
-// reset all per-question interactive state when moving to a new question
   useEffect(() => {
-    setFlipped([]); setMatchedPairs(new Set()); setWrongIds([]);
-    setFoundWords(new Set()); setFoundCells(new Set()); setSelCells([]); setSelStart(null);
-    setBlur(20); setGuess(""); setGuessState(null);
+    setFlipped([]); setWrongIds([]);
+    setSelCells([]); setSelStart(null);
     setSelectedRightIndex(null);
+
+    // word_search: the found-words list already survives a refresh via
+    // persisted `answers`, but the highlighted cells / chip strikethrough
+    // are local-only — rebuild them from the saved words + this question's
+    // placements instead of wiping the board back to "nothing found".
+    if (question?.question_type === "word_search") {
+      const savedWords = new Set(answers[question.id] || []);
+      const cells = new Set();
+      (puzzle?.placements || []).forEach((p) => {
+        if (savedWords.has(p.word)) p.cells.forEach(([r, c]) => cells.add(cellKey(r, c)));
+      });
+      setFoundWords(savedWords);
+      setFoundCells(cells);
+    } else {
+      setFoundWords(new Set());
+      setFoundCells(new Set());
+    }
+
+    // image_reveal: restore the guess text + blur/correct state from the
+    // saved answer instead of re-blurring an image the student already
+    // solved.
+    if (question?.question_type === "image_reveal") {
+      const savedGuess = answers[question.id];
+      const isCorrect = savedGuess && String(savedGuess).trim().toLowerCase() === String(content.answer || "").trim().toLowerCase();
+      setGuess(savedGuess || "");
+      setGuessState(isCorrect ? "correct" : null);
+      setBlur(isCorrect ? 0 : 20);
+    } else {
+      setBlur(20); setGuess(""); setGuessState(null);
+    }
+
+    // Restore in-progress memory-tile matches for this question, if any
+    // were saved before a refresh — otherwise this game would silently
+    // wipe out everything already matched every time the page reloads.
+    let savedTiles = [];
+    if (question?.question_type === "memory_tiles") {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+        savedTiles = saved?.tileProgress?.[question.id] || [];
+      } catch {}
+    }
+    setMatchedPairs(new Set(savedTiles));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question?.id]);
+
+  // Persist memory-tile match progress as it happens, same idea as the
+  // answers-persist effect above but keyed per-question since matched
+  // pairs aren't part of `answers` until the game is fully complete.
+  useEffect(() => {
+    if (step !== "game" || question?.question_type !== "memory_tiles") return;
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch {}
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      ...saved,
+      tileProgress: { ...(saved.tileProgress || {}), [question.id]: [...matchedPairs] },
+    }));
+  }, [matchedPairs, step, question?.id, question?.question_type]);
 
   useEffect(() => {
     const leaderboard = async () => {
@@ -311,6 +439,7 @@ export default function ChallengePlay() {
   const begin = async () => {
     try {
       await startChallenge(id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers: {}, index: 0, startedAt: Date.now() }));
       setStep("game");
     } catch (e) {
       setError(e.data?.detail || "You have already completed this challenge.");
@@ -322,6 +451,7 @@ export default function ChallengePlay() {
     setStep("submitting");
     try {
       const data = await submitChallenge(id, { answers });
+      localStorage.removeItem(STORAGE_KEY);
       setResult(data);
       setBoard(await getChallengeLeaderboard(id));
       setStep("done");
@@ -330,6 +460,13 @@ export default function ChallengePlay() {
       setError(e.data?.detail || "Could not submit your answers.");
       setStep("game");
     }
+  };
+
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const handleExit = () => setShowExitConfirm(true);
+  const confirmExit = () => {
+    localStorage.removeItem(STORAGE_KEY);
+    navigate("/challenges");
   };
 
   if (error) {
@@ -437,6 +574,13 @@ export default function ChallengePlay() {
           <header>
             <span>Question {index + 1} / {challenge.questions.length}</span>
             <strong>⏱ {seconds(left)}</strong>
+            <button
+              type="button"
+              onClick={handleExit}
+              style={{ border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", color: "#c7473f", fontWeight: 700 }}
+            >
+              Exit Challenge ✕
+            </button>
           </header>
 
           <div className="game-progress"><i style={{ width: `${progress}%` }} /></div>
@@ -533,18 +677,17 @@ export default function ChallengePlay() {
                         padding: "14px 16px",
                         borderRadius: 12,
                         cursor: selectedRightIndex !== null ? "pointer" : "default",
-                        border: matches[leftKey] ? "2px solid var(--color-purple, #7c5cfc)" : "2px dashed var(--color-border, #ddd)",
-                        background: matches[leftKey] ? "rgba(124,92,252,.08)" : "#fff",
+                        border: matchIdx[leftKey] !== undefined ? "2px solid var(--color-purple, #7c5cfc)" : "2px dashed var(--color-border, #ddd)",
+                        background: matchIdx[leftKey] !== undefined ? "rgba(124,92,252,.08)" : "#fff",
                         display: "flex",
                         flexDirection: "column",
                         gap: 4,
                       }}
                     >
                       <strong>{leftKey}</strong>
-                      {matches[leftKey] !== undefined ? (
+                      {matchIdx[leftKey] !== undefined ? (
                         <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".85rem", color: "var(--color-purple, #7c5cfc)" }}>
-                          {/* matches[leftKey] now stores the RIGHT VALUE or INDEX */}
-                          ↔ {matchRightPool[matches[leftKey]]}
+                          ↔ {matchRightPool[matchIdx[leftKey]]}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -738,6 +881,43 @@ export default function ChallengePlay() {
             </button>
           </footer>
         </section>
+      )}
+
+      {showExitConfirm && (
+        <div
+          onClick={() => setShowExitConfirm(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(20,15,45,.55)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 1000, padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff", borderRadius: 20, padding: "28px 26px", maxWidth: 380,
+              width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(20,15,45,.35)",
+            }}
+          >
+            <div style={{ fontSize: "2rem", marginBottom: 8 }}>⚠️</div>
+            <h3 style={{ margin: "0 0 8px" }}>Exit this challenge?</h3>
+            <p style={{ fontSize: ".88rem", color: "#7a7568", margin: "0 0 22px", lineHeight: 1.5 }}>
+              Your answers on this page will be cleared — you'll need to start over from question 1 next time.
+            </p>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowExitConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{ flex: 1, background: "#c7473f", color: "#fff", border: "none" }}
+                onClick={confirmExit}
+              >
+                Exit Challenge
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </StudentLayout>
   );
