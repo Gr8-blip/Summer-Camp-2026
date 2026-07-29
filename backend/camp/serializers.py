@@ -11,6 +11,13 @@ def _mission_locked(mission):
     return (not mission.is_published) or (not camp_is_started())
 
 
+def _avatar_key(student):
+    """Shared helper: returns the equipped avatar's key, or None if the
+    student hasn't equipped one yet. Used by both attempt serializers so
+    leaderboards and completion screens render the same avatar."""
+    return student.equipped_avatar.key if getattr(student, "equipped_avatar_id", None) else None
+
+
 class MissionListSerializer(serializers.ModelSerializer):
     lesson_count = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
@@ -100,7 +107,7 @@ class AssignmentSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'xp_reward', 'deadline', 
             'lesson', 'lesson_title', 'already_submitted', 'is_published', 
-            'locked', 'has_questions', 'is_expired'
+            'locked', 'has_questions', 'is_expired', 'game_type'
         ]
 
     def get_is_expired(self, obj):
@@ -197,7 +204,7 @@ class ChallengeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Challenge
-        fields = ['id', 'title', 'description', 'xp_reward', 'start_date', 'end_date', 'mission', 'time_limit', 'created_at', 'is_published', 'locked', 'already_completed', 'is_expired', 'is_not_yet_open']
+        fields = ['id', 'title', 'description', 'xp_reward', 'start_date', 'end_date', 'mission', 'time_limit', 'created_at', 'is_published', 'locked', 'already_completed', 'is_expired', 'is_not_yet_open', 'game_type']
 
     def get_is_expired(self, obj):
         from django.utils import timezone
@@ -276,16 +283,20 @@ class StudentChallengeQuestionSerializer(ChallengeQuestionSerializer):
 
 class ChallengeAttemptSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
+    student_avatar = serializers.SerializerMethodField()
     challenge_title = serializers.CharField(source='challenge.title', read_only=True)
     mission_title = serializers.SerializerMethodField()
 
     class Meta:
         model = ChallengeAttempt
-        fields = ['id', 'challenge', 'challenge_title', 'mission_title', 'student', 'student_name', 'score', 'accuracy', 'xp_earned', 'time_taken', 'started_at', 'completed_at']
+        fields = ['id', 'challenge', 'challenge_title', 'mission_title', 'student', 'student_name', 'student_avatar', 'score', 'accuracy', 'xp_earned', 'time_taken', 'started_at', 'completed_at']
         read_only_fields = fields
 
     def get_mission_title(self, obj):
         return obj.challenge.mission.title if obj.challenge.mission_id else None
+
+    def get_student_avatar(self, obj):
+        return _avatar_key(obj.student)
 
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -351,18 +362,22 @@ class StudentAssignmentQuestionSerializer(AssignmentQuestionSerializer):
 
 class AssignmentAttemptSerializer(serializers.ModelSerializer):
     student_name = serializers.CharField(source='student.full_name', read_only=True)
+    student_avatar = serializers.SerializerMethodField()
     assignment_title = serializers.CharField(source='assignment.title', read_only=True)
     mission_title = serializers.SerializerMethodField()
 
     class Meta:
         model = AssignmentAttempt
-        fields = ['id', 'assignment', 'assignment_title', 'mission_title', 'student', 'student_name', 'score', 'accuracy',
+        fields = ['id', 'assignment', 'assignment_title', 'mission_title', 'student', 'student_name', 'student_avatar', 'score', 'accuracy',
                   'xp_earned', 'attempt_count', 'time_taken', 'started_at', 'completed_at']
         read_only_fields = fields
 
     def get_mission_title(self, obj):
         lesson = obj.assignment.lesson
         return lesson.mission.title if lesson and lesson.mission_id else None
+
+    def get_student_avatar(self, obj):
+        return _avatar_key(obj.student)
 
 
 class CampSettingsSerializer(serializers.ModelSerializer):
@@ -429,3 +444,43 @@ class DashboardSerializer(serializers.Serializer):
     recent_xp = XPLogSerializer(many=True)
     recent_attendance = StudentAttendanceSerializer(many=True)
     recent_conversations = AIConversationSerializer(many=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# MARKETPLACE serializers
+# ─────────────────────────────────────────────────────────────────────────
+
+from .models import CosmeticItem, StudentCosmetic  # noqa: E402
+
+
+class CosmeticItemSerializer(serializers.ModelSerializer):
+    status = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CosmeticItem
+        fields = ['id', 'category', 'key', 'name', 'price', 'status']
+
+    def get_status(self, obj):
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return "locked"
+        student = request.user.student
+
+        equipped_ids = {
+            student.equipped_avatar_id,
+            student.equipped_theme_id,
+            student.equipped_victory_effect_id,
+        }
+        if obj.id in equipped_ids:
+            return "equipped"
+
+        owned = obj.price == 0 or StudentCosmetic.objects.filter(student=student, item=obj).exists()
+        return "owned" if owned else "locked"
+
+
+class StudentCosmeticSerializer(serializers.ModelSerializer):
+    item = CosmeticItemSerializer(read_only=True)
+
+    class Meta:
+        model = StudentCosmetic
+        fields = ['item', 'acquired_at']

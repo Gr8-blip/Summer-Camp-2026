@@ -1,0 +1,60 @@
+.mkt-wrapper { display: flex; flex-direction: column; gap: 28px; }
+
+.mkt-coin-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--color-purple-soft);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 10px 20px;
+  width: fit-content;
+  font-weight: 700;
+}
+.mkt-coin-icon { font-size: 1.3rem; }
+.mkt-coin-total { font-size: 1.15rem; color: var(--color-purple); }
+.mkt-coin-label { color: var(--color-text-soft); font-size: 0.85rem; }
+
+.mkt-section-head h3 { margin: 0 0 2px; font-size: 1.15rem; }
+.mkt-section-head p { margin: 0 0 14px; color: var(--color-text-soft); font-size: 0.85rem; }
+
+.mkt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.mkt-card {
+  background: var(--color-bg-alt);
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px 14px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  text-align: center;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.mkt-card:hover { transform: translateY(-3px); }
+
+.mkt-card.mkt-equipped { border-color: var(--color-purple); box-shadow: 0 0 0 2px var(--color-purple-soft); }
+.mkt-card.mkt-locked { opacity: 0.88; }
+
+.mkt-card-icon { font-size: 2.2rem; height: 44px; display: flex; align-items: center; justify-content: center; }
+.mkt-emoji { font-size: 2.2rem; }
+.mkt-card-name { font-weight: 700; font-size: 0.9rem; min-height: 2.2em; }
+
+.mkt-price { color: var(--color-text-soft); font-size: 0.85rem; font-weight: 600; }
+
+.mkt-btn { width: 100%; padding: 8px; font-size: 0.85rem; border-radius: var(--radius-pill); }
+
+.mkt-equipped-tag {
+  color: var(--color-purple);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.mkt-toast {
+  position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+  background: var(--color-text); color: var(--color-bg);
+  padding: 12px 22px; border-radius: var(--radius-pill);
+  font-weight: 600; z-index: 1000;
+  animation: mkt-toast-in 0.2s ease;
+}
+@keyframes mkt-toast-in { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }

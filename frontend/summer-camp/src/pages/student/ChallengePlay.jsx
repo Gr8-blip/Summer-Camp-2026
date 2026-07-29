@@ -7,8 +7,21 @@ import {
   submitChallenge,
 } from "../../api/client";
 import StudentLayout from "./StudentLayout";
+import VictoryEffect from "../../components/VictoryEffect";
 import { generateWordSearch, matchSelection, straightLine } from "../../components/wordSearchGenerator";
+import DungeonCrawler from "../../components/DungeonCrawler";
+import FloorIsLava from "../../components/Floorislava";
+import Avatar from "../../components/Avatar";
 import "./challenge.css";
+
+// Maps a Challenge's `game_type` to the component that renders it.
+// "classic" (and anything not yet built) falls through to the existing
+// question-list flow below — nothing breaks for old content or games
+// still in progress.
+const GAME_COMPONENTS = {
+  dungeon_crawler: DungeonCrawler,
+  floor_is_lava: FloorIsLava,
+};
 
 const seconds = (value) =>
   `${String(Math.max(0, Math.floor(value / 60))).padStart(2, "0")}:${String(
@@ -73,6 +86,19 @@ function XPPopup({ amount }) {
   );
 }
 
+
+function StatPill({ value, label, accent }) {
+  return (
+    <div style={{
+      background: "#1d1740", borderRadius: 16, padding: "14px 8px", textAlign: "center",
+      border: `1px solid ${accent}33`, boxShadow: `inset 0 0 0 1px rgba(255,255,255,.02)`,
+    }}>
+      <div style={{ fontSize: "1.15rem", fontWeight: 800, color: accent }}>{value}</div>
+      <div style={{ fontSize: ".66rem", fontWeight: 700, color: "#8a84a8", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
+    </div>
+  );
+}
+
 const GAME_KEYFRAMES = `
 @keyframes cpFall { to { top: 110vh; opacity: 0; } }
 @keyframes xpPop { 0% { opacity:0; transform: translateX(-50%) translateY(10px) scale(.8); } 15% { opacity:1; transform: translateX(-50%) translateY(0) scale(1); } 80% { opacity:1; } 100% { opacity:0; transform: translateX(-50%) translateY(-16px) scale(.95); } }
@@ -95,6 +121,8 @@ export default function ChallengePlay() {
   const [board, setBoard] = useState({ results: [], is_finalized: false, champion_id: null, champion_name: null });
   const [error, setError] = useState("");
   const [confettiKey, setConfettiKey] = useState(0);
+  const [victoryEffectKey, setVictoryEffectKey] = useState(null);
+  const [pendingDoneData, setPendingDoneData] = useState(null);
   const [xpFlash, setXpFlash] = useState(0);
 
   const celebrate = (xp = 5) => {
@@ -144,7 +172,7 @@ export default function ChallengePlay() {
   useEffect(() => {
     if (step !== "game") return;
     let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch {}
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch { }
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...saved,
       answers,
@@ -400,7 +428,7 @@ export default function ChallengePlay() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
         savedTiles = saved?.tileProgress?.[question.id] || [];
-      } catch {}
+      } catch { }
     }
     setMatchedPairs(new Set(savedTiles));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -412,7 +440,7 @@ export default function ChallengePlay() {
   useEffect(() => {
     if (step !== "game" || question?.question_type !== "memory_tiles") return;
     let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch {}
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch { }
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...saved,
       tileProgress: { ...(saved.tileProgress || {}), [question.id]: [...matchedPairs] },
@@ -431,7 +459,7 @@ export default function ChallengePlay() {
   useEffect(() => {
     if (step !== "done" || board.is_finalized) return;
     const interval = setInterval(() => {
-      getChallengeLeaderboard(id).then(setBoard).catch(() => {});
+      getChallengeLeaderboard(id).then(setBoard).catch(() => { });
     }, 15000);
     return () => clearInterval(interval);
   }, [step, id, board.is_finalized]);
@@ -446,16 +474,29 @@ export default function ChallengePlay() {
     }
   };
 
-  const finish = async () => {
+  const finish = async (coinsEarned) => {
     if (step === "submitting" || !challenge) return;
     setStep("submitting");
     try {
-      const data = await submitChallenge(id, { answers });
+      const data = await submitChallenge(id, { answers, coins_earned: coinsEarned || 0 });
       localStorage.removeItem(STORAGE_KEY);
-      setResult(data);
-      setBoard(await getChallengeLeaderboard(id));
-      setStep("done");
-      setConfettiKey((k) => k + 1);
+      const board = await getChallengeLeaderboard(id);
+
+      // Stash the "done" reveal — if a victory effect is equipped, play
+      // it first and only THEN flip to the completion screen.
+      const revealDone = () => {
+        setResult(data);
+        setBoard(board);
+        setStep("done");
+        setConfettiKey((k) => k + 1);
+      };
+
+      if (data.victory_effect_key) {
+        setPendingDoneData(() => revealDone);
+        setVictoryEffectKey(data.victory_effect_key);
+      } else {
+        revealDone();
+      }
     } catch (e) {
       setError(e.data?.detail || "Could not submit your answers.");
       setStep("game");
@@ -497,6 +538,17 @@ export default function ChallengePlay() {
       <Confetti burstKey={confettiKey} />
       <XPPopup amount={xpFlash} />
 
+      {victoryEffectKey && (
+        <VictoryEffect
+          effectKey={victoryEffectKey}
+          onDone={() => {
+            setVictoryEffectKey(null);
+            pendingDoneData?.();
+            setPendingDoneData(null);
+          }}
+        />
+      )}
+
       {step === "intro" && (
         <section className="challenge-hero">
           <span>⚔️ BOSS BATTLE</span>
@@ -531,37 +583,114 @@ export default function ChallengePlay() {
       )}
 
       {step === "done" && (
-        <section className="challenge-hero celebrate">
-          <span>🎉 GREAT WORK!</span>
-          <h1>Boss battle complete</h1>
+        <section
+          style={{
+            maxWidth: 560, margin: "0 auto", borderRadius: 28, overflow: "hidden",
+            background: "linear-gradient(180deg,#14102a 0%,#0c0818 100%)",
+            boxShadow: "0 30px 80px -30px rgba(124,92,252,.45), 0 0 0 1px rgba(124,92,252,.18)",
+          }}
+        >
+          <style>{`
+            @keyframes cwPop { from{ transform:scale(.9); opacity:0 } to{ transform:scale(1); opacity:1 } }
+            @keyframes cwFloat { 0%,100%{ transform:translateY(0) rotate(-2deg) } 50%{ transform:translateY(-6px) rotate(2deg) } }
+            @keyframes cwShine { 0%{ background-position:-200% 0 } 100%{ background-position:200% 0 } }
+            @keyframes cwGlow { 0%,100%{ box-shadow:0 0 18px rgba(250,204,21,.35) } 50%{ box-shadow:0 0 30px rgba(250,204,21,.6) } }
+          `}</style>
 
-          {result && (
-            <div className="result-grid result-grid-3">
-              <b>{result.accuracy}%<small>Score</small></b>
-              <b>+{result.xp_earned}<small>XP earned</small></b>
-              <b>{seconds(result.time_taken)}<small>Time</small></b>
+          {/* Hero */}
+          <div style={{ position: "relative", padding: "38px 28px 30px", textAlign: "center", overflow: "hidden" }}>
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% -10%, rgba(124,92,252,.35), transparent 60%)" }} />
+            <div style={{ fontSize: "3.4rem", animation: "cwFloat 2.4s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(250,204,21,.5))", position: "relative" }}>
+              🎉
             </div>
-          )}
+            <div style={{
+              display: "inline-block", marginTop: 10, fontSize: ".72rem", fontWeight: 800, letterSpacing: ".08em",
+              color: "#facc15", textTransform: "uppercase", position: "relative",
+            }}>
+              Great Work
+            </div>
 
-          <h2>Top players</h2>
-          <p className="leaderboard-status">
-            {board.is_finalized
-              ? (board.champion_name ? `🏆 Finalized — ${board.champion_name} is the Challenge Champion` : "🏆 Finalized")
-              : `🔴 Live — the Hall of Fame badge isn't awarded yet. It locks in once the challenge ends${challenge?.end_date ? ` (${new Date(challenge.end_date).toLocaleString()})` : ""}.`}
-          </p>
-          <ol className="leaderboard">
-            {(board.results || []).map((row, i) => (
-              <li
-                className={`${row.is_current_student ? "mine" : ""} ${row.is_champion ? "champion" : ""}`}
-                key={`${row.student_name}-${i}`}
+
+            <Avatar avatarKey={result?.student_avatar} size={48} />
+
+
+            <h1 style={{ margin: "6px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#fff", position: "relative" }}>
+              Boss Battle Complete
+            </h1>
+
+            {result && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 26, position: "relative" }}>
+                <StatPill value={`${result.accuracy}%`} label="Score" accent="#7c5cfc" />
+                <StatPill value={`+${result.xp_earned}`} label="XP earned" accent="#22c55e" />
+                <StatPill value={seconds(result.time_taken)} label="Time" accent="#0ea5e9" />
+              </div>
+            )}
+          </div>
+
+          {/* Leaderboard */}
+          <div style={{ background: "#0c0818", padding: "24px 24px 28px" }}>
+            <h2 style={{ margin: "0 0 8px", fontSize: "1rem", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
+              🏆 Top Players
+            </h2>
+            <p style={{
+              fontSize: ".76rem", lineHeight: 1.5, marginBottom: 16, padding: "8px 12px", borderRadius: 10,
+              color: board.is_finalized ? "#86efac" : "#fbbf24",
+              background: board.is_finalized ? "rgba(34,197,94,.1)" : "rgba(250,204,21,.1)",
+              border: `1px solid ${board.is_finalized ? "rgba(34,197,94,.25)" : "rgba(250,204,21,.25)"}`,
+            }}>
+              {board.is_finalized
+                ? (board.champion_name ? `🏆 Finalized — ${board.champion_name} is the Challenge Champion` : "🏆 Finalized")
+                : `🔴 Live — the Hall of Fame badge isn't awarded yet. It locks in once the challenge ends${challenge?.end_date ? ` (${new Date(challenge.end_date).toLocaleString()})` : ""}.`}
+            </p>
+
+            <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "grid", gap: 8 }}>
+              {(board.results || []).map((row, i) => (
+                <li
+                  key={`${row.student_name}-${i}`}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 14,
+                    animation: "cwPop .25s ease-out both", animationDelay: `${i * 0.04}s`,
+                    background: row.is_current_student ? "rgba(124,92,252,.16)" : "#14102a",
+                    border: row.is_champion ? "1px solid rgba(250,204,21,.55)" : row.is_current_student ? "1px solid rgba(124,92,252,.4)" : "1px solid rgba(124,92,252,.1)",
+                    boxShadow: row.is_champion ? "0 0 18px rgba(250,204,21,.25)" : "none",
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".88rem", fontWeight: row.is_current_student ? 800 : 600, color: "#e6e2f5" }}>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: "50%",
+                      fontSize: ".72rem", fontWeight: 800, flexShrink: 0,
+                      background: row.is_champion ? "linear-gradient(135deg,#eab308,#fde047)" : "#241d47",
+                      color: row.is_champion ? "#3a2c00" : "#a099c2",
+                    }}>
+                      {row.is_champion ? "🏆" : `#${row.rank ?? i + 1}`}
+                    </span>
+                    {row.student_name}
+                  </span>
+                  <span style={{ fontSize: ".78rem", color: "#a099c2", fontWeight: 700, flexShrink: 0 }}>
+                    {row.accuracy}% · {seconds(row.time_taken)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            <div style={{ display: "grid", gap: 10, marginTop: 22 }}>
+              <button
+                onClick={() => navigate(`/challenges/${id}/leaderboard`)}
+                style={{
+                  padding: "14px 0", borderRadius: 14, border: "none", fontWeight: 800, fontSize: ".92rem", cursor: "pointer",
+                  background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", color: "#fff", boxShadow: "0 10px 24px -10px rgba(124,92,252,.6)",
+                }}
               >
-                <span>{row.is_champion ? "🏆 " : ""}#{row.rank ?? i + 1} {row.student_name}</span>
-                <span>{row.accuracy}% · {seconds(row.time_taken)}</span>
-              </li>
-            ))}
-          </ol>
-          <button className="btn btn-primary" onClick={() => navigate(`/challenges/${id}/leaderboard`)}>View Full Leaderboard</button>
-          <button className="btn" onClick={() => navigate("/challenges")}>Continue</button>
+                View Full Leaderboard
+              </button>
+              <button
+                onClick={() => navigate("/challenges")}
+                style={{ padding: "13px 0", borderRadius: 14, border: "1px solid rgba(124,92,252,.25)", background: "transparent", color: "#e6e2f5", fontWeight: 700, fontSize: ".9rem", cursor: "pointer" }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
         </section>
       )}
 
@@ -569,7 +698,23 @@ export default function ChallengePlay() {
         <div className="s-error"><h2>Challenge doesn't have any questions</h2></div>
       )}
 
-      {(step === "game" || step === "submitting") && question && (
+      {(step === "game" || step === "submitting") && GAME_COMPONENTS[challenge.game_type] && (() => {
+        const Game = GAME_COMPONENTS[challenge.game_type];
+        return (
+          <>
+            <div style={{ textAlign: "center", fontWeight: 800, marginBottom: 6 }}>⏱ {seconds(left)}</div>
+            <Game
+              questions={challenge.questions}
+              title={challenge.title}
+              onAnswer={(qid, val) => setAnswers((old) => ({ ...old, [qid]: val }))}
+              onComplete={(finalAnswers, coinsEarned) => finish(coinsEarned)}
+              onExit={handleExit}
+            />
+          </>
+        );
+      })()}
+
+      {(step === "game" || step === "submitting") && !GAME_COMPONENTS[challenge.game_type] && question && (
         <section className="game-card">
           <header>
             <span>Question {index + 1} / {challenge.questions.length}</span>
@@ -747,7 +892,7 @@ export default function ChallengePlay() {
           {question.question_type === "memory_tiles" && (
             <>
               <p className="game-hint">{matchedPairs.size} / {(content.pairs || []).length} pairs found</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+              <div className="s-memory-grid">
                 {tiles.map((tile) => {
                   const isMatched = matchedPairs.has(tile.pairId);
                   const isFlipped = isMatched || flipped.some((t) => t.id === tile.id);
@@ -755,15 +900,15 @@ export default function ChallengePlay() {
                   return (
                     <button
                       key={tile.id}
+                      className="s-memory-tile"
                       onClick={() => flipTile(tile)}
                       disabled={isMatched}
                       style={{
-                        aspectRatio: "1", borderRadius: 14, border: "none", cursor: isMatched ? "default" : "pointer",
-                        fontWeight: 800, fontSize: ".82rem", padding: 8, textAlign: "center",
+                        cursor: isMatched ? "default" : "pointer",
                         background: isFlipped ? grad.memory_tiles : "linear-gradient(135deg,#e9e5da,#d8d3c5)",
                         color: isFlipped ? "white" : "transparent",
                         animation: isMatched ? "tileMatchPulse 1s ease-out" : isWrong ? "tileWrongShake .4s" : "none",
-                        transition: "background .2s ease", boxShadow: isMatched ? "0 0 0 2px #14b8a6 inset" : "none",
+                        boxShadow: isMatched ? "0 0 0 2px #14b8a6 inset" : "none",
                       }}
                     >
                       {isFlipped ? tile.label : "🧠"}

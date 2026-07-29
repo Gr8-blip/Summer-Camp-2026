@@ -1,0 +1,39 @@
+.prof-wrapper { display: flex; flex-direction: column; gap: 20px; max-width: 560px; }
+
+.prof-hero { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 32px 24px; }
+
+.prof-avatar-ring {
+  width: 88px; height: 88px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--color-purple-soft);
+  border: 3px solid var(--color-purple);
+  margin-bottom: 8px;
+}
+
+.prof-name { margin: 0; font-size: 1.4rem; }
+.prof-tagline { color: var(--color-text-soft); margin: 0 0 16px; font-size: 0.9rem; }
+
+.prof-stats-row { display: flex; gap: 28px; margin-bottom: 16px; }
+.prof-stat { display: flex; flex-direction: column; align-items: center; }
+.prof-stat strong { font-size: 1.2rem; color: var(--color-purple); }
+.prof-stat small { color: var(--color-text-soft); font-size: 0.75rem; }
+
+.prof-equip-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+.prof-equip-pill {
+  background: var(--color-bg); border: 2px solid var(--color-border);
+  border-radius: var(--radius-pill); padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
+  text-transform: capitalize;
+}
+
+.prof-badges-card { padding: 20px; }
+.prof-badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; margin-top: 12px; }
+.prof-badge {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 12px 8px; border-radius: 12px; border: 2px solid var(--color-border);
+  background: var(--color-bg);
+}
+.prof-badge-icon { font-size: 1.6rem; }
+.prof-badge-name { font-size: 0.72rem; font-weight: 600; text-align: center; }
+.prof-badge-legendary { border-color: #f5b800; box-shadow: 0 0 0 2px rgba(245,184,0,0.2); }
+.prof-badge-epic { border-color: #a78bfa; }
+.prof-badge-rare { border-color: #38bdf8; }

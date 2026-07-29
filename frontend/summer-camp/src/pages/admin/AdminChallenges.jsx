@@ -3,10 +3,11 @@ import { adminGetChallenges, adminCreateChallenge, adminUpdateChallenge, adminDe
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder";
+import GameTypePicker from "../../components/GameTypePicker";
 import "./AdminChallenges.css";
 
 const PAGE_SIZE = 10;
-const EMPTY_FORM = { title: "", description: "", xp_reward: "", mission: "", start_date: "", end_date: "" };
+const EMPTY_FORM = { title: "", description: "", xp_reward: "", mission: "", start_date: "", end_date: "", game_type: "classic" };
 
 export default function AdminChallenges() {
   const { toasts, toast } = useToast();
@@ -40,7 +41,7 @@ export default function AdminChallenges() {
 
   const openCreate = () => { setForm(EMPTY_FORM); setEditing(null); setFormErr(""); setModal("create"); };
   const openEdit = (item) => {
-    setForm({ title: item.title, description: item.description, xp_reward: item.xp_reward, mission: item.mission || "", start_date: item.start_date?.slice(0, 16) || "", end_date: item.end_date?.slice(0, 16) || "" });
+    setForm({ title: item.title, description: item.description, xp_reward: item.xp_reward, mission: item.mission || "", start_date: item.start_date?.slice(0, 16) || "", end_date: item.end_date?.slice(0, 16) || "", game_type: item.game_type || "classic" });
     setEditing(item); setFormErr(""); setModal("edit");
   };
   const closeModal = () => setModal(null);
@@ -54,7 +55,7 @@ export default function AdminChallenges() {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true); setFormErr("");
-    const body = { title: form.title, description: form.description, xp_reward: Number(form.xp_reward), mission: form.mission || null, start_date: form.start_date, end_date: form.end_date };
+    const body = { title: form.title, description: form.description, xp_reward: Number(form.xp_reward), mission: form.mission || null, start_date: form.start_date, end_date: form.end_date, game_type: form.game_type };
     try {
       if (modal === "edit") { await adminUpdateChallenge(editing.id, body); toast("Challenge updated!"); }
       else                  { await adminCreateChallenge(body);              toast("Challenge created!"); }
@@ -96,15 +97,20 @@ export default function AdminChallenges() {
         <>
           <div className="a-table-wrap ac-table-wrap">
             <table className="a-table">
-              <thead><tr><th>Title</th><th>XP</th><th>Lesson</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Title</th><th>XP</th><th>Lesson</th><th>Game</th><th>Start</th><th>End</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
-                {paged.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No challenges found.</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No challenges found.</td></tr>}
                 {paged.map((c) => {
                   return (
                     <tr key={c.id} className={c.is_published ? "ac-row-active" : ""}>
                       <td data-label="Title"><strong>{c.title}</strong></td>
                       <td data-label="XP"><span className="a-badge a-badge-green">+{c.xp_reward}</span></td>
                       <td data-label="Lesson">{missions.find((m) => m.id === c.mission)?.title || "—"}</td>
+                      <td data-label="Game">
+                        <span className={`a-badge ${c.game_type && c.game_type !== "classic" ? "a-badge-green" : ""}`}>
+                          {c.game_type === "dungeon_crawler" ? "🏰 Dungeon" : c.game_type && c.game_type !== "classic" ? c.game_type : "Classic"}
+                        </span>
+                      </td>
                       <td data-label="Start" style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.start_date ? new Date(c.start_date).toLocaleDateString() : "—"}</td>
                       <td data-label="End" style={{ fontSize: "0.82rem", color: "var(--color-text-soft)" }}>{c.end_date ? new Date(c.end_date).toLocaleDateString() : "—"}</td>
                       <td data-label="Status">
@@ -159,6 +165,9 @@ export default function AdminChallenges() {
             <div className="form-row ac-date-row">
               <div className="form-group"><label>Start Date *</label><input type="datetime-local" value={form.start_date} onChange={(e) => setForm((f) => ({ ...f, start_date: e.target.value }))} /></div>
               <div className="form-group"><label>End Date *</label><input type="datetime-local" value={form.end_date} onChange={(e) => setForm((f) => ({ ...f, end_date: e.target.value }))} /></div>
+            </div>
+            <div className="form-group">
+              <GameTypePicker value={form.game_type} onChange={(v) => setForm((f) => ({ ...f, game_type: v }))} />
             </div>
             {formErr && <div className="error-text" style={{ marginBottom: 12 }}>⚠️ {formErr}</div>}
             <div className="a-modal-actions">

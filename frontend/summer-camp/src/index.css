@@ -1,11 +1,18 @@
 /* ===== FONTS ===== */
 @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
 
-/* ===== COLOR SYSTEM ===== */
+/*
+  NOTE: --color-bg, --color-bg-alt, --color-text, --color-text-soft,
+  --color-border, --color-purple, --color-purple-light,
+  --color-purple-soft, --color-success, --color-danger, --radius-sm,
+  --radius-pill, --font-display, --gradient-*, and --shadow-* are ALL
+  defined in themes.css and swap per [data-theme]. Do NOT redefine any
+  of them here — that's what caused dark mode to only half-apply.
+  The variables below (--color-pink, --color-orange, etc.) are
+  marketing/landing-page-only brand accents that intentionally stay
+  constant across themes.
+*/
 :root {
-  /* Rainbow brand palette - kid friendly, high energy */
-  --color-purple: #7C3AED;
-  --color-purple-light: #A78BFA;
   --color-pink: #EC4899;
   --color-pink-light: #F9A8D4;
   --color-orange: #FB923C;
@@ -14,32 +21,10 @@
   --color-blue: #38BDF8;
   --color-blue-deep: #3B82F6;
 
-  /* Neutrals */
-  --color-bg: #FFF9F0;
-  --color-bg-soft: #FFFFFF;
-  --color-text: #241C3F;
-  --color-text-soft: #5B5470;
-  --color-border: #ECE6FF;
-
-  /* Gradients */
-  --gradient-hero: linear-gradient(135deg, #7C3AED 0%, #EC4899 50%, #FB923C 100%);
-  --gradient-card: linear-gradient(135deg, #38BDF8 0%, #7C3AED 100%);
-  --gradient-cta: linear-gradient(135deg, #FB923C 0%, #EC4899 100%);
-  --gradient-success: linear-gradient(135deg, #34D399 0%, #38BDF8 100%);
-
-  /* Shadows */
-  --shadow-soft: 0 8px 24px rgba(124, 58, 237, 0.12);
-  --shadow-pop: 0 10px 0 rgba(0,0,0,0.08);
-  --shadow-card: 0 14px 34px rgba(36, 28, 63, 0.10);
-
-  /* Radii */
-  --radius-sm: 14px;
+  /* Radii used only by marketing/landing sections that don't theme-swap */
   --radius-md: 22px;
   --radius-lg: 32px;
-  --radius-pill: 999px;
 
-  /* Fonts */
-  --font-display: 'Baloo 2', sans-serif;
   --font-body: 'Poppins', sans-serif;
 }
 
@@ -111,16 +96,16 @@ ul {
 .btn-primary {
   background: var(--gradient-cta);
   color: white;
-  box-shadow: 0 6px 0 #C2410C, 0 10px 20px rgba(251, 146, 60, 0.35);
+  box-shadow: var(--shadow-cta-pop);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 0 #C2410C, 0 14px 26px rgba(251, 146, 60, 0.4);
+  box-shadow: var(--shadow-cta-pop-hover);
 }
 
 .btn-secondary {
-  background: white;
+  background: var(--color-bg-alt);
   color: var(--color-purple);
   border: 3px solid var(--color-purple-light);
 }
@@ -156,7 +141,7 @@ ul {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: white;
+  background: var(--color-bg-alt);
   border-radius: var(--radius-pill);
   padding: 8px 18px;
   font-weight: 600;

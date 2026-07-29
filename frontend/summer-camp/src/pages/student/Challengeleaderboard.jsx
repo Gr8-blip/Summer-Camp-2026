@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getChallenge, getChallengeLeaderboard } from "../../api/client";
 import StudentLayout from "./StudentLayout";
+import Avatar from "../../components/Avatar";
 import "./student.css";
 
 export default function ChallengeLeaderboard() {
@@ -140,7 +141,10 @@ export default function ChallengeLeaderboard() {
                             {getRankBadge(row.rank, row.is_champion)}
                           </td>
                           <td className="lb-td-student">
-                            <span className="lb-student-name">{row.student_name}</span>
+                            <span className="lb-student-name" style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                              <Avatar avatarKey={row.student_avatar} size={18} />
+                              {row.student_name}
+                            </span>
                             {row.is_current_student && <span className="lb-you-tag">YOU</span>}
                             {row.is_champion && <span className="lb-hof-tag">HALL OF FAME</span>}
                           </td>

@@ -3,14 +3,16 @@ import { useAuth } from "../../context/AuthContext";
 import "./StudentLayout.css";
 
 const NAV_ITEMS = [
-  { to: "/dashboard",   label: "🏠 Dashboard"   },
-  { to: "/missions",    label: "🎯 Missions"     },
-  { to: "/assignments", label: "🗺️ Quests"       },
-  { to: "/submissions", label: "📬 Submissions"  },
-  { to: "/challenges",  label: "⚡ Challenges"   },
-  { to: "/attendance",  label: "📅 Attendance"   },
-  { to: "/badges",      label: "🏅 Badges"       },
-  { to: "/xp",          label: "✨ XP History"   },
+  { to: "/dashboard",    label: "🏠 Dashboard"   },
+  { to: "/missions",     label: "🎯 Missions"     },
+  { to: "/assignments",  label: "🗺️ Quests"       },
+  { to: "/submissions",  label: "📬 Submissions"  },
+  { to: "/challenges",   label: "⚡ Challenges"   },
+  { to: "/attendance",   label: "📅 Attendance"   },
+  { to: "/badges",       label: "🏅 Badges"       },
+  { to: "/xp",           label: "✨ XP History"   },
+  { to: "/marketplace",  label: "🛒 Marketplace"  },
+  { to: "/profile",      label: "👤 Profile"      },
 ];
 
 export default function StudentLayout({ children, title }) {

@@ -1,4 +1,4 @@
-.bd-collection-card{background:white;border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:18px 22px;margin-bottom:20px;}
+.bd-collection-card{background:var(--color-bg-alt);border-radius:var(--radius-md);box-shadow:var(--shadow-card);padding:18px 22px;margin-bottom:20px;}
 .bd-collection-label{font-weight:800;font-size:1.05rem;display:block;margin-bottom:10px;}
 .bd-collection-track{height:14px;}
 

@@ -2,6 +2,21 @@ import uuid
 from django.db import models
 from users.models import Student
 
+# Shared by Challenge and Assignment — the "classic" list-of-questions flow
+# stays as the default so nothing breaks for existing content. Admins pick
+# one of these per Challenge/Quest; the student frontend branches on this
+# value to decide which game shell (or the classic flow) to render. Adding
+# a new game later is just: add a choice here + a matching case in the
+# frontend's GAME_COMPONENTS map — no model/serializer changes needed.
+GAME_TYPES = [
+    ("classic", "Classic (question list)"),
+    ("dungeon_crawler", "Dungeon Crawler"),
+    ("target_shooter", "Target Shooter"),
+    ("escape_room", "Escape Room"),
+    ("floor_is_lava", "Floor Is Lava"),
+    ("ai_defense", "AI Defense"),
+]
+
 class Mission(models.Model):
     week = models.PositiveIntegerField()
     title = models.CharField(max_length=100)
@@ -59,6 +74,23 @@ class XPLog(models.Model):
     
     def __str__(self):
         return f"{self.student.full_name} - {self.amount} XP ({self.reason})"
+
+
+class CoinLog(models.Model):
+    """
+    Mirrors XPLog exactly. Coins are earned through gameplay performance
+    (speed, no mistakes, potions/pickups found, etc.) rather than the
+    fixed one-time reward XP gives — a second, replayable progression
+    track. Not spendable through gameplay (spent via the Marketplace
+    instead — see CosmeticItem/StudentCosmetic below).
+    """
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='coin_logs')
+    amount = models.IntegerField()
+    reason = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.full_name} - {self.amount} coins ({self.reason})"
     
 
 class Assignment(models.Model):
@@ -68,6 +100,7 @@ class Assignment(models.Model):
     xp_reward = models.IntegerField()
     deadline = models.DateTimeField()
     is_published = models.BooleanField(default=False) 
+    game_type = models.CharField(max_length=32, choices=GAME_TYPES, default="classic")
 
     def __str__(self):
         return f"{self.title} (Lesson: {self.lesson.title})"
@@ -95,6 +128,7 @@ class Challenge(models.Model):
     time_limit = models.PositiveIntegerField(default=600, help_text="Time allowed in seconds")
     is_published = models.BooleanField(default=False) 
     created_at = models.DateTimeField(auto_now_add=True)
+    game_type = models.CharField(max_length=32, choices=GAME_TYPES, default="classic")
 
     def __str__(self):
         return f"{self.title} (XP: {self.xp_reward})"
@@ -299,3 +333,47 @@ class MissionCompletion(models.Model):
  
     def __str__(self):
         return f"{self.student.full_name} completed Mission: {self.mission.title}"
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# MARKETPLACE (Part 1): Coins → Cosmetics → Avatars / Themes / Victory FX
+# ─────────────────────────────────────────────────────────────────────────
+
+class CosmeticItem(models.Model):
+    CATEGORY = [
+        ("avatar", "Avatar"),
+        ("theme", "Theme"),
+        ("victory_effect", "Victory Effect"),
+    ]
+    category = models.CharField(max_length=20, choices=CATEGORY)
+    key = models.SlugField(unique=True)             # e.g. "cadet", "cyber_blue", "star_burst"
+    name = models.CharField(max_length=100)          # display label, e.g. "🧑‍🚀 Cadet"
+    price = models.PositiveIntegerField(default=0)   # 0 = free / starter item, always "owned"
+    order = models.PositiveIntegerField(default=0)   # display order within category
+    is_active = models.BooleanField(default=True)    # admins retire items without deleting/breaking ownership history
+
+    class Meta:
+        ordering = ["category", "order", "price"]
+
+    def __str__(self):
+        return f"{self.name} ({self.category}, {self.price}c)"
+
+
+class StudentCosmetic(models.Model):
+    """
+    Ownership record. A row existing here = owned. Free items (price=0)
+    don't need a row — they're treated as owned by everyone (see
+    utils/marketplace.py:owns_item). Keeps the ledger only tracking
+    actual purchases.
+    """
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["student", "item"], name="unique_owned_cosmetic")
+        ]
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="owned_cosmetics")
+    item = models.ForeignKey(CosmeticItem, on_delete=models.CASCADE, related_name="owners")
+    acquired_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.full_name} owns {self.item.name}"

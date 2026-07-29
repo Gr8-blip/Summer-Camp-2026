@@ -33,6 +33,24 @@ class Student(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     login_code = models.CharField(max_length=25, unique=True, blank=True, null=True)
     xp = models.PositiveIntegerField(default=0)
+    coins = models.IntegerField(default=0)
+
+    equipped_avatar = models.ForeignKey(
+        'camp.CosmeticItem', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+        limit_choices_to={'category': 'avatar'},
+    )
+    equipped_theme = models.ForeignKey(
+        'camp.CosmeticItem', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+        limit_choices_to={'category': 'theme'},
+    )
+    equipped_victory_effect = models.ForeignKey(
+        'camp.CosmeticItem', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+',
+        limit_choices_to={'category': 'victory_effect'},
+    )
+
     
     def __str__(self):
         return f"Student {self.id} - {self.full_name}"

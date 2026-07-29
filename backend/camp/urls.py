@@ -46,6 +46,10 @@ from .views.student.attendance import (
     AttendanceCheckInView,
 )
 
+from .views.student.marketplace import (
+    MarketplaceListView, MarketplacePurchaseView, MarketplaceEquipView, ProfileView,
+)
+
 from .views.parent.dashboard import ParentDashboardView
 from .views.parent.student import ParentStudentStatView
 from .views.parent.mission import ParentMissionListView
@@ -168,6 +172,11 @@ urlpatterns = [
         AttendanceCheckInView.as_view(),
         name="attendance-check-in",
     ),
+
+    path("marketplace/", MarketplaceListView.as_view()),
+    path("marketplace/<int:pk>/purchase/", MarketplacePurchaseView.as_view()),
+    path("marketplace/<int:pk>/equip/", MarketplaceEquipView.as_view()),
+    path("profile/", ProfileView.as_view()),
 
 
 

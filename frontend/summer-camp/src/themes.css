@@ -1,0 +1,221 @@
+/*
+  Global theme system. Every component in the app reads var(--color-*),
+  var(--radius-*), var(--shadow-*), var(--gradient-*), var(--font-display)
+  etc — so adding a theme is just adding a new [data-theme="..."] block
+  here — zero component changes required.
+
+  IMPORTANT: this file is the ONLY place themed variables are defined.
+  index.css must not redefine any of --color-bg, --color-bg-alt,
+  --color-text, --color-text-soft, --color-border, --color-purple,
+  --color-purple-light, --color-purple-soft, --color-success,
+  --color-danger, --radius-sm, --radius-pill, --font-display,
+  --gradient-*, or --shadow-* in its own :root — doing so re-introduces
+  the "half dark mode" bug where index.css's unconditional :root
+  clobbers these theme's values back to light-mode hex codes.
+
+  To add a new theme later: pick a key matching the CosmeticItem.key in
+  the DB, add a block below (copy the default_light block and restyle
+  every variable), done.
+*/
+
+:root,
+[data-theme="default_light"] {
+  --color-bg: #f7f7fb;
+  --color-bg-alt: #ffffff;
+  --color-text: #1c1c28;
+  --color-text-soft: #6b6b7d;
+  --color-border: #e6e6ef;
+  --color-purple: #6c5ce7;
+  --color-purple-light: #a78bfa;
+  --color-purple-soft: #ede9fe;
+  --color-success: #22c55e;
+  --color-danger: #ef4444;
+  --radius-sm: 10px;
+  --radius-pill: 999px;
+  --font-display: "Poppins", sans-serif;
+
+  --gradient-hero: linear-gradient(135deg, #7C3AED 0%, #EC4899 50%, #FB923C 100%);
+  --gradient-card: linear-gradient(135deg, #38BDF8 0%, #7C3AED 100%);
+  --gradient-cta: linear-gradient(135deg, #FB923C 0%, #EC4899 100%);
+  --gradient-success: linear-gradient(135deg, #34D399 0%, #38BDF8 100%);
+
+  --shadow-soft: 0 8px 24px rgba(124, 58, 237, 0.12);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 14px 34px rgba(36, 28, 63, 0.10);
+  --shadow-cta-pop: 0 6px 0 #C2410C, 0 10px 20px rgba(251, 146, 60, 0.35);
+  --shadow-cta-pop-hover: 0 8px 0 #C2410C, 0 14px 26px rgba(251, 146, 60, 0.4);
+}
+
+[data-theme="dark"] {
+  --color-bg: #14141c;
+  --color-bg-alt: #1d1d29;
+  --color-text: #f2f2f7;
+  --color-text-soft: #9a9ab0;
+  --color-border: #2c2c3c;
+  --color-purple: #a78bfa;
+  --color-purple-light: #c4b5fd;
+  --color-purple-soft: #2e2a4d;
+  --color-success: #4ade80;
+  --color-danger: #f87171;
+
+  --gradient-hero: linear-gradient(135deg, #a78bfa 0%, #f472b6 50%, #fb923c 100%);
+  --gradient-card: linear-gradient(135deg, #38bdf8 0%, #a78bfa 100%);
+  --gradient-cta: linear-gradient(135deg, #fb923c 0%, #f472b6 100%);
+  --gradient-success: linear-gradient(135deg, #4ade80 0%, #38bdf8 100%);
+
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.5);
+  --shadow-cta-pop: 0 6px 0 #9a3412, 0 10px 20px rgba(0, 0, 0, 0.45);
+  --shadow-cta-pop-hover: 0 8px 0 #9a3412, 0 14px 26px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="cyber_blue"] {
+  --color-bg: #050c17;
+  --color-bg-alt: #0b1a2c;
+  --color-text: #dff5ff;
+  --color-text-soft: #7fb8d6;
+  --color-border: #123049;
+  --color-purple: #00d4ff;
+  --color-purple-light: #6ee7ff;
+  --color-purple-soft: #0b2f42;
+  --color-success: #2ee6a6;
+  --color-danger: #ff5c7a;
+
+  --gradient-hero: linear-gradient(135deg, #00d4ff 0%, #2ee6a6 50%, #6ee7ff 100%);
+  --gradient-card: linear-gradient(135deg, #0b2f42 0%, #00d4ff 100%);
+  --gradient-cta: linear-gradient(135deg, #00d4ff 0%, #2ee6a6 100%);
+  --gradient-success: linear-gradient(135deg, #2ee6a6 0%, #00d4ff 100%);
+
+  --shadow-soft: 0 8px 24px rgba(0, 212, 255, 0.18);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --shadow-cta-pop: 0 6px 0 #0a5c7a, 0 10px 20px rgba(0, 212, 255, 0.3);
+  --shadow-cta-pop-hover: 0 8px 0 #0a5c7a, 0 14px 26px rgba(0, 212, 255, 0.35);
+}
+
+[data-theme="neon_purple"] {
+  --color-bg: #14051f;
+  --color-bg-alt: #200a33;
+  --color-text: #f3e8ff;
+  --color-text-soft: #b98ee0;
+  --color-border: #3a1454;
+  --color-purple: #e040fb;
+  --color-purple-light: #f472fb;
+  --color-purple-soft: #3a1454;
+  --color-success: #39ff9d;
+  --color-danger: #ff4d8d;
+
+  --gradient-hero: linear-gradient(135deg, #e040fb 0%, #ff4d8d 50%, #f472fb 100%);
+  --gradient-card: linear-gradient(135deg, #200a33 0%, #e040fb 100%);
+  --gradient-cta: linear-gradient(135deg, #e040fb 0%, #ff4d8d 100%);
+  --gradient-success: linear-gradient(135deg, #39ff9d 0%, #e040fb 100%);
+
+  --shadow-soft: 0 8px 24px rgba(224, 64, 251, 0.22);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --shadow-cta-pop: 0 6px 0 #7a1a91, 0 10px 20px rgba(224, 64, 251, 0.35);
+  --shadow-cta-pop-hover: 0 8px 0 #7a1a91, 0 14px 26px rgba(224, 64, 251, 0.4);
+}
+
+[data-theme="lava_core"] {
+  --color-bg: #1a0805;
+  --color-bg-alt: #2b0f09;
+  --color-text: #ffe9df;
+  --color-text-soft: #e08a68;
+  --color-border: #4a1c10;
+  --color-purple: #ff5722;
+  --color-purple-light: #ff8a5b;
+  --color-purple-soft: #4a1c10;
+  --color-success: #ffb347;
+  --color-danger: #ff2d2d;
+
+  --gradient-hero: linear-gradient(135deg, #ff5722 0%, #ff2d2d 50%, #ffb347 100%);
+  --gradient-card: linear-gradient(135deg, #2b0f09 0%, #ff5722 100%);
+  --gradient-cta: linear-gradient(135deg, #ff5722 0%, #ffb347 100%);
+  --gradient-success: linear-gradient(135deg, #ffb347 0%, #ff5722 100%);
+
+  --shadow-soft: 0 8px 24px rgba(255, 87, 34, 0.22);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --shadow-cta-pop: 0 6px 0 #7a2a0d, 0 10px 20px rgba(255, 87, 34, 0.35);
+  --shadow-cta-pop-hover: 0 8px 0 #7a2a0d, 0 14px 26px rgba(255, 87, 34, 0.4);
+}
+
+[data-theme="frozen"] {
+  --color-bg: #eaf6ff;
+  --color-bg-alt: #ffffff;
+  --color-text: #0b2b3c;
+  --color-text-soft: #4c7891;
+  --color-border: #cdeaff;
+  --color-purple: #29b6f6;
+  --color-purple-light: #7cd4fb;
+  --color-purple-soft: #d6f0ff;
+  --color-success: #26c6da;
+  --color-danger: #ef5350;
+
+  --gradient-hero: linear-gradient(135deg, #29b6f6 0%, #26c6da 50%, #7cd4fb 100%);
+  --gradient-card: linear-gradient(135deg, #7cd4fb 0%, #29b6f6 100%);
+  --gradient-cta: linear-gradient(135deg, #29b6f6 0%, #26c6da 100%);
+  --gradient-success: linear-gradient(135deg, #26c6da 0%, #29b6f6 100%);
+
+  --shadow-soft: 0 8px 24px rgba(41, 182, 246, 0.15);
+  --shadow-pop: 0 10px 0 rgba(11, 43, 60, 0.08);
+  --shadow-card: 0 14px 34px rgba(11, 43, 60, 0.10);
+  --shadow-cta-pop: 0 6px 0 #0f7fae, 0 10px 20px rgba(41, 182, 246, 0.3);
+  --shadow-cta-pop-hover: 0 8px 0 #0f7fae, 0 14px 26px rgba(41, 182, 246, 0.35);
+}
+
+[data-theme="matrix"] {
+  --color-bg: #050a05;
+  --color-bg-alt: #0c150c;
+  --color-text: #c8ffcf;
+  --color-text-soft: #4fae5c;
+  --color-border: #123312;
+  --color-purple: #39ff14;
+  --color-purple-light: #8dff70;
+  --color-purple-soft: #123312;
+  --color-success: #39ff14;
+  --color-danger: #ff5555;
+
+  --gradient-hero: linear-gradient(135deg, #39ff14 0%, #4fae5c 50%, #8dff70 100%);
+  --gradient-card: linear-gradient(135deg, #0c150c 0%, #39ff14 100%);
+  --gradient-cta: linear-gradient(135deg, #39ff14 0%, #4fae5c 100%);
+  --gradient-success: linear-gradient(135deg, #4fae5c 0%, #39ff14 100%);
+
+  --shadow-soft: 0 8px 24px rgba(57, 255, 20, 0.18);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.45);
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.6);
+  --shadow-cta-pop: 0 6px 0 #0d5c05, 0 10px 20px rgba(57, 255, 20, 0.3);
+  --shadow-cta-pop-hover: 0 8px 0 #0d5c05, 0 14px 26px rgba(57, 255, 20, 0.35);
+}
+
+[data-theme="galaxy"] {
+  --color-bg: #0a0a1f;
+  --color-bg-alt: #14143a;
+  --color-text: #e8e6ff;
+  --color-text-soft: #9d97d6;
+  --color-border: #232360;
+  --color-purple: #8c6bff;
+  --color-purple-light: #b3a1ff;
+  --color-purple-soft: #232360;
+  --color-success: #56e0c1;
+  --color-danger: #ff6b9d;
+
+  --gradient-hero: linear-gradient(135deg, #8c6bff 0%, #ff6b9d 50%, #56e0c1 100%);
+  --gradient-card: linear-gradient(135deg, #14143a 0%, #8c6bff 100%);
+  --gradient-cta: linear-gradient(135deg, #8c6bff 0%, #ff6b9d 100%);
+  --gradient-success: linear-gradient(135deg, #56e0c1 0%, #8c6bff 100%);
+
+  --shadow-soft: 0 8px 24px rgba(140, 107, 255, 0.2);
+  --shadow-pop: 0 10px 0 rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 14px 34px rgba(0, 0, 0, 0.55);
+  --shadow-cta-pop: 0 6px 0 #4a3aa8, 0 10px 20px rgba(140, 107, 255, 0.3);
+  --shadow-cta-pop-hover: 0 8px 0 #4a3aa8, 0 14px 26px rgba(140, 107, 255, 0.35);
+}
+
+/* Smooth cross-theme transition on the properties components actually use */
+body, .s-card, .sl-sidebar, .sl-main, button, .lb-table, .lb-tr {
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}

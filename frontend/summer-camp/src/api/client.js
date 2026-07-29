@@ -130,3 +130,9 @@ export const adminDeleteAssignmentQuestion  = (id)       => camp(`/camp-admin/as
 // / `locked` inline, so the student app never hits this endpoint directly.
 export const adminGetCampSettings    = ()     => camp("/camp-admin/camp-settings/", { method: "GET",   adminAuth: true });
 export const adminUpdateCampSettings = (body) => camp("/camp-admin/camp-settings/", { method: "PATCH", adminAuth: true, body });
+
+// ── Marketplace / Profile ─────────────────────────────────────────────────────
+export const getMarketplace       = ()     => camp("/marketplace/",               { method: "GET",  studentAuth: true });
+export const purchaseCosmetic     = (id)   => camp(`/marketplace/${id}/purchase/`, { method: "POST", studentAuth: true });
+export const equipCosmetic        = (id)   => camp(`/marketplace/${id}/equip/`,   { method: "POST", studentAuth: true });
+export const getProfile           = ()     => camp("/profile/",                   { method: "GET",  studentAuth: true });

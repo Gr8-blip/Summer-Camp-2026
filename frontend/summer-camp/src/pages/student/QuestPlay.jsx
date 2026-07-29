@@ -6,8 +6,18 @@ import {
   submitQuest,
 } from "../../api/client";
 import StudentLayout from "./StudentLayout";
+import VictoryEffect from "../../components/VictoryEffect";
 import { generateWordSearch, matchSelection, straightLine } from "../../components/wordSearchGenerator";
+import DungeonCrawler from "../../components/DungeonCrawler";
+import FloorIsLava from "../../components/Floorislava";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
+
+// Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
+// through to the existing question-list flow below.
+const GAME_COMPONENTS = {
+  dungeon_crawler: DungeonCrawler,
+  floor_is_lava: FloorIsLava,
+};
 
 function shuffled(arr) {
   const a = [...arr];
@@ -87,6 +97,8 @@ export default function QuestPlay() {
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [confettiKey, setConfettiKey] = useState(0);
+  const [victoryEffectKey, setVictoryEffectKey] = useState(null);
+  const [pendingDoneData, setPendingDoneData] = useState(null);
   const [xpFlash, setXpFlash] = useState(0);
 
   const celebrate = (xp = 5) => {
@@ -310,7 +322,7 @@ export default function QuestPlay() {
       try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
         savedTiles = saved?.tileProgress?.[question.id] || [];
-      } catch {}
+      } catch { }
     }
     setMatchedPairs(new Set(savedTiles));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -320,7 +332,7 @@ export default function QuestPlay() {
   useEffect(() => {
     if (step !== "game" || question?.question_type !== "memory_tiles") return;
     let saved = {};
-    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch {}
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null") || {}; } catch { }
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       ...saved,
       tileProgress: { ...(saved.tileProgress || {}), [question.id]: [...matchedPairs] },
@@ -338,16 +350,28 @@ export default function QuestPlay() {
     }
   };
 
-  const finish = async () => {
+  const finish = async (coinsEarned) => {
     if (step === "submitting" || !quest) return;
     setStep("submitting");
     try {
-      const data = await submitQuest(id, { answers });
+      const data = await submitQuest(id, { answers, coins_earned: coinsEarned || 0 });
       setResult(data);
       if (data.is_complete) {
         localStorage.removeItem(STORAGE_KEY);
-        setStep("done");
-        setConfettiKey((k) => k + 1);
+
+        // Stash the "done" reveal — if a victory effect is equipped, play
+        // it first and only THEN flip to the completion screen.
+        const revealDone = () => {
+          setStep("done");
+          setConfettiKey((k) => k + 1);
+        };
+
+        if (data.victory_effect_key) {
+          setPendingDoneData(() => revealDone);
+          setVictoryEffectKey(data.victory_effect_key);
+        } else {
+          revealDone();
+        }
       } else {
         // Retryable: show what went wrong, let them try again from Q1
         setStep("retry");
@@ -391,6 +415,17 @@ export default function QuestPlay() {
       <style>{GAME_KEYFRAMES}</style>
       <Confetti burstKey={confettiKey} />
       <XPPopup amount={xpFlash} />
+
+      {victoryEffectKey && (
+        <VictoryEffect
+          effectKey={victoryEffectKey}
+          onDone={() => {
+            setVictoryEffectKey(null);
+            pendingDoneData?.();
+            setPendingDoneData(null);
+          }}
+        />
+      )}
 
       {step === "locked" && (
         <section className="challenge-hero">
@@ -453,7 +488,20 @@ export default function QuestPlay() {
         <div className="s-error"><h2>This quest doesn't have any questions yet.</h2></div>
       )}
 
-      {(step === "game" || step === "submitting") && question && (
+      {(step === "game" || step === "submitting") && GAME_COMPONENTS[quest.game_type] && (() => {
+        const Game = GAME_COMPONENTS[quest.game_type];
+        return (
+          <Game
+            questions={quest.questions}
+            title={quest.title}
+            onAnswer={(qid, val) => setAnswers((old) => ({ ...old, [qid]: val }))}
+            onComplete={(finalAnswers, coinsEarned) => finish(coinsEarned)}
+            onExit={handleExit}
+          />
+        );
+      })()}
+
+      {(step === "game" || step === "submitting") && !GAME_COMPONENTS[quest.game_type] && question && (
         <section className="game-card">
           <header>
             <span>Question {index + 1} / {quest.questions.length}</span>
@@ -592,7 +640,7 @@ export default function QuestPlay() {
           {question.question_type === "memory_tiles" && (
             <>
               <p className="game-hint">{matchedPairs.size} / {(content.pairs || []).length} pairs found</p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+              <div className="s-memory-grid">
                 {tiles.map((tile) => {
                   const isMatched = matchedPairs.has(tile.pairId);
                   const isFlipped = isMatched || flipped.some((t) => t.id === tile.id);
@@ -600,15 +648,15 @@ export default function QuestPlay() {
                   return (
                     <button
                       key={tile.id}
+                      className="s-memory-tile"
                       onClick={() => flipTile(tile)}
                       disabled={isMatched}
                       style={{
-                        aspectRatio: "1", borderRadius: 14, border: "none", cursor: isMatched ? "default" : "pointer",
-                        fontWeight: 800, fontSize: ".82rem", padding: 8, textAlign: "center",
+                        cursor: isMatched ? "default" : "pointer",
                         background: isFlipped ? grad.memory_tiles : "linear-gradient(135deg,#e9e5da,#d8d3c5)",
                         color: isFlipped ? "white" : "transparent",
                         animation: isMatched ? "tileMatchPulse 1s ease-out" : isWrong ? "tileWrongShake .4s" : "none",
-                        transition: "background .2s ease", boxShadow: isMatched ? "0 0 0 2px #14b8a6 inset" : "none",
+                        boxShadow: isMatched ? "0 0 0 2px #14b8a6 inset" : "none",
                       }}
                     >
                       {isFlipped ? tile.label : "🧠"}

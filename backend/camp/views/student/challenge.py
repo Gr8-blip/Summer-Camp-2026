@@ -12,6 +12,7 @@ from ...serializers import ChallengeSerializer, StudentChallengeQuestionSerializ
 from ...utils import achievements
 from ...utils.achievements import PUZZLE_TYPES
 from ...utils.scoring import score_fraction
+from ...utils.coins import award_coins, clamp_coins
 from ...utils.challenge_finalize import (
     challenge_is_finalized,
     finalize_challenge_if_ready,
@@ -88,6 +89,14 @@ class ChallengeSubmitView(APIView):
         XPLog.objects.create(student=student, amount=attempt.xp_earned, reason=f'Boss battle: {attempt.challenge.title}')
         student.refresh_from_db(fields=['xp'])
 
+        # Coins are earned by the run itself (however the game shell scored
+        # it — speed, no mistakes, potions found, etc.) regardless of final
+        # accuracy, since that's a separate, replayable progression track
+        # from XP. The classic (non-game) flow just won't send this field,
+        # so it defaults to 0 — nothing changes for existing content.
+        coins_earned = clamp_coins(request.data.get('coins_earned', 0))
+        award_coins(student, coins_earned, reason=f'Boss battle run: {attempt.challenge.title}')
+
         new_badges = []
         new_badges += achievements.check_challenge(student, attempt)
 
@@ -120,7 +129,11 @@ class ChallengeSubmitView(APIView):
 
         data = ChallengeAttemptSerializer(attempt).data
         data['xp_gained'] = attempt.xp_earned
+        data['coins_gained'] = coins_earned
         data['new_badges'] = _serialize_badges(new_badges)
+        # Frontend plays this cosmetic celebration (if equipped) before
+        # revealing the completion screen — purely visual, no gameplay effect.
+        data['victory_effect_key'] = student.equipped_victory_effect.key if student.equipped_victory_effect_id else None
         return Response(data)
 
 class ChallengeLeaderboardView(APIView):

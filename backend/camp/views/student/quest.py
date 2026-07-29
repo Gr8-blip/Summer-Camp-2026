@@ -13,6 +13,7 @@ from ...serializers import (
 )
 from ...utils.scoring import score_fraction
 from ...utils.camp import camp_is_started
+from ...utils.coins import award_coins, clamp_coins
 from ...utils import achievements
 from ...utils.achievements import PUZZLE_TYPES
 
@@ -98,6 +99,8 @@ class QuestSubmitView(APIView):
         attempt.accuracy = accuracy
         attempt.attempt_count = F('attempt_count') + 1
         new_badges = []
+        coins_earned = 0
+        victory_effect_key = None
 
         if is_complete:
             attempt.completed_at = timezone.now()
@@ -115,6 +118,9 @@ class QuestSubmitView(APIView):
                 reason=f'Quest complete: {attempt.assignment.title}'
             )
             student.refresh_from_db(fields=['xp'])
+
+            coins_earned = clamp_coins(request.data.get('coins_earned', 0))
+            award_coins(student, coins_earned, reason=f'Quest run: {attempt.assignment.title}')
 
             new_badges += achievements.check_quest_completion(student)
             new_badges += achievements.check_coding_cadet(student)
@@ -140,10 +146,16 @@ class QuestSubmitView(APIView):
                 new_badges += achievements.check_prompt_apprentice(student)
             new_badges += achievements.check_puzzle_master(student)
 
+            # Purely cosmetic — frontend plays this before showing the
+            # completion screen, same pattern as ChallengeSubmitView.
+            victory_effect_key = student.equipped_victory_effect.key if student.equipped_victory_effect_id else None
+
         data = AssignmentAttemptSerializer(attempt).data
         data['xp_gained'] = attempt.xp_earned if is_complete else 0
+        data['coins_gained'] = coins_earned if is_complete else 0
         data['is_complete'] = is_complete
         data['new_badges'] = _serialize_badges(new_badges)
+        data['victory_effect_key'] = victory_effect_key if is_complete else None
         return Response(data)
 
 

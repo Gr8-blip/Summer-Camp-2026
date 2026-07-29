@@ -3,9 +3,10 @@ import { adminGetAssignments, adminCreateAssignment, adminUpdateAssignment, admi
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder"; // reused as-is; pass resource="assignment"
+import GameTypePicker from "../../components/GameTypePicker";
 
 const PAGE_SIZE = 10;
-const EMPTY_FORM = { lesson: "", title: "", description: "", xp_reward: "", deadline: "" };
+const EMPTY_FORM = { lesson: "", title: "", description: "", xp_reward: "", deadline: "", game_type: "classic" };
 
 export default function AdminAssignments() {
   const { toasts, toast } = useToast();
@@ -47,7 +48,7 @@ export default function AdminAssignments() {
   const openCreate = () => { setForm(EMPTY_FORM); setEditing(null); setFormErr(""); setModal("create"); };
   const openEdit = (item) => {
     const dl = item.deadline ? item.deadline.slice(0, 16) : "";
-    setForm({ lesson: item.lesson || "", title: item.title, description: item.description, xp_reward: item.xp_reward, deadline: dl });
+    setForm({ lesson: item.lesson || "", title: item.title, description: item.description, xp_reward: item.xp_reward, deadline: dl, game_type: item.game_type || "classic" });
     setEditing(item); setFormErr(""); setModal("edit");
   };
   const closeModal = () => setModal(null);
@@ -60,7 +61,7 @@ export default function AdminAssignments() {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true); setFormErr("");
-    const body = { lesson: form.lesson || null, title: form.title, description: form.description, xp_reward: Number(form.xp_reward), deadline: form.deadline };
+    const body = { lesson: form.lesson || null, title: form.title, description: form.description, xp_reward: Number(form.xp_reward), deadline: form.deadline, game_type: form.game_type };
     try {
       if (modal === "edit") { await adminUpdateAssignment(editing.id, body); toast("Assignment updated!"); }
       else                  { await adminCreateAssignment(body);              toast("Assignment created!"); }
@@ -89,13 +90,18 @@ export default function AdminAssignments() {
         <>
           <div className="a-table-wrap">
             <table className="a-table">
-              <thead><tr><th>Title</th><th>Lesson</th><th>XP</th><th>Deadline</th><th>Published</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Title</th><th>Lesson</th><th>Game</th><th>XP</th><th>Deadline</th><th>Published</th><th>Actions</th></tr></thead>
               <tbody>
-                {paged.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No quests found.</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No quests found.</td></tr>}
                 {paged.map((a) => (
                   <tr key={a.id}>
                     <td><strong>{a.title}</strong></td>
                     <td>{lessons.find((l) => l.id === a.lesson)?.title || "—"}</td>
+                    <td>
+                      <span className={`a-badge ${a.game_type && a.game_type !== "classic" ? "a-badge-green" : ""}`}>
+                        {a.game_type === "dungeon_crawler" ? "🏰 Dungeon" : a.game_type && a.game_type !== "classic" ? a.game_type : "Classic"}
+                      </span>
+                    </td>
                     <td><span className="a-badge a-badge-green">+{a.xp_reward} XP</span></td>
                     <td style={{ fontSize: "0.85rem", color: "var(--color-text-soft)" }}>{a.deadline ? new Date(a.deadline).toLocaleDateString() : "—"}</td>
                     <td>
@@ -143,6 +149,9 @@ export default function AdminAssignments() {
             <div className="form-row">
               <div className="form-group"><label>XP Reward *</label><input type="number" min="0" value={form.xp_reward} onChange={(e) => setForm((f) => ({ ...f, xp_reward: e.target.value }))} placeholder="50" /></div>
               <div className="form-group"><label>Deadline *</label><input type="datetime-local" value={form.deadline} onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))} /></div>
+            </div>
+            <div className="form-group">
+              <GameTypePicker value={form.game_type} onChange={(v) => setForm((f) => ({ ...f, game_type: v }))} />
             </div>
             {formErr && <div className="error-text" style={{ marginBottom: 12 }}>⚠️ {formErr}</div>}
             <div className="a-modal-actions">
