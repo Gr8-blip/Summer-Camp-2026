@@ -9,7 +9,7 @@ import {
 import StudentLayout from "./StudentLayout";
 import VictoryEffect from "../../components/VictoryEffect";
 import { generateWordSearch, matchSelection, straightLine } from "../../components/wordSearchGenerator";
-import DungeonCrawler from "../../components/DungeonCrawler";
+import DungeonCrawler from "../../components/Dungeoncrawler";
 import FloorIsLava from "../../components/Floorislava";
 import Avatar from "../../components/Avatar";
 import "./challenge.css";
