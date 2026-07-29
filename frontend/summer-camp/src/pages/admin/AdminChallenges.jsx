@@ -3,7 +3,7 @@ import { adminGetChallenges, adminCreateChallenge, adminUpdateChallenge, adminDe
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder";
-import GameTypePicker from "../../components/GameTypePicker";
+import GameTypePicker from "../../components/Gametypepicker";
 import "./AdminChallenges.css";
 
 const PAGE_SIZE = 10;

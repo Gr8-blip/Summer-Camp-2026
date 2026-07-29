@@ -3,7 +3,7 @@ import { adminGetAssignments, adminCreateAssignment, adminUpdateAssignment, admi
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 import ChallengeQuestionBuilder from "./ChallengeQuestionBuilder"; // reused as-is; pass resource="assignment"
-import GameTypePicker from "../../components/GameTypePicker";
+import GameTypePicker from "../../components/Gametypepicker";
 
 const PAGE_SIZE = 10;
 const EMPTY_FORM = { lesson: "", title: "", description: "", xp_reward: "", deadline: "", game_type: "classic" };
