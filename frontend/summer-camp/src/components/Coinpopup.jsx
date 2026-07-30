@@ -10,6 +10,7 @@ import "./Coinpopup.css";
  *
  * Usage:
  *   <CoinPopup queue={coinQueue} onAdvance={() => setCoinQueue((q) => q.slice(1))} />
+ * 
  */
 
 const AUTO_ADVANCE_MS = 2600;
