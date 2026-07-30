@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import "./CoinPopup.css";
+import "./Coinpopup.css";
 
 /**
  * Renders one coin celebration at a time out of a queue — same queueing

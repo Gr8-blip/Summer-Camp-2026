@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { subscribeCoins } from "../api/coinQueueStore";
-import CoinPopup from "./CoinPopup";
+import CoinPopup from "./Coinpopup";
 
 const CoinQueueContext = createContext(null);
 
