@@ -168,6 +168,9 @@ class ChallengeAttempt(models.Model):
     class Meta:
         constraints = [models.UniqueConstraint(fields=["challenge", "student"], name="one_attempt_per_challenge")]
 
+    def __str__(self):
+        return f"{self.student.full_name} challenge attempt"
+
 
 class ChallengeWin(models.Model):
     challenge = models.OneToOneField(Challenge, on_delete=models.CASCADE, related_name="win")
@@ -216,6 +219,10 @@ class AssignmentAttempt(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["assignment", "student"], name="one_row_per_quest_student")
         ]
+
+
+    def __str__(self):
+        return f"{self.student.full_name} assignment attempt"
 
 
 class AttendanceSession(models.Model):

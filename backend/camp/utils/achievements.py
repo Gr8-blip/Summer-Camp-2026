@@ -3,6 +3,7 @@ from camp.models import (
     Challenge,
     Lesson,
     Assignment,
+    Submission,
     PuzzleCompletion, 
     AssignmentAttempt
 )
@@ -146,6 +147,81 @@ def check_quest_completion(student):
 
     if completed >= 1:
         return _awarded(award_badge(student, "Quest Complete"))
+    return []
+
+
+def check_flawless_victory(student, attempt):
+    """
+    Award once ever, the first time a student completes a Quest on their
+    very first attempt (attempt.attempt_count == 1) with 100% accuracy.
+    Call this from QuestSubmitView right after an attempt completes —
+    attempt_count is only 1 on that very first successful submission
+    (see quest.py), so it's safe to call this on every completion;
+    award_badge() itself is idempotent per student either way.
+    """
+    if attempt.attempt_count == 1 and attempt.accuracy == 100:
+        return _awarded(award_badge(student, "Flawless Victory"))
+    return []
+
+
+def lesson_fully_complete(student, lesson):
+    """
+    True once every published Quest (Assignment) belonging to this lesson
+    has been completed by the student. Mirrors LessonSerializer's
+    get_quests_completed logic (question-based assignments need a
+    completed AssignmentAttempt; legacy classic assignments just need a
+    Submission) so "complete" means the same thing everywhere.
+    """
+    assignments = lesson.assignments.filter(is_published=True)
+    if not assignments.exists():
+        return True
+
+    for assignment in assignments:
+        if assignment.questions.exists():
+            done = AssignmentAttempt.objects.filter(
+                assignment=assignment, student=student, completed_at__isnull=False
+            ).exists()
+        else:
+            done = Submission.objects.filter(assignment=assignment, student=student).exists()
+        if not done:
+            return False
+
+    return True
+
+
+def mission_fully_complete(student, mission):
+    """
+    True once EVERY published Lesson in the mission has attendance
+    recorded AND every Quest in every one of those lessons is complete
+    (see lesson_fully_complete). This is the "100% mission completion"
+    bar used by both the Mission Completionist badge and the Mission
+    Completion coin bonus.
+    """
+    lessons = Lesson.objects.filter(mission=mission, is_published=True)
+    if not lessons.exists():
+        return False
+
+    attended_ids = set(
+        student.attendances.filter(lesson__in=lessons).values_list("lesson_id", flat=True)
+    )
+    if attended_ids < set(lessons.values_list("id", flat=True)):
+        return False
+
+    for lesson in lessons:
+        if not lesson_fully_complete(student, lesson):
+            return False
+
+    return True
+
+
+def check_mission_completionist(student, mission):
+    """
+    Award once ever (StudentBadge's unique constraint makes repeat calls
+    across different missions a safe no-op after the first success), the
+    first time mission_fully_complete() is true for any mission.
+    """
+    if mission_fully_complete(student, mission):
+        return _awarded(award_badge(student, "Mission Completionist"))
     return []
 
 

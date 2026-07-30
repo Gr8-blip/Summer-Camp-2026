@@ -20,7 +20,7 @@
 
 :root,
 [data-theme="default_light"] {
-  --color-bg: #f7f7fb;
+  --color-bg: rgba(255, 249, 240, 0.85);
   --color-bg-alt: #ffffff;
   --color-text: #1c1c28;
   --color-text-soft: #6b6b7d;

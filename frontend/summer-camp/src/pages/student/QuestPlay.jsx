@@ -8,7 +8,7 @@ import {
 import StudentLayout from "./StudentLayout";
 import VictoryEffect from "../../components/VictoryEffect";
 import { generateWordSearch, matchSelection, straightLine } from "../../components/wordSearchGenerator";
-import DungeonCrawler from "../../components/Dungeoncrawler";
+import DungeonCrawler from "../../components/DungeonCrawler";
 import FloorIsLava from "../../components/Floorislava";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
@@ -100,6 +100,7 @@ export default function QuestPlay() {
   const [victoryEffectKey, setVictoryEffectKey] = useState(null);
   const [pendingDoneData, setPendingDoneData] = useState(null);
   const [xpFlash, setXpFlash] = useState(0);
+  const [coinsWon, setCoinsWon] = useState(0);
 
   const celebrate = (xp = 5) => {
     setConfettiKey((k) => k + 1);
@@ -362,6 +363,7 @@ export default function QuestPlay() {
         // Stash the "done" reveal — if a victory effect is equipped, play
         // it first and only THEN flip to the completion screen.
         const revealDone = () => {
+          setCoinsWon(coinsEarned || 0);
           setStep("done");
           setConfettiKey((k) => k + 1);
         };
@@ -470,17 +472,93 @@ export default function QuestPlay() {
       )}
 
       {step === "done" && (
-        <section className="challenge-hero celebrate">
-          <span>🎉 QUEST COMPLETE!</span>
-          <h1>{quest.title}</h1>
-          {result && (
-            <div className="result-grid result-grid-3">
-              <b>{result.accuracy}%<small>Score</small></b>
-              <b>+{result.xp_gained}<small>XP earned</small></b>
-              <b>{result.attempt_count}<small>Attempts</small></b>
+        <section
+          style={{
+            maxWidth: 560, margin: "0 auto", borderRadius: 28, overflow: "hidden",
+            background: "var(--color-bg-alt)",
+            boxShadow: "var(--shadow-card), 0 0 0 1px var(--color-border)",
+          }}
+        >
+          <style>{`
+            @keyframes qwFloat { 0%,100%{ transform:translateY(0) rotate(-2deg) } 50%{ transform:translateY(-6px) rotate(2deg) } }
+            @keyframes qwShine { 0%{ background-position:-200% 0 } 100%{ background-position:200% 0 } }
+            @keyframes qwGlow { 0%,100%{ box-shadow:0 0 18px rgba(250,204,21,.35) } 50%{ box-shadow:0 0 30px rgba(250,204,21,.6) } }
+            @keyframes qwCoinSpin { 0%{ transform:rotateY(0deg) } 100%{ transform:rotateY(360deg) } }
+            @keyframes qwSparkle { 0%,100%{ opacity:.3; transform:scale(.8) } 50%{ opacity:1; transform:scale(1.15) } }
+            @keyframes qwPop { from{ transform:scale(.9); opacity:0 } to{ transform:scale(1); opacity:1 } }
+          `}</style>
+
+          {/* Hero — always a vivid themed gradient, so this stays the celebratory
+              focal point no matter which theme is equipped */}
+          <div style={{ position: "relative", padding: "42px 28px 36px", textAlign: "center", overflow: "hidden", background: "var(--gradient-hero)" }}>
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% -10%, rgba(255,255,255,.25), transparent 60%)" }} />
+            <span style={{ position: "absolute", top: 18, left: 22, fontSize: "1.3rem", animation: "qwSparkle 1.8s ease-in-out infinite" }}>✨</span>
+            <span style={{ position: "absolute", top: 30, right: 30, fontSize: "1rem", animation: "qwSparkle 1.8s ease-in-out infinite .4s" }}>✨</span>
+            <span style={{ position: "absolute", bottom: 14, left: "18%", fontSize: ".9rem", animation: "qwSparkle 1.8s ease-in-out infinite .8s" }}>⭐</span>
+
+            <div style={{ fontSize: "3.4rem", animation: "qwFloat 2.4s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(250,204,21,.6))", position: "relative" }}>
+              🎉
             </div>
-          )}
-          <button className="btn btn-primary" onClick={() => navigate("/assignments")}>Continue</button>
+            <div style={{
+              display: "inline-block", marginTop: 10, fontSize: ".72rem", fontWeight: 800, letterSpacing: ".08em",
+              color: "#facc15", textTransform: "uppercase", position: "relative",
+              textShadow: "0 0 12px rgba(250,204,21,.6)",
+            }}>
+              Quest Complete
+            </div>
+
+            <h1 style={{
+              margin: "10px 0 0", fontSize: "1.6rem", fontWeight: 800, position: "relative",
+              background: "linear-gradient(90deg, #fff 20%, #ffe9a8 40%, #fff 60%)",
+              backgroundSize: "200% auto", WebkitBackgroundClip: "text", backgroundClip: "text",
+              color: "transparent", animation: "qwShine 2.6s linear infinite",
+            }}>
+              {quest.title}
+            </h1>
+
+            {result && (
+              <div style={{ display: "grid", gridTemplateColumns: coinsWon > 0 ? "repeat(4, 1fr)" : "repeat(3, 1fr)", gap: 10, marginTop: 26, position: "relative" }}>
+                <div style={{ background: "var(--color-purple-soft)", borderRadius: 16, padding: "14px 8px", textAlign: "center", border: "1px solid #a78bfa33" }}>
+                  <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#a78bfa" }}>{result.accuracy}%</div>
+                  <div style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--color-text-soft)", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>Score</div>
+                </div>
+                <div style={{ background: "var(--color-purple-soft)", borderRadius: 16, padding: "14px 8px", textAlign: "center", border: "1px solid #4ade8033" }}>
+                  <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#4ade80" }}>+{result.xp_gained}</div>
+                  <div style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--color-text-soft)", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>XP earned</div>
+                </div>
+                <div style={{ background: "var(--color-purple-soft)", borderRadius: 16, padding: "14px 8px", textAlign: "center", border: "1px solid #38bdf833" }}>
+                  <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#38bdf8" }}>{result.attempt_count}</div>
+                  <div style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--color-text-soft)", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>Attempts</div>
+                </div>
+                {coinsWon > 0 && (
+                  <div style={{
+                    background: "rgba(255,255,255,.14)", borderRadius: 16, padding: "14px 8px", textAlign: "center",
+                    border: "1px solid rgba(250,204,21,.5)", animation: "qwGlow 1.8s ease-in-out infinite",
+                  }}>
+                    <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#facc15", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <span style={{ display: "inline-block", animation: "qwCoinSpin 1.6s linear infinite" }}>🪙</span>
+                      +{coinsWon}
+                    </div>
+                    <div style={{ fontSize: ".66rem", fontWeight: 700, color: "#fef3c7", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>Coins</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div style={{ background: "var(--color-bg)", padding: "24px 24px 28px", textAlign: "center", animation: "qwPop .3s ease-out both" }}>
+            <p style={{ color: "var(--color-text-soft)", fontSize: ".9rem", marginBottom: 18 }}>
+              Nice work — that's another quest in the books. Keep the streak going!
+            </p>
+            <button
+              className="btn btn-primary"
+              style={{ width: "100%" }}
+              onClick={() => navigate("/assignments")}
+            >
+              Continue
+            </button>
+          </div>
         </section>
       )}
 

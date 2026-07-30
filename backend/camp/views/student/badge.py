@@ -29,12 +29,14 @@ BADGE_REQUIREMENTS = {
     "Challenge Conqueror": "Complete 5 challenges.",
     "Perfect Score": "Score 100% in any challenge.",
     "Speed Runner": "Finish a challenge in under 50% of its time limit.",
-    "Coding Cadet": "Complete every assignment in a single mission.",
+    "Coding Cadet": "Complete every quest in a single mission.",
+    "Flawless Victory": "Complete a quest on your first attempt with 100% accuracy.",
     "AI Explorer": "Reach 1000 XP.",
     "Puzzle Master": "Complete every puzzle type at least once.",
     "Attendance Hero": "Attend every lesson in the bootcamp.",
     "Challenge Champion": "Complete every challenge in the camp.",
-    "AI Master": "Complete every lesson and submit every assignment in the camp.",
+    "Mission Completionist": "Achieve 100% completion of an entire mission — every lesson attended and every quest completed.",
+    "AI Master": "Complete every lesson and finish every quest in the camp.",
     "Ultimate Challenger": "Earn a perfect score (100%) on at least 3 different challenges.",
     "Legend": "Collect every Common, Rare, and Epic badge.",
     "Hall of Fame": "Finish #1 on the leaderboard for a challenge.",
@@ -60,7 +62,8 @@ def _progress_for(badge, student, ctx):
     """
     Returns a dict {current, target, label} describing progress toward
     a badge, or None if there's no meaningful numeric progress to show
-    (e.g. one-off unlocks like Hall of Fame).
+    (e.g. one-off unlocks like Hall of Fame, Flawless Victory, or
+    Mission Completionist).
     """
     name = badge.name
 
@@ -125,7 +128,7 @@ def _progress_for(badge, student, ctx):
             "secondary": {
                 "current": min(ctx["submitted_assignment_count"], ctx["total_assignments"]),
                 "target": ctx["total_assignments"],
-                "label": "Assignments",
+                "label": "Quests",
             },
         }
 

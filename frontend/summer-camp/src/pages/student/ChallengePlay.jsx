@@ -90,11 +90,11 @@ function XPPopup({ amount }) {
 function StatPill({ value, label, accent }) {
   return (
     <div style={{
-      background: "#1d1740", borderRadius: 16, padding: "14px 8px", textAlign: "center",
-      border: `1px solid ${accent}33`, boxShadow: `inset 0 0 0 1px rgba(255,255,255,.02)`,
+      background: "var(--color-purple-soft)", borderRadius: 16, padding: "14px 8px", textAlign: "center",
+      border: `1px solid ${accent}33`, boxShadow: `inset 0 0 0 1px rgba(255,255,255,.04)`,
     }}>
       <div style={{ fontSize: "1.15rem", fontWeight: 800, color: accent }}>{value}</div>
-      <div style={{ fontSize: ".66rem", fontWeight: 700, color: "#8a84a8", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
+      <div style={{ fontSize: ".66rem", fontWeight: 700, color: "var(--color-text-soft)", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>{label}</div>
     </div>
   );
 }
@@ -124,6 +124,12 @@ export default function ChallengePlay() {
   const [victoryEffectKey, setVictoryEffectKey] = useState(null);
   const [pendingDoneData, setPendingDoneData] = useState(null);
   const [xpFlash, setXpFlash] = useState(0);
+  const [coinsWon, setCoinsWon] = useState(0);
+  // Guards the timeout-triggered auto-finish below so it can only ever
+  // fire once per game session — without this, a failed submit that
+  // bounces step back to "game" while left is still <= 0 would re-trigger
+  // finish() on every re-render, POSTing /submit/ in an infinite loop.
+  const autoFinishedRef = useRef(false);
 
   const celebrate = (xp = 5) => {
     setConfettiKey((k) => k + 1);
@@ -152,11 +158,22 @@ export default function ChallengePlay() {
           if (saved && saved.startedAt) {
             const elapsed = Math.floor((Date.now() - saved.startedAt) / 1000);
             const remaining = Math.max(c.time_limit - elapsed, 0);
-            setAnswers(saved.answers || {});
-            setIndex(saved.index || 0);
-            setLeft(remaining);
-            setStep("game");
-            return;
+            // A remaining time of 0 means this saved session already expired
+            // (e.g. left the tab open for days, or the attempt was reset
+            // server-side) — resuming straight into "game" here would skip
+            // startChallenge() entirely, since begin() is what normally
+            // creates the attempt. Treat it as stale instead: clear it and
+            // fall through to the ordinary intro screen so the student has
+            // to press "Enter Challenge" and a real attempt gets created.
+            if (remaining <= 0) {
+              localStorage.removeItem(STORAGE_KEY);
+            } else {
+              setAnswers(saved.answers || {});
+              setIndex(saved.index || 0);
+              setLeft(remaining);
+              setStep("game");
+              return;
+            }
           }
         } catch {
           localStorage.removeItem(STORAGE_KEY);
@@ -184,7 +201,10 @@ export default function ChallengePlay() {
   useEffect(() => {
     if (step !== "game") return;
     if (left <= 0) {
-      finish();
+      if (!autoFinishedRef.current) {
+        autoFinishedRef.current = true;
+        finish();
+      }
       return;
     }
     const t = setInterval(() => setLeft((n) => n - 1), 1000);
@@ -468,6 +488,7 @@ export default function ChallengePlay() {
     try {
       await startChallenge(id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers: {}, index: 0, startedAt: Date.now() }));
+      autoFinishedRef.current = false;
       setStep("game");
     } catch (e) {
       setError(e.data?.detail || "You have already completed this challenge.");
@@ -487,6 +508,7 @@ export default function ChallengePlay() {
       const revealDone = () => {
         setResult(data);
         setBoard(board);
+        setCoinsWon(coinsEarned || 0);
         setStep("done");
         setConfettiKey((k) => k + 1);
       };
@@ -586,8 +608,8 @@ export default function ChallengePlay() {
         <section
           style={{
             maxWidth: 560, margin: "0 auto", borderRadius: 28, overflow: "hidden",
-            background: "linear-gradient(180deg,#14102a 0%,#0c0818 100%)",
-            boxShadow: "0 30px 80px -30px rgba(124,92,252,.45), 0 0 0 1px rgba(124,92,252,.18)",
+            background: "var(--color-bg-alt)",
+            boxShadow: "var(--shadow-card), 0 0 0 1px var(--color-border)",
           }}
         >
           <style>{`
@@ -595,48 +617,73 @@ export default function ChallengePlay() {
             @keyframes cwFloat { 0%,100%{ transform:translateY(0) rotate(-2deg) } 50%{ transform:translateY(-6px) rotate(2deg) } }
             @keyframes cwShine { 0%{ background-position:-200% 0 } 100%{ background-position:200% 0 } }
             @keyframes cwGlow { 0%,100%{ box-shadow:0 0 18px rgba(250,204,21,.35) } 50%{ box-shadow:0 0 30px rgba(250,204,21,.6) } }
+            @keyframes cwCoinSpin { 0%{ transform:rotateY(0deg) } 100%{ transform:rotateY(360deg) } }
+            @keyframes cwSparkle { 0%,100%{ opacity:.3; transform:scale(.8) } 50%{ opacity:1; transform:scale(1.15) } }
           `}</style>
 
-          {/* Hero */}
-          <div style={{ position: "relative", padding: "38px 28px 30px", textAlign: "center", overflow: "hidden" }}>
-            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% -10%, rgba(124,92,252,.35), transparent 60%)" }} />
-            <div style={{ fontSize: "3.4rem", animation: "cwFloat 2.4s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(250,204,21,.5))", position: "relative" }}>
+          {/* Hero — always a vivid themed gradient, so this stays the celebratory
+              focal point no matter which theme is equipped */}
+          <div style={{ position: "relative", padding: "38px 28px 30px", textAlign: "center", overflow: "hidden", background: "var(--gradient-hero)" }}>
+            <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% -10%, rgba(255,255,255,.25), transparent 60%)" }} />
+            <span style={{ position: "absolute", top: 18, left: 22, fontSize: "1.3rem", animation: "cwSparkle 1.8s ease-in-out infinite" }}>✨</span>
+            <span style={{ position: "absolute", top: 30, right: 30, fontSize: "1rem", animation: "cwSparkle 1.8s ease-in-out infinite .4s" }}>✨</span>
+            <span style={{ position: "absolute", bottom: 14, left: "18%", fontSize: ".9rem", animation: "cwSparkle 1.8s ease-in-out infinite .8s" }}>⭐</span>
+
+            <div style={{ fontSize: "3.4rem", animation: "cwFloat 2.4s ease-in-out infinite", filter: "drop-shadow(0 0 18px rgba(250,204,21,.6))", position: "relative" }}>
               🎉
             </div>
             <div style={{
               display: "inline-block", marginTop: 10, fontSize: ".72rem", fontWeight: 800, letterSpacing: ".08em",
               color: "#facc15", textTransform: "uppercase", position: "relative",
+              textShadow: "0 0 12px rgba(250,204,21,.6)",
             }}>
               Great Work
             </div>
 
+            <div style={{ position: "relative", display: "flex", justifyContent: "center", marginTop: 8 }}>
+              <Avatar avatarKey={result?.student_avatar} size={48} />
+            </div>
 
-            <Avatar avatarKey={result?.student_avatar} size={48} />
-
-
-            <h1 style={{ margin: "6px 0 0", fontSize: "1.5rem", fontWeight: 800, color: "#fff", position: "relative" }}>
+            <h1 style={{
+              margin: "10px 0 0", fontSize: "1.6rem", fontWeight: 800, position: "relative",
+              background: "linear-gradient(90deg, #fff 20%, #ffe9a8 40%, #fff 60%)",
+              backgroundSize: "200% auto", WebkitBackgroundClip: "text", backgroundClip: "text",
+              color: "transparent", animation: "cwShine 2.6s linear infinite",
+            }}>
               Boss Battle Complete
             </h1>
 
             {result && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginTop: 26, position: "relative" }}>
-                <StatPill value={`${result.accuracy}%`} label="Score" accent="#7c5cfc" />
-                <StatPill value={`+${result.xp_earned}`} label="XP earned" accent="#22c55e" />
-                <StatPill value={seconds(result.time_taken)} label="Time" accent="#0ea5e9" />
+              <div style={{ display: "grid", gridTemplateColumns: coinsWon > 0 ? "repeat(4, 1fr)" : "repeat(3, 1fr)", gap: 10, marginTop: 26, position: "relative" }}>
+                <StatPill value={`${result.accuracy}%`} label="Score" accent="#a78bfa" />
+                <StatPill value={`+${result.xp_earned}`} label="XP earned" accent="#4ade80" />
+                <StatPill value={seconds(result.time_taken)} label="Time" accent="#38bdf8" />
+                {coinsWon > 0 && (
+                  <div style={{
+                    background: "rgba(255,255,255,.14)", borderRadius: 16, padding: "14px 8px", textAlign: "center",
+                    border: "1px solid rgba(250,204,21,.5)", animation: "cwGlow 1.8s ease-in-out infinite",
+                  }}>
+                    <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#facc15", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+                      <span style={{ display: "inline-block", animation: "cwCoinSpin 1.6s linear infinite" }}>🪙</span>
+                      +{coinsWon}
+                    </div>
+                    <div style={{ fontSize: ".66rem", fontWeight: 700, color: "#fef3c7", marginTop: 3, textTransform: "uppercase", letterSpacing: ".04em" }}>Coins</div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Leaderboard */}
-          <div style={{ background: "#0c0818", padding: "24px 24px 28px" }}>
-            <h2 style={{ margin: "0 0 8px", fontSize: "1rem", fontWeight: 800, color: "#fff", display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ background: "var(--color-bg)", padding: "24px 24px 28px" }}>
+            <h2 style={{ margin: "0 0 8px", fontSize: "1rem", fontWeight: 800, color: "var(--color-text)", display: "flex", alignItems: "center", gap: 8 }}>
               🏆 Top Players
             </h2>
             <p style={{
               fontSize: ".76rem", lineHeight: 1.5, marginBottom: 16, padding: "8px 12px", borderRadius: 10,
-              color: board.is_finalized ? "#86efac" : "#fbbf24",
-              background: board.is_finalized ? "rgba(34,197,94,.1)" : "rgba(250,204,21,.1)",
-              border: `1px solid ${board.is_finalized ? "rgba(34,197,94,.25)" : "rgba(250,204,21,.25)"}`,
+              color: board.is_finalized ? "var(--color-success)" : "#d97706",
+              background: board.is_finalized ? "color-mix(in srgb, var(--color-success) 14%, transparent)" : "rgba(250,204,21,.12)",
+              border: `1px solid ${board.is_finalized ? "color-mix(in srgb, var(--color-success) 35%, transparent)" : "rgba(250,204,21,.3)"}`,
             }}>
               {board.is_finalized
                 ? (board.champion_name ? `🏆 Finalized — ${board.champion_name} is the Challenge Champion` : "🏆 Finalized")
@@ -650,23 +697,23 @@ export default function ChallengePlay() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", borderRadius: 14,
                     animation: "cwPop .25s ease-out both", animationDelay: `${i * 0.04}s`,
-                    background: row.is_current_student ? "rgba(124,92,252,.16)" : "#14102a",
-                    border: row.is_champion ? "1px solid rgba(250,204,21,.55)" : row.is_current_student ? "1px solid rgba(124,92,252,.4)" : "1px solid rgba(124,92,252,.1)",
+                    background: row.is_current_student ? "var(--color-purple-soft)" : "var(--color-bg-alt)",
+                    border: row.is_champion ? "1px solid rgba(250,204,21,.55)" : row.is_current_student ? "1px solid var(--color-purple)" : "1px solid var(--color-border)",
                     boxShadow: row.is_champion ? "0 0 18px rgba(250,204,21,.25)" : "none",
                   }}
                 >
-                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".88rem", fontWeight: row.is_current_student ? 800 : 600, color: "#e6e2f5" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: ".88rem", fontWeight: row.is_current_student ? 800 : 600, color: "var(--color-text)" }}>
                     <span style={{
                       display: "inline-flex", alignItems: "center", justifyContent: "center", width: 26, height: 26, borderRadius: "50%",
                       fontSize: ".72rem", fontWeight: 800, flexShrink: 0,
-                      background: row.is_champion ? "linear-gradient(135deg,#eab308,#fde047)" : "#241d47",
-                      color: row.is_champion ? "#3a2c00" : "#a099c2",
+                      background: row.is_champion ? "linear-gradient(135deg,#eab308,#fde047)" : "var(--color-border)",
+                      color: row.is_champion ? "#3a2c00" : "var(--color-text-soft)",
                     }}>
                       {row.is_champion ? "🏆" : `#${row.rank ?? i + 1}`}
                     </span>
                     {row.student_name}
                   </span>
-                  <span style={{ fontSize: ".78rem", color: "#a099c2", fontWeight: 700, flexShrink: 0 }}>
+                  <span style={{ fontSize: ".78rem", color: "var(--color-text-soft)", fontWeight: 700, flexShrink: 0 }}>
                     {row.accuracy}% · {seconds(row.time_taken)}
                   </span>
                 </li>
@@ -678,14 +725,14 @@ export default function ChallengePlay() {
                 onClick={() => navigate(`/challenges/${id}/leaderboard`)}
                 style={{
                   padding: "14px 0", borderRadius: 14, border: "none", fontWeight: 800, fontSize: ".92rem", cursor: "pointer",
-                  background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", color: "#fff", boxShadow: "0 10px 24px -10px rgba(124,92,252,.6)",
+                  background: "var(--gradient-cta)", color: "#fff", boxShadow: "var(--shadow-cta-pop)",
                 }}
               >
                 View Full Leaderboard
               </button>
               <button
                 onClick={() => navigate("/challenges")}
-                style={{ padding: "13px 0", borderRadius: 14, border: "1px solid rgba(124,92,252,.25)", background: "transparent", color: "#e6e2f5", fontWeight: 700, fontSize: ".9rem", cursor: "pointer" }}
+                style={{ padding: "13px 0", borderRadius: 14, border: "1px solid var(--color-border)", background: "transparent", color: "var(--color-text)", fontWeight: 700, fontSize: ".9rem", cursor: "pointer" }}
               >
                 Continue
               </button>

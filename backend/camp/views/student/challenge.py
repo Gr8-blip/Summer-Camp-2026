@@ -95,7 +95,10 @@ class ChallengeSubmitView(APIView):
         # from XP. The classic (non-game) flow just won't send this field,
         # so it defaults to 0 — nothing changes for existing content.
         coins_earned = clamp_coins(request.data.get('coins_earned', 0))
-        award_coins(student, coins_earned, reason=f'Boss battle run: {attempt.challenge.title}')
+        coin_events = []
+        paid = award_coins(student, coins_earned, reason=f'Boss battle run: {attempt.challenge.title}')
+        if paid:
+            coin_events.append({"amount": paid, "reason": f"Boss battle run: {attempt.challenge.title}"})
 
         new_badges = []
         new_badges += achievements.check_challenge(student, attempt)
@@ -130,6 +133,7 @@ class ChallengeSubmitView(APIView):
         data = ChallengeAttemptSerializer(attempt).data
         data['xp_gained'] = attempt.xp_earned
         data['coins_gained'] = coins_earned
+        data['coin_events'] = coin_events
         data['new_badges'] = _serialize_badges(new_badges)
         # Frontend plays this cosmetic celebration (if equipped) before
         # revealing the completion screen — purely visual, no gameplay effect.

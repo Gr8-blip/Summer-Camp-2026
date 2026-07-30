@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 
 // One source of truth for the active theme key. Any page can call
 // setTheme() (e.g. right after an equip action in the Marketplace) and
@@ -13,9 +13,6 @@ export function ThemeProvider({ children }) {
     () => localStorage.getItem("equipped_theme") || "default_light"
   );
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
 
   const setTheme = useCallback((key) => {
     setThemeState(key);
@@ -24,7 +21,9 @@ export function ThemeProvider({ children }) {
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      {children}
+      <div data-theme={theme}>
+        {children}
+      </div>
     </ThemeContext.Provider>
   );
 }

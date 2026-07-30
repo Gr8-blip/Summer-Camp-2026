@@ -13,7 +13,13 @@ from ...serializers import (
 )
 from ...utils.scoring import score_fraction
 from ...utils.camp import camp_is_started
-from ...utils.coins import award_coins, clamp_coins
+from ...utils.coins import award_coins, award_coins_once, clamp_coins
+from ...utils.coin_config import (
+    PERFECT_ACCURACY_BONUS,
+    FLAWLESS_VICTORY_BONUS,
+    LESSON_COMPLETION_BONUS,
+    MISSION_COMPLETION_BONUS,
+)
 from ...utils import achievements
 from ...utils.achievements import PUZZLE_TYPES
 
@@ -102,6 +108,12 @@ class QuestSubmitView(APIView):
         coins_earned = 0
         victory_effect_key = None
 
+        # Every coin award (client-side run bonus + every server-side
+        # milestone bonus) gets appended here as {amount, reason} — the
+        # frontend queues these one at a time so the student sees exactly
+        # WHY each stack of coins landed, not just one opaque total.
+        coin_events = []
+
         if is_complete:
             attempt.completed_at = timezone.now()
             attempt.xp_earned = attempt.assignment.xp_reward
@@ -120,7 +132,9 @@ class QuestSubmitView(APIView):
             student.refresh_from_db(fields=['xp'])
 
             coins_earned = clamp_coins(request.data.get('coins_earned', 0))
-            award_coins(student, coins_earned, reason=f'Quest run: {attempt.assignment.title}')
+            paid = award_coins(student, coins_earned, reason=f'Quest run: {attempt.assignment.title}')
+            if paid:
+                coin_events.append({"amount": paid, "reason": f"Quest run: {attempt.assignment.title}"})
 
             new_badges += achievements.check_quest_completion(student)
             new_badges += achievements.check_coding_cadet(student)
@@ -146,6 +160,47 @@ class QuestSubmitView(APIView):
                 new_badges += achievements.check_prompt_apprentice(student)
             new_badges += achievements.check_puzzle_master(student)
 
+            # ── Perfect Accuracy / Flawless Victory coin bonuses ──────
+            if attempt.accuracy == 100:
+                paid = award_coins(
+                    student, PERFECT_ACCURACY_BONUS,
+                    reason=f'Perfect accuracy: {attempt.assignment.title}'
+                )
+                if paid:
+                    coin_events.append({"amount": paid, "reason": "Perfect accuracy! 🎯"})
+
+                # Flawless Victory stacks on top, only if this was also
+                # the student's very first attempt at this quest.
+                if attempt.attempt_count == 1:
+                    paid = award_coins(
+                        student, FLAWLESS_VICTORY_BONUS,
+                        reason=f'Flawless victory: {attempt.assignment.title}'
+                    )
+                    if paid:
+                        coin_events.append({"amount": paid, "reason": "Flawless Victory — first try, 100%! ⚡"})
+                    new_badges += achievements.check_flawless_victory(student, attempt)
+
+            # ── Lesson completion bonus (once per lesson) ─────────────
+            lesson = attempt.assignment.lesson
+            if lesson and achievements.lesson_fully_complete(student, lesson):
+                paid = award_coins_once(
+                    student, LESSON_COMPLETION_BONUS,
+                    reason=f'Lesson complete: {lesson.title}'
+                )
+                if paid:
+                    coin_events.append({"amount": paid, "reason": f"Lesson complete: {lesson.title} 📚"})
+
+            # ── Mission completion bonus + badge (once per mission) ───
+            mission = lesson.mission if (lesson and lesson.mission_id) else None
+            if mission and achievements.mission_fully_complete(student, mission):
+                paid = award_coins_once(
+                    student, MISSION_COMPLETION_BONUS,
+                    reason=f'Mission complete: {mission.title}'
+                )
+                if paid:
+                    coin_events.append({"amount": paid, "reason": f"Mission complete: {mission.title} 🏆"})
+                new_badges += achievements.check_mission_completionist(student, mission)
+
             # Purely cosmetic — frontend plays this before showing the
             # completion screen, same pattern as ChallengeSubmitView.
             victory_effect_key = student.equipped_victory_effect.key if student.equipped_victory_effect_id else None
@@ -153,6 +208,7 @@ class QuestSubmitView(APIView):
         data = AssignmentAttemptSerializer(attempt).data
         data['xp_gained'] = attempt.xp_earned if is_complete else 0
         data['coins_gained'] = coins_earned if is_complete else 0
+        data['coin_events'] = coin_events
         data['is_complete'] = is_complete
         data['new_badges'] = _serialize_badges(new_badges)
         data['victory_effect_key'] = victory_effect_key if is_complete else None

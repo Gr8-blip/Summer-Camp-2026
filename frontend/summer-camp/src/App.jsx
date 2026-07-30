@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import "./themes.css";
@@ -72,27 +72,27 @@ function AdminRoute({ children }) {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* Public */}
-            <Route path="/" element={<RedirectRoute><LandingPage /></RedirectRoute>} />
-            <Route path="/register" element={<RedirectRoute><RegisterWizard /></RedirectRoute>} />
-            <Route path="/plan/:familyId" element={<RedirectRoute><PlanReview /></RedirectRoute>} />
-            <Route path="/payment/callback/:reference" element={<PaymentCallback />} />
-            <Route path="/login" element={<RedirectRoute><ParentLogin /></RedirectRoute>} />
-            <Route path="/student-login" element={<RedirectRoute><StudentLogin /></RedirectRoute>} />
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<RedirectRoute><LandingPage /></RedirectRoute>} />
+          <Route path="/register" element={<RedirectRoute><RegisterWizard /></RedirectRoute>} />
+          <Route path="/plan/:familyId" element={<RedirectRoute><PlanReview /></RedirectRoute>} />
+          <Route path="/payment/callback/:reference" element={<PaymentCallback />} />
+          <Route path="/login" element={<RedirectRoute><ParentLogin /></RedirectRoute>} />
+          <Route path="/student-login" element={<RedirectRoute><StudentLogin /></RedirectRoute>} />
 
-            {/* Parent + Student shared dashboard */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-
-
-            {/* Parent platform */}
-            <Route path="/parent/week-scheme" element={<ProtectedRoute><ParentWeekScheme /></ProtectedRoute>} />
+          {/* Parent + Student shared dashboard */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
 
 
-            {/* Student platform */}
+          {/* Parent platform */}
+          <Route path="/parent/week-scheme" element={<ProtectedRoute><ParentWeekScheme /></ProtectedRoute>} />
+
+
+          {/* Student platform */}
+          <Route element={<ThemeProvider><Outlet /></ThemeProvider>}>
             <Route path="/missions" element={<StudentRoute><Missions /></StudentRoute>} />
             <Route path="/missions/:id" element={<StudentRoute><MissionDetail /></StudentRoute>} />
             <Route path="/lessons/:id" element={<StudentRoute><LessonDetail /></StudentRoute>} />
@@ -110,24 +110,25 @@ export default function App() {
             <Route path="/marketplace" element={<StudentRoute><Marketplace /></StudentRoute>} />
             <Route path="/profile" element={<StudentRoute><Profile /></StudentRoute>} />
 
+          </Route>
 
-            {/* Admin */}
-            <Route path="/camp-admin/login" element={<AdminLogin />} />
-            <Route path="/camp-admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-            <Route path="/camp-admin/missions" element={<AdminRoute><AdminMissions /></AdminRoute>} />
-            <Route path="/camp-admin/lessons" element={<AdminRoute><AdminLessons /></AdminRoute>} />
-            <Route path="/camp-admin/assignments" element={<AdminRoute><AdminAssignments /></AdminRoute>} />
-            <Route path="/camp-admin/submissions" element={<AdminRoute><AdminSubmissions /></AdminRoute>} />
-            <Route path="/camp-admin/attendance" element={<AdminRoute><AdminAttendance /></AdminRoute>} />
-            <Route path="/camp-admin/xp" element={<AdminRoute><AdminXP /></AdminRoute>} />
-            <Route path="/camp-admin/badges" element={<AdminRoute><AdminBadges /></AdminRoute>} />
-            <Route path="/camp-admin/challenges" element={<AdminRoute><AdminChallenges /></AdminRoute>} />
-            <Route path="/admin/camp-control" element={<AdminCampControl />} />  {/* admin router */}
 
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
-      </AuthProvider>
-    </ThemeProvider>
+          {/* Admin */}
+          <Route path="/camp-admin/login" element={<AdminLogin />} />
+          <Route path="/camp-admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/camp-admin/missions" element={<AdminRoute><AdminMissions /></AdminRoute>} />
+          <Route path="/camp-admin/lessons" element={<AdminRoute><AdminLessons /></AdminRoute>} />
+          <Route path="/camp-admin/assignments" element={<AdminRoute><AdminAssignments /></AdminRoute>} />
+          <Route path="/camp-admin/submissions" element={<AdminRoute><AdminSubmissions /></AdminRoute>} />
+          <Route path="/camp-admin/attendance" element={<AdminRoute><AdminAttendance /></AdminRoute>} />
+          <Route path="/camp-admin/xp" element={<AdminRoute><AdminXP /></AdminRoute>} />
+          <Route path="/camp-admin/badges" element={<AdminRoute><AdminBadges /></AdminRoute>} />
+          <Route path="/camp-admin/challenges" element={<AdminRoute><AdminChallenges /></AdminRoute>} />
+          <Route path="/admin/camp-control" element={<AdminCampControl />} />  {/* admin router */}
+
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }

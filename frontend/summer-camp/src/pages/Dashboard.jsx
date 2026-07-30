@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { getStudentDashboard } from "../api/client";
 import ParentDashboard from "./ParentDashboard";
 import StudentDashboard from "./StudentDashboard";
+import { ThemeProvider } from "../context/ThemeContext";
 import "./Dashboard.css";
 
 export default function Dashboard() {
@@ -42,7 +43,7 @@ export default function Dashboard() {
     ? parentEmail
     : (dashData?.student?.name || JSON.parse(localStorage.getItem("student_info") || "{}")?.name || "Student");
 
-  return (
+  const shell = (
     <div className="page-shell dashboard-page">
       <nav className="dashboard-nav">
         <div className="container dashboard-nav-inner">
@@ -75,4 +76,7 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
+  // Only the student viewer gets themed — parent viewer is untouched.
+  return viewer === "student" ? <ThemeProvider>{shell}</ThemeProvider> : shell;
 }

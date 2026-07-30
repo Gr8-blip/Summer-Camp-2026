@@ -2,6 +2,7 @@ const BASE_URL = import.meta.env.VITE_API_URL;
 const CAMP_URL = import.meta.env.VITE_API_CAMP_URL;
 
 import { publishBadges } from "./badgeQueueStore";
+import { publishCoins } from "./coinQueueStore";
 
 async function request(baseUrl, path, { method = "GET", body, auth = false, studentAuth = false, adminAuth = false } = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -26,6 +27,7 @@ async function request(baseUrl, path, { method = "GET", body, auth = false, stud
   }
 
   if (data?.new_badges?.length) publishBadges(data.new_badges);
+  if (data?.coin_events?.length) publishCoins(data.coin_events);
 
   return data;
 }

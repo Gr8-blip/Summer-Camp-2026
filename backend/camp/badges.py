@@ -71,6 +71,11 @@ BADGES = [
         "icon": "💻",
         "rarity": "rare",
     },
+    {
+        "name": "Flawless Victory",
+        "icon": "🎯",
+        "rarity": "rare",
+    },
 
     # =========================
     # 🟣 EPIC
@@ -93,6 +98,11 @@ BADGES = [
     {
         "name": "Challenge Champion",
         "icon": "🏆",
+        "rarity": "epic",
+    },
+    {
+        "name": "Mission Completionist",
+        "icon": "🏵️",
         "rarity": "epic",
     },
 

@@ -6,7 +6,6 @@ const NAV_ITEMS = [
   { to: "/dashboard",    label: "🏠 Dashboard"   },
   { to: "/missions",     label: "🎯 Missions"     },
   { to: "/assignments",  label: "🗺️ Quests"       },
-  { to: "/submissions",  label: "📬 Submissions"  },
   { to: "/challenges",   label: "⚡ Challenges"   },
   { to: "/attendance",   label: "📅 Attendance"   },
   { to: "/badges",       label: "🏅 Badges"       },
