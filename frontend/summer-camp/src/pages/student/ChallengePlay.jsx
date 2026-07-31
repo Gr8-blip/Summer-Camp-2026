@@ -10,6 +10,7 @@ import StudentLayout from "./StudentLayout";
 import VictoryEffect from "../../components/VictoryEffect";
 import { generateWordSearch, matchSelection, straightLine } from "../../components/wordSearchGenerator";
 import DungeonCrawler from "../../components/Dungeoncrawler";
+import EscapeRoom from "../../components/EscapeRoom";
 import FloorIsLava from "../../components/Floorislava";
 import Avatar from "../../components/Avatar";
 import "./challenge.css";
@@ -21,6 +22,7 @@ import "./challenge.css";
 const GAME_COMPONENTS = {
   dungeon_crawler: DungeonCrawler,
   floor_is_lava: FloorIsLava,
+  escape_room: EscapeRoom,
 };
 
 const seconds = (value) =>
@@ -503,12 +505,13 @@ export default function ChallengePlay() {
       localStorage.removeItem(STORAGE_KEY);
       const board = await getChallengeLeaderboard(id);
 
-      // Stash the "done" reveal — if a victory effect is equipped, play
-      // it first and only THEN flip to the completion screen.
+      // coins_gained comes back from the server, computed from this
+      // attempt's accuracy — that's the number we show, not whatever the
+      // game shell guessed on its own.
       const revealDone = () => {
         setResult(data);
         setBoard(board);
-        setCoinsWon(coinsEarned || 0);
+        setCoinsWon(data.coins_gained || 0);
         setStep("done");
         setConfettiKey((k) => k + 1);
       };
@@ -753,6 +756,7 @@ export default function ChallengePlay() {
             <Game
               questions={challenge.questions}
               title={challenge.title}
+              timeLeft={left}   // 👈 add this one line
               onAnswer={(qid, val) => setAnswers((old) => ({ ...old, [qid]: val }))}
               onComplete={(finalAnswers, coinsEarned) => finish(coinsEarned)}
               onExit={handleExit}

@@ -2,6 +2,7 @@ from django.db import transaction
 from django.db.models import F
 from django.db.models import Avg, Sum
 from django.utils import timezone
+import random
 from rest_framework import status
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
@@ -18,6 +19,21 @@ from ...utils.challenge_finalize import (
     finalize_challenge_if_ready,
     get_ranked_attempts,
 )
+
+# Coins are now tied to how well the student actually did on the challenge,
+# not to how the game shell happened to play out (speed/no-mistakes, etc).
+# 100% accuracy pays out somewhere in the 300-450 coin band (randomized
+# within the band so a perfect run doesn't always feel like the exact same
+# number); any lower accuracy scales that whole band down proportionally —
+# e.g. 50% accuracy pays roughly 150-225 coins, 0% pays 0. Computed and
+# clamped server-side only — never trust a client-supplied coin amount.
+def coins_for_score(accuracy):
+    accuracy = max(0, min(100, float(accuracy)))
+    if accuracy <= 0:
+        return 0
+    band_min = round(300 * accuracy / 100)
+    band_max = round(450 * accuracy / 100)
+    return random.randint(band_min, max(band_min, band_max))
 
 def student_for(request):
     return request.user.student
@@ -89,12 +105,13 @@ class ChallengeSubmitView(APIView):
         XPLog.objects.create(student=student, amount=attempt.xp_earned, reason=f'Boss battle: {attempt.challenge.title}')
         student.refresh_from_db(fields=['xp'])
 
-        # Coins are earned by the run itself (however the game shell scored
-        # it — speed, no mistakes, potions found, etc.) regardless of final
-        # accuracy, since that's a separate, replayable progression track
-        # from XP. The classic (non-game) flow just won't send this field,
-        # so it defaults to 0 — nothing changes for existing content.
-        coins_earned = clamp_coins(request.data.get('coins_earned', 0))
+        # Coins are earned from the score the student got on this
+        # challenge — a perfect run pays out the most, a weaker run pays
+        # less, proportionally. This is a separate, replayable progression
+        # track from XP, but unlike XP it's not a fixed reward — it scales
+        # with performance every time. Computed here from `accuracy`, not
+        # taken from the request, so it can't be spoofed client-side.
+        coins_earned = clamp_coins(coins_for_score(accuracy))
         coin_events = []
         paid = award_coins(student, coins_earned, reason=f'Boss battle run: {attempt.challenge.title}')
         if paid:

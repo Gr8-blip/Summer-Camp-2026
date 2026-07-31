@@ -11,7 +11,7 @@ const GAMES = [
   { value: "classic", label: "Classic", icon: "📋", blurb: "Plain question list — today's default flow.", ready: true },
   { value: "dungeon_crawler", label: "Dungeon Crawler", icon: "🏰", blurb: "Explore a maze, fight rooms tied to each question.", ready: true },
   { value: "target_shooter", label: "Target Shooter", icon: "🎯", blurb: "Shoot the correct falling answer.", ready: false },
-  { value: "escape_room", label: "Escape Room", icon: "🔑", blurb: "Answer to unlock doors and escape.", ready: false },
+  { value: "escape_room", label: "Escape Room", icon: "🔑", blurb: "Answer to unlock doors and escape.", ready: true },
   { value: "floor_is_lava", label: "Floor Is Lava", icon: "🌋", blurb: "True/False only — climb before lava catches you.", ready: true },
   { value: "ai_defense", label: "AI Defense", icon: "🛡️", blurb: "Defend the AI core from corrupted bots.", ready: false },
 ];

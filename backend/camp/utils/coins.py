@@ -2,12 +2,11 @@ from django.db.models import F
 from ..models import CoinLog
 
 # Hard ceiling per single game run, regardless of what the client claims
-# it earned. The client computes the "real" number (speed, no mistakes,
-# potions found, etc. — all things that live naturally in the game's own
-# state), but the server never trusts it blindly since coins aren't
-# spendable anywhere *yet* — this cap just keeps the ledger sane while
-# that's being designed, not a serious anti-cheat measure.
-MAX_COINS_PER_RUN = 100
+# it earned. Coins are computed server-side from challenge accuracy (see
+# challenge.py:coins_for_score — 100% accuracy pays out up to 450), so
+# this cap just has to sit at or above that top of that band; it's a
+# sanity backstop, not the thing doing the real scoring.
+MAX_COINS_PER_RUN = 450
 
 
 def clamp_coins(raw):
