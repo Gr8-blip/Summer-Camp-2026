@@ -1,4 +1,5 @@
 import uuid
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from users.models import Student
 
@@ -36,6 +37,15 @@ class Lesson(models.Model):
     order = models.PositiveIntegerField()
     duration = models.DurationField()
     is_published = models.BooleanField(default=False) 
+    # Optional downloadable material for the lesson (worksheets, starter
+    # code, slide exports, etc). Zip-only, kept simple — no per-file
+    # metadata model needed since it's one attachment per lesson.
+    material_file = models.FileField(
+        upload_to='lesson_materials/%Y/%m/',
+        blank=True,
+        null=True,
+        validators=[FileExtensionValidator(allowed_extensions=['zip'])],
+    )
 
     def __str__(self):
         return f"{self.title} (Mission: {self.mission.title})"

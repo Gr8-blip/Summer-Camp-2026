@@ -5,7 +5,10 @@ import { publishBadges } from "./badgeQueueStore";
 import { publishCoins } from "./coinQueueStore";
 
 async function request(baseUrl, path, { method = "GET", body, auth = false, studentAuth = false, adminAuth = false } = {}) {
-  const headers = { "Content-Type": "application/json" };
+  const isFormData = body instanceof FormData;
+  const headers = isFormData ? {} : { "Content-Type": "application/json" };
+  // FormData: leave Content-Type unset so the browser adds the multipart
+  // boundary itself — setting it manually breaks the upload.
 
   if (auth) { const t = localStorage.getItem("access_token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
   if (studentAuth) { const t = localStorage.getItem("student_access_token"); if (t) headers["Authorization"] = `Bearer ${t}`; }
@@ -14,7 +17,7 @@ async function request(baseUrl, path, { method = "GET", body, auth = false, stud
   const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: body ? (isFormData ? body : JSON.stringify(body)) : undefined,
   });
 
   const data = await res.json().catch(() => ({}));
@@ -81,6 +84,11 @@ export const adminGetLessons = () => camp("/camp-admin/lessons/", { method: "GET
 export const adminCreateLesson = (body) => camp("/camp-admin/lessons/", { method: "POST", adminAuth: true, body });
 export const adminUpdateLesson = (id, body) => camp(`/camp-admin/lessons/${id}/`, { method: "PATCH", adminAuth: true, body });
 export const adminDeleteLesson = (id) => camp(`/camp-admin/lessons/${id}/`, { method: "DELETE", adminAuth: true });
+export const adminUploadLessonMaterial = (id, file) => {
+  const formData = new FormData();
+  formData.append("material_file", file);
+  return camp(`/camp-admin/lessons/${id}/`, { method: "PATCH", adminAuth: true, body: formData });
+};
 
 export const adminGetAssignments = () => camp("/camp-admin/assignments/", { method: "GET", adminAuth: true });
 export const adminCreateAssignment = (body) => camp("/camp-admin/assignments/", { method: "POST", adminAuth: true, body });

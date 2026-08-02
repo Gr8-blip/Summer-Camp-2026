@@ -162,6 +162,9 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 BOOTCAMP_PAYMENT_AMOUNT = int(os.getenv("BOOTCAMP_AMOUNT_PAYMENT"))  # Amount in Naira for each group of 3 students
 
 REST_FRAMEWORK = {

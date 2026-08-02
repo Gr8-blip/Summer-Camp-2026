@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { adminGetLessons, adminCreateLesson, adminUpdateLesson, adminDeleteLesson, adminGetMissions } from "../../api/client";
+import { useEffect, useState, useMemo, useRef } from "react";
+import { adminGetLessons, adminCreateLesson, adminUpdateLesson, adminDeleteLesson, adminGetMissions, adminUploadLessonMaterial } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 
@@ -20,6 +20,8 @@ export default function AdminLessons() {
   const [saving, setSaving]     = useState(false);
   const [formErr, setFormErr]   = useState("");
   const [confirmDel, setConfirmDel] = useState(null);
+  const [uploadingId, setUploadingId] = useState(null); // lesson.id currently mid-upload, for the row spinner
+  const fileInputs = useRef({}); // lessonId -> hidden <input type="file"> ref, so the paperclip button can trigger it
 
   const load = () => {
     setLoading(true);
@@ -88,6 +90,34 @@ export default function AdminLessons() {
     }
   };
 
+  // Zip-only guard on the client too — backend re-validates with
+  // FileExtensionValidator, this is just so a wrong pick fails instantly
+  // instead of round-tripping to the server first.
+  const handleMaterialUpload = async (item, file) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      toast("Only .zip files are supported for lesson materials.", "error");
+      return;
+    }
+    setUploadingId(item.id);
+    try {
+      const updated = await adminUploadLessonMaterial(item.id, file);
+      setItems((prev) => prev.map((l) => (l.id === item.id ? { ...l, ...updated } : l)));
+      toast("Material uploaded!");
+    } catch (e) {
+      toast(e.data?.detail || e.data?.error || "Upload failed.", "error");
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const formatBytes = (n) => {
+    if (!n && n !== 0) return "";
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <AdminLayout title="📖 Lessons">
       <div className="a-action-bar">
@@ -108,18 +138,43 @@ export default function AdminLessons() {
                   <th>Title</th>
                   <th>Mission</th>
                   <th>Duration</th>
+                  <th>Material</th>
                   <th>Published</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paged.length === 0 && <tr><td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No lessons found.</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No lessons found.</td></tr>}
                 {paged.map((l) => (
                   <tr key={l.id}>
                     <td><span className="a-badge a-badge-purple">{l.order}</span></td>
                     <td><strong>{l.title}</strong><div style={{ fontSize: "0.8rem", color: "var(--color-text-soft)" }}>{l.description?.slice(0, 60)}...</div></td>
                     <td>{missions.find((m) => m.id === l.mission)?.title || "—"}</td>
                     <td>{l.duration}</td>
+                    <td>
+                      <input
+                        type="file"
+                        accept=".zip"
+                        ref={(el) => (fileInputs.current[l.id] = el)}
+                        style={{ display: "none" }}
+                        onChange={(e) => { handleMaterialUpload(l, e.target.files?.[0]); e.target.value = ""; }}
+                      />
+                      <button
+                        className="a-badge a-badge-purple"
+                        style={{ border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 5 }}
+                        disabled={uploadingId === l.id}
+                        onClick={() => fileInputs.current[l.id]?.click()}
+                        title={l.material_filename ? `Replace ${l.material_filename}` : "Upload a .zip material"}
+                      >
+                        {uploadingId === l.id ? (
+                          <><span className="spinner" style={{ width: 12, height: 12 }} /> Uploading…</>
+                        ) : l.material_filename ? (
+                          <>📎 {l.material_filename}{l.material_size != null ? ` (${formatBytes(l.material_size)})` : ""}</>
+                        ) : (
+                          <>📎 Add material</>
+                        )}
+                      </button>
+                    </td>
                     <td>
                       <button
                         className={`a-badge ${l.is_published ? "a-badge-green" : "a-badge-orange"}`}

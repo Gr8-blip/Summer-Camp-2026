@@ -50,13 +50,27 @@ class LessonSerializer(serializers.ModelSerializer):
     locked = serializers.SerializerMethodField()
     completed = serializers.SerializerMethodField()
     quests_completed = serializers.SerializerMethodField()
+    material_filename = serializers.SerializerMethodField()
+    material_size = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
         fields = [
             'id', 'title', 'description', 'order', 'duration', 
-            'mission', 'is_published', 'locked', 'completed', 'quests_completed'
+            'mission', 'is_published', 'locked', 'completed', 'quests_completed',
+            'material_file', 'material_filename', 'material_size',
         ]
+
+    def get_material_filename(self, obj):
+        return obj.material_file.name.rsplit('/', 1)[-1] if obj.material_file else None
+
+    def get_material_size(self, obj):
+        # Bytes, so the frontend can format it however it wants (KB/MB).
+        # .size touches storage — only called when a file is actually set.
+        try:
+            return obj.material_file.size if obj.material_file else None
+        except (OSError, ValueError):
+            return None
 
     def get_locked(self, obj):
         if _mission_locked(obj.mission):
@@ -427,10 +441,24 @@ class MissionDetailSerializer(serializers.ModelSerializer):
 class LessonDetailSerializer(serializers.ModelSerializer):
     assignments = AssignmentSerializer(many=True, read_only=True)
     challenges = ChallengeSerializer(many=True, read_only=True)
+    material_filename = serializers.SerializerMethodField()
+    material_size = serializers.SerializerMethodField()
 
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'description', 'order', 'duration', 'assignments', 'challenges', 'is_published']
+        fields = [
+            'id', 'title', 'description', 'order', 'duration', 'assignments', 'challenges', 'is_published',
+            'material_file', 'material_filename', 'material_size',
+        ]
+
+    def get_material_filename(self, obj):
+        return obj.material_file.name.rsplit('/', 1)[-1] if obj.material_file else None
+
+    def get_material_size(self, obj):
+        try:
+            return obj.material_file.size if obj.material_file else None
+        except (OSError, ValueError):
+            return None
 
 
 class DashboardStudentSerializer(serializers.Serializer):
