@@ -384,3 +384,19 @@ class StudentCosmetic(models.Model):
 
     def __str__(self):
         return f"{self.student.full_name} owns {self.item.name}"
+
+
+class Notification(models.Model):
+    student = models.ForeignKey(
+        Student, related_name="notifications", on_delete=models.CASCADE
+    )
+    kind = models.CharField(max_length=32)  # "badge", "coins", etc.
+    payload = models.JSONField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["student", "read_at"]),
+        ]

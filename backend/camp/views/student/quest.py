@@ -164,10 +164,10 @@ class QuestSubmitView(APIView):
             if attempt.accuracy == 100:
                 paid = award_coins(
                     student, PERFECT_ACCURACY_BONUS,
-                    reason=f'Perfect accuracy: {attempt.assignment.title}'
+                    reason=f'Perfect score: {attempt.assignment.title}'
                 )
                 if paid:
-                    coin_events.append({"amount": paid, "reason": "Perfect accuracy! 🎯"})
+                    coin_events.append({"amount": paid, "reason": "Perfect score! 🎯"})
 
                 # Flawless Victory stacks on top, only if this was also
                 # the student's very first attempt at this quest.

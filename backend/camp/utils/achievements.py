@@ -19,6 +19,23 @@ PUZZLE_TYPES = {
 }
 
 
+def countable_lessons():
+    """The set of lessons that actually count toward completion badges —
+    must be published themselves AND belong to a published mission.
+    Shared with badge.py so the awarding logic and the progress-bar
+    logic can never disagree on the denominator."""
+    return Lesson.objects.filter(is_published=True, mission__is_published=True)
+
+
+def countable_assignments():
+    """Same idea as countable_lessons(), for quests."""
+    return Assignment.objects.filter(
+        is_published=True,
+        lesson__is_published=True,
+        lesson__mission__is_published=True,
+    )
+
+
 def _awarded(*results):
     """Filter award_badge() results down to the badges that were actually new."""
     return [b for b in results if b is not None]
@@ -44,7 +61,7 @@ def check_xp(student):
     return _awarded(*results)
 
 def _distinct_attended_lesson_count(student):
-    return student.attendances.values("lesson").distinct().count()
+    return student.attendances.filter(lesson__in=countable_lessons()).values("lesson").distinct().count()
 
 
 def check_attendance(student):
@@ -54,7 +71,7 @@ def check_attendance(student):
     if attendance_count >= 1:
         results.append(award_badge(student, "Present & Ready"))
 
-    total_lessons = Lesson.objects.all().count()
+    total_lessons = countable_lessons().count()
     attended_lessons = _distinct_attended_lesson_count(student)
 
     if total_lessons and attended_lessons >= total_lessons:
@@ -233,14 +250,14 @@ def check_coding_cadet(student):
     )
 
     mission_ids = (
-        Assignment.objects.filter(lesson__mission__is_published=True)
+        countable_assignments()
         .values_list("lesson__mission_id", flat=True)
         .distinct()
     )
 
     for mission_id in mission_ids:
         mission_assignment_ids = set(
-            Assignment.objects.filter(
+            countable_assignments().filter(
                 lesson__mission_id=mission_id
             ).values_list("id", flat=True)
         )
@@ -251,12 +268,14 @@ def check_coding_cadet(student):
 
 
 def check_ai_master(student):
-    total_lessons = Lesson.objects.all().count()
+    total_lessons = countable_lessons().count()
     attended_lessons = _distinct_attended_lesson_count(student)
 
-    total_assignments = Assignment.objects.all().count()
+    total_assignments = countable_assignments().count()
     completed_assignments = (
-        AssignmentAttempt.objects.filter(student=student, completed_at__isnull=False)
+        AssignmentAttempt.objects.filter(
+            student=student, completed_at__isnull=False, assignment__in=countable_assignments()
+        )
         .values("assignment").distinct().count()
     )
 
@@ -283,7 +302,7 @@ def check_class_explorer(student):
     except ImportError:
         return []
 
-    total_lessons = Lesson.objects.filter(mission__is_published=True).count()
+    total_lessons = countable_lessons().count()
     visited_lessons = (
         LessonVisit.objects.filter(student=student).values("lesson").distinct().count()
     )

@@ -8,6 +8,7 @@ from ...models import (
     ChallengeAttempt,
 )
 from ...serializers import StudentBadgeSerializer
+from ...utils.achievements import countable_lessons, countable_assignments
 
 
 # Badge model only stores name/icon/rarity — the human-readable requirement
@@ -157,19 +158,19 @@ class StudentBadgeGridView(APIView):
             for sb in StudentBadge.objects.filter(student=student)
         }
 
-        total_lessons = Lesson.objects.filter(mission__is_published=True).count()
-        attended_lessons = student.attendances.values("lesson").distinct().count()
+        total_lessons = countable_lessons().count()
+        attended_lessons = student.attendances.filter(lesson__in=countable_lessons()).values("lesson").distinct().count()
         attendance_count = student.attendances.count()
 
-        total_assignments = Assignment.objects.filter(lesson__mission__is_published=True).count()
+        total_assignments = countable_assignments().count()
 
         mission_ids = (
-            Assignment.objects.filter(lesson__mission__is_published=True)
+            countable_assignments()
             .values_list("lesson__mission_id", flat=True).distinct()
         )
         submitted_ids = set(
             AssignmentAttempt.objects.filter(
-                student=student, completed_at__isnull=False
+                student=student, completed_at__isnull=False, assignment__in=countable_assignments()
             ).values_list("assignment_id", flat=True)
         )
         submitted_assignment_count = len(submitted_ids)  # or requery filtered to published, same idea
@@ -177,7 +178,7 @@ class StudentBadgeGridView(APIView):
         best_ratio = (0, 1)
         for mission_id in mission_ids:
             mission_assignment_ids = set(
-                Assignment.objects.filter(lesson__mission_id=mission_id).values_list("id", flat=True)
+                countable_assignments().filter(lesson__mission_id=mission_id).values_list("id", flat=True)
             )
             if not mission_assignment_ids:
                 continue

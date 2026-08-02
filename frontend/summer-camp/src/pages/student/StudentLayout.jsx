@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { replayMissedNotifications } from "../../api/replayNotifications";
 import "./StudentLayout.css";
 
 const NAV_ITEMS = [
@@ -18,6 +20,11 @@ export default function StudentLayout({ children, title }) {
   const navigate = useNavigate();
   const { logoutStudent } = useAuth();
   const handleLogout = () => { logoutStudent(); navigate("/"); };
+
+  useEffect(() => {
+    replayMissedNotifications().catch(() => {});
+  }, []);
+
   return (
     <div className="sl-shell">
       <aside className="sl-sidebar">

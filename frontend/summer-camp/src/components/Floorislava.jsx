@@ -38,20 +38,76 @@ import { useEffect, useMemo, useRef, useState } from "react";
  *    are submitted for grading when the run is won."
  */
 
-const TIME_PER_Q = 4500;              // ms to answer before auto-timeout — tight enough to force real urgency
-const LAVA_RATE_BASE_PER_MS = 1 / 4200; // even at the START, sitting on a question costs real ground
-const LAVA_RATE_MAX_MULT = 4.2;       // ~4x faster once fully ramped up — "start slow then go faster"
-const LAVA_RAMP_PLATFORMS = 9;        // ramps to full aggression fast — the run should never stay comfortable for long
-const LAVA_BUFFER = 1.6;              // slim head start — some lava is visible from platform 1
-const TIMEOUT_LAVA_BOOM = 0.7;        // a miss should hurt, but shouldn't feel like a teleporting instant-kill
+// ── Difficulty presets ────────────────────────────────────────────────
+// Each preset defines the *felt* knobs (time per question, top ramp
+// speed, how fast the ramp maxes out, buffer size, timeout penalty).
+// LAVA_RATE_BASE_PER_MS is NOT hand-tuned — it's DERIVED from the other
+// numbers (see computeConfig) so the math is always fair: at full ramp
+// speed, a player who uses their ENTIRE question timer only burns ~90%
+// of their buffer, never more. That's the bug fix — see note below.
+const DIFFICULTY_PRESETS = {
+  easy: {
+    label: "Easy",
+    icon: "😌",
+    coinMult: 0.6,
+    blurb: "More time to think, lava takes it slow.",
+    TIME_PER_Q: 6000,
+    LAVA_RATE_MAX_MULT: 3.0,
+    LAVA_RAMP_PLATFORMS: 12,
+    LAVA_BUFFER: 2.0,
+    TIMEOUT_LAVA_BOOM: 0.45,
+  },
+  normal: {
+    label: "Normal",
+    icon: "🔥",
+    coinMult: 1,
+    blurb: "Balanced heat — the classic climb.",
+    TIME_PER_Q: 4500,
+    LAVA_RATE_MAX_MULT: 4.2,
+    LAVA_RAMP_PLATFORMS: 9,
+    LAVA_BUFFER: 1.6,
+    TIMEOUT_LAVA_BOOM: 0.6,
+  },
+  hard: {
+    label: "Hard",
+    icon: "💀",
+    coinMult: 1.6,
+    blurb: "Fast clock, faster lava. No mercy.",
+    TIME_PER_Q: 3200,
+    LAVA_RATE_MAX_MULT: 5.4,
+    LAVA_RAMP_PLATFORMS: 7,
+    LAVA_BUFFER: 1.3,
+    TIMEOUT_LAVA_BOOM: 0.75,
+  },
+};
+
+// ── THE BUG FIX ──────────────────────────────────────────────────────
+// Old code hard-coded LAVA_RATE_BASE_PER_MS completely independent of
+// TIME_PER_Q. At full ramp (platform 9+), that meant the lava's rise
+// over one FULL question timer (4.5s) was ~4.5 platforms-worth — but
+// the buffer was only 1.6. Translation: past platform 9, simply using
+// your whole timer to answer (even correctly!) was already more lava
+// than your buffer could survive. That's the "rushes to 0 with 1s
+// left" feeling — it wasn't a rendering glitch, the speed genuinely
+// outran the clock.
+//
+// Fix: derive the base rate FROM the buffer and timer, so at max ramp,
+// a full-timer answer only ever eats SAFETY_MARGIN (90%) of the
+// buffer — always survivable if you're reasonably quick, always tense
+// because 90% is close, never a guaranteed death by design.
+const SAFETY_MARGIN = 0.9;
+function computeConfig(preset) {
+  const maxRatePerMs = (preset.LAVA_BUFFER * SAFETY_MARGIN) / (preset.TIME_PER_Q * preset.LAVA_RATE_MAX_MULT);
+  return { ...preset, LAVA_RATE_BASE_PER_MS: maxRatePerMs };
+}
 
 // Two things speed the lava up: (1) raw progress — the further you've
 // climbed, the faster the passive rise, eased so it truly starts slow; and
 // (2) timeouts, handled separately as an instant spike in resolve().
-function lavaRampMultiplier(platformsCleared) {
-  const t = Math.min(1, platformsCleared / LAVA_RAMP_PLATFORMS);
+function lavaRampMultiplier(platformsCleared, cfg) {
+  const t = Math.min(1, platformsCleared / cfg.LAVA_RAMP_PLATFORMS);
   const eased = t * t;
-  return 1 + eased * (LAVA_RATE_MAX_MULT - 1);
+  return 1 + eased * (cfg.LAVA_RATE_MAX_MULT - 1);
 }
 
 function buildRows(questions) {
@@ -61,10 +117,13 @@ function buildRows(questions) {
 export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnswer, onComplete, onExit }) {
   const rows = useMemo(() => buildRows(questions), [questions]);
 
+  const [difficulty, setDifficulty] = useState(null); // null while on the select screen
+  const cfg = useMemo(() => computeConfig(DIFFICULTY_PRESETS[difficulty || "normal"]), [difficulty]);
+
   const [cleared, setCleared] = useState(0);        // platforms fully passed
-  const [lava, setLava] = useState(-LAVA_BUFFER);
+  const [lava, setLava] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(TIME_PER_Q);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [toast, setToast] = useState("");
   const [flashKind, setFlashKind] = useState(null);  // 'climb' | 'slip'
   const [jumping, setJumping] = useState(false);      // visual-only, never blocks
@@ -79,14 +138,22 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
   const [displayCleared, setDisplayCleared] = useState(0);
   const [slideStep, setSlideStep] = useState(0); // 0 settled · 1 wound up (pre-transition) · 2 sliding
   const [attempt, setAttempt] = useState(0);          // bumps on every timeout to restart the clock on the SAME platform
-  // playing -> touch -> fire -> fade -> gameover   |   playing -> victory
-  const [phase, setPhase] = useState("playing");
+  const [misses, setMisses] = useState(0);            // total wrong/timeout answers this run — feeds accuracy + coin payout
+  // select -> playing -> touch -> fire -> fade -> gameover   |   playing -> victory
+  const [phase, setPhase] = useState("select");
+  // Shown once per browser (persisted), same pattern as DungeonCrawler's
+  // intro walkthrough — reopenable anytime via the "❓ How to play" button.
+  const [showIntro, setShowIntro] = useState(() => {
+    try { return localStorage.getItem("fil_hide_intro") !== "1"; } catch { return true; }
+  });
 
   const answeredRef = useRef(false); // debounce so a single round can't double-resolve
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
   const clearedRef = useRef(cleared); // read inside the rise interval without re-subscribing it
   clearedRef.current = cleared;
+  const cfgRef = useRef(cfg); // read inside the rise interval without re-subscribing it
+  cfgRef.current = cfg;
 
   const terminal = phase !== "playing";
   const currentRow = rows[cleared];
@@ -121,8 +188,9 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
   useEffect(() => {
     const t = setInterval(() => {
       if (phaseRef.current !== "playing") return;
-      const mult = lavaRampMultiplier(clearedRef.current);
-      setLava((l) => l + LAVA_RATE_BASE_PER_MS * 150 * mult);
+      const c = cfgRef.current;
+      const mult = lavaRampMultiplier(clearedRef.current, c);
+      setLava((l) => l + c.LAVA_RATE_BASE_PER_MS * 150 * mult);
     }, 150);
     return () => clearInterval(t);
   }, []);
@@ -132,7 +200,7 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
     if (phase !== "playing" || allClimbed) return;
     if (lava >= cleared) setPhase("touch");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lava, phase, allClimbed]);
+  }, [lava, phase, allClimbed]); // phase !== "playing" already excludes the "select" screen
 
   useEffect(() => {
     if (phase === "touch") { const t = setTimeout(() => setPhase("fire"), 300); return () => clearTimeout(t); }
@@ -143,17 +211,17 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
   // ── question countdown — restarts on `attempt` too, so a timeout re-arms
   // the clock on the SAME platform instead of skipping ahead ─────────────
   useEffect(() => {
-    if (terminal || allClimbed || !currentRow) return;
-    setTimeLeft(TIME_PER_Q);
+    if (phase !== "playing" || allClimbed || !currentRow) return;
+    setTimeLeft(cfg.TIME_PER_Q);
     const start = Date.now();
     const t = setInterval(() => {
-      const left = TIME_PER_Q - (Date.now() - start);
+      const left = cfg.TIME_PER_Q - (Date.now() - start);
       if (left <= 0) { clearInterval(t); resolve(null, true); }
       else setTimeLeft(left);
     }, 100);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cleared, attempt, terminal]);
+  }, [cleared, attempt, phase]);
 
   const resolve = (response, timedOut = false) => {
     if (!currentRow || answeredRef.current || terminal) return;
@@ -167,8 +235,9 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
       onAnswer?.(q.id, null);
       flash("slip");
       say("💥 BOOM — the lava surged! Speed up!");
-      setLava((l) => l + TIMEOUT_LAVA_BOOM);
+      setLava((l) => l + cfg.TIMEOUT_LAVA_BOOM);
       setAttempt((a) => a + 1);
+      setMisses((m) => m + 1);
       return;
     }
 
@@ -183,28 +252,47 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
     setCleared((c) => c + 1); // next platform + next question, right now
   };
 
-  const retry = () => {
+  // Kicks off a fresh run at the chosen difficulty — used both for the
+  // very first start (from the select screen) and for "Play Again"
+  // (which reuses whatever difficulty was already picked).
+  const beginRun = (diff) => {
+    const nextCfg = computeConfig(DIFFICULTY_PRESETS[diff]);
+    setDifficulty(diff);
     setCleared(0);
     setDisplayCleared(0);
     setSlideStep(0);
-    setLava(-LAVA_BUFFER);
+    setLava(-nextCfg.LAVA_BUFFER);
     setAnswers({});
     setToast("");
     setFlashKind(null);
     setJumping(false);
     setAttempt(0);
+    setMisses(0);
     answeredRef.current = false;
     setPhase("playing");
   };
 
+  const retry = () => beginRun(difficulty || "normal");
+  const changeDifficulty = () => setPhase("select");
+
   useEffect(() => {
     if (allClimbed && phase === "playing") {
       setPhase("victory");
-      // Reward margin over the lava, not just reaching the top — average
-      // remaining gap is a reasonable proxy for how many close calls this
-      // run actually had vs. cruising clean.
-      const avgGap = Math.max(0, cleared - lava);
-      const coins = rows.length * 2 + Math.round(avgGap * 6);
+      // Coin formula, same "difficulty multiplier on top of a run-quality
+      // base" shape as DungeonCrawler's coinMult:
+      //  - a flat per-platform base (you climbed the whole thing)
+      //  - an accuracy bonus (fewer misses = more coins — this is the
+      //    stand-in for "pellets collected" here, since there's nothing
+      //    to sweep in this game, just questions to not blow)
+      //  - a small gap bonus (finished with breathing room, not scraping in)
+      //  - all of that scaled by the chosen difficulty's coinMult
+      const totalAnswers = cleared + misses;
+      const accuracy = totalAnswers > 0 ? cleared / totalAnswers : 1;
+      const gapBonus = Math.max(0, cleared - lava);
+      const base = rows.length * 2;
+      const accuracyBonus = Math.round(rows.length * 3 * accuracy);
+      const gapBonusCoins = Math.round(gapBonus * 4);
+      const coins = Math.round((base + accuracyBonus + gapBonusCoins) * cfg.coinMult);
       const t = setTimeout(() => onComplete(answers, coins), 1500);
       return () => clearTimeout(t);
     }
@@ -223,14 +311,14 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
   const PLAYER_OFFSET = 3; // rows above the viewport's bottom edge the player stands on — high enough that lava is visible well before it's dangerously close
   const cellPx = 58;
   const viewportPx = VIEW * cellPx;
-  const pct = !terminal && currentRow ? Math.max(0, timeLeft / TIME_PER_Q) : 1;
+  const pct = phase === "playing" && currentRow ? Math.max(0, timeLeft / cfg.TIME_PER_Q) : 1;
 
   // lava's position translated into this fixed window: when lava === cleared
   // (i.e. it has reached the player's platform) this equals PLAYER_OFFSET,
   // so the molten surface visibly reaches right up to the player's feet.
   const lavaRowFromBottom = lava - cleared + PLAYER_OFFSET;
   const lavaHeightPx = Math.max(0, Math.min(viewportPx, lavaRowFromBottom * cellPx));
-  const dangerT = Math.min(1, cleared / LAVA_RAMP_PLATFORMS); // 0 at the start, 1 once the ramp is maxed
+  const dangerT = Math.min(1, cleared / cfg.LAVA_RAMP_PLATFORMS); // 0 at the start, 1 once the ramp is maxed
 
   // Slide render params: while a slide is in flight we render one extra row
   // (revealed from the top as the world scrolls down past the fixed
@@ -247,7 +335,7 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
   // timeout doesn't move `cleared`, so the lava visibly gains) and jumps
   // back up whenever they successfully climb.
   const gapPlatforms = Math.max(0, cleared - lava);
-  const gapPct = Math.round(Math.min(1, gapPlatforms / LAVA_BUFFER) * 100);
+  const gapPct = Math.round(Math.min(1, gapPlatforms / cfg.LAVA_BUFFER) * 100);
   const gapColor = gapPct > 55 ? "#22c55e" : gapPct > 25 ? "#f59e0b" : "#ef4444";
 
   return (
@@ -272,23 +360,32 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
       <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <div>
           <div style={{ fontWeight: 800, fontSize: "1.05rem", color: "#fff" }}>🌋 {title}</div>
-          <div style={{ fontSize: ".78rem", color: "#8a8474" }}>{cleared} / {rows.length} platforms climbed</div>
+          <div style={{ fontSize: ".78rem", color: "#8a8474" }}>
+            {phase === "select" ? "Choose your heat" : `${cleared} / ${rows.length} platforms climbed`}
+          </div>
         </div>
-        {onExit && (
-          <button onClick={onExit} style={{ border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", color: "#c7473f", fontWeight: 700 }}>
-            Exit ✕
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={() => setShowIntro(true)} style={{ border: "1px solid rgba(255,255,255,.2)", background: "none", cursor: "pointer", fontSize: ".76rem", color: "#c9c3e8", fontWeight: 700, borderRadius: 999, padding: "4px 10px" }}>
+            ❓ How to play
           </button>
-        )}
+          {onExit && (
+            <button onClick={onExit} style={{ border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", color: "#c7473f", fontWeight: 700 }}>
+              Exit ✕
+            </button>
+          )}
+        </div>
       </header>
 
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".72rem", fontWeight: 700, color: "#7a7568", marginBottom: 3 }}>
-          <span>🌡️ Platforms until lava catches you</span><span>{gapPlatforms.toFixed(1)}</span>
+      {phase !== "select" && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".72rem", fontWeight: 700, color: "#7a7568", marginBottom: 3 }}>
+            <span>🌡️ Platforms until lava catches you</span><span>{gapPlatforms.toFixed(1)}</span>
+          </div>
+          <div style={{ height: 10, borderRadius: 999, background: "#2a2440", overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${gapPct}%`, borderRadius: 999, transition: "width .15s linear, background .3s ease", background: gapColor }} />
+          </div>
         </div>
-        <div style={{ height: 10, borderRadius: 999, background: "#2a2440", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${gapPct}%`, borderRadius: 999, transition: "width .15s linear, background .3s ease", background: gapColor }} />
-        </div>
-      </div>
+      )}
 
       {toast && (
         <div style={{ textAlign: "center", fontSize: ".82rem", fontWeight: 700, color: "#5b3fd6", background: "#efeaff", borderRadius: 10, padding: "6px 10px", marginBottom: 10, animation: "filPop .2s ease-out" }}>
@@ -298,6 +395,7 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
 
       {/* Climbing shaft — cool, dim sky up top; the walls warm into the
           lava's glow as you look down toward the bottom of frame */}
+      {phase !== "select" && (
       <div
         style={{
           position: "relative", margin: "0 auto",
@@ -408,6 +506,7 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
           </div>
         </div>
       </div>
+      )}
 
       {/* True/False HUD prompt — stays live and visible while the lava keeps
           climbing underneath, so waiting is never free */}
@@ -436,10 +535,14 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
         <Overlay burnt>
           <div style={{ fontSize: "2.4rem" }}>🔥</div>
           <h2 style={{ margin: "8px 0", letterSpacing: ".02em" }}>YOU BURNT</h2>
-          <p style={{ color: "#c9a58f", marginBottom: 18 }}>The lava caught up with you.</p>
-          <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <p style={{ color: "#c9a58f", marginBottom: 6 }}>The lava caught up with you.</p>
+          <p style={{ color: "#8a7a6a", fontSize: ".78rem", marginBottom: 18 }}>Difficulty: {DIFFICULTY_PRESETS[difficulty || "normal"].icon} {DIFFICULTY_PRESETS[difficulty || "normal"].label}</p>
+          <div style={{ display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={retry} style={{ padding: "12px 22px", borderRadius: 12, border: "none", fontWeight: 800, cursor: "pointer", background: "linear-gradient(135deg,#ff7a1a,#ffb454)", color: "#fff" }}>
               Play Again
+            </button>
+            <button onClick={changeDifficulty} style={{ padding: "12px 22px", borderRadius: 12, border: "1px solid rgba(255,255,255,.25)", fontWeight: 700, cursor: "pointer", background: "none", color: "#e6e2f5" }}>
+              Change Difficulty
             </button>
             {onExit && (
               <button onClick={onExit} style={{ padding: "12px 22px", borderRadius: 12, border: "1px solid rgba(255,255,255,.25)", fontWeight: 700, cursor: "pointer", background: "none", color: "#e6e2f5" }}>
@@ -454,9 +557,146 @@ export default function FloorIsLava({ questions, title = "Floor Is Lava", onAnsw
         <Overlay>
           <div style={{ fontSize: "2.4rem" }}>🏔️</div>
           <h2 style={{ margin: "8px 0" }}>SUMMIT REACHED</h2>
+          <p style={{ color: "#a09a89", marginBottom: 4 }}>
+            Accuracy: {cleared + misses > 0 ? Math.round((cleared / (cleared + misses)) * 100) : 100}% · {misses} miss{misses === 1 ? "" : "es"}
+          </p>
           <p style={{ color: "#a09a89" }}>Submitting your run…</p>
         </Overlay>
       )}
+
+      {showIntro && <IntroWalkthrough onClose={() => setShowIntro(false)} />}
+      {phase === "select" && !showIntro && <DifficultyModal onChoose={beginRun} />}
+    </div>
+  );
+}
+
+// ───────────────────────── intro walkthrough ─────────────────────────
+// Shown once per browser (persisted via localStorage) unless the player
+// checks "Don't show again" or hits Skip. Reopenable anytime via the
+// "❓ How to play" button in the header — same pattern as DungeonCrawler.
+
+const FIL_INTRO_SLIDES = [
+  { icon: "🌋", grad: "linear-gradient(135deg,#ff7a1a,#ffb454)", title: "The Floor Is Lava!", body: "Climb platform by platform by answering True/False questions. Miss too many, and the lava underneath catches you." },
+  { icon: "❓", grad: "linear-gradient(135deg,#7c5cfc,#a78bfa)", title: "Answer Before Time's Up", body: "Each platform gives you one question and a countdown. Answer TRUE or FALSE before the bar under the question runs out." },
+  { icon: "🧍➡️🪨", grad: "linear-gradient(135deg,#22c55e,#86efac)", title: "Correct = Instant Climb", body: "Get it right and you jump straight to the next platform — no waiting around." },
+  { icon: "🐌🔥", grad: "linear-gradient(135deg,#ff5c8a,#f97316)", title: "Wrong or Too Slow = You Stay Put", body: "Miss it and you're stuck on the same platform — the question re-arms right there, and the lava gets an instant surge on top of its normal rise." },
+  { icon: "🌡️", grad: "linear-gradient(135deg,#eab308,#fde047)", title: "The Lava Never Stops", body: "It's always rising — not while you're reading, not between platforms — and it speeds up the higher you climb. The bar up top just tracks the gap between you and it." },
+  { icon: "📊", grad: "linear-gradient(135deg,#0ea5e9,#67e8f9)", title: "Your Score Shows After the Run", body: "Nothing gets sent anywhere while you're climbing — every answer is tracked right here. Your accuracy only shows up once you reach the summit, so a rough patch mid-run doesn't end things early. Get it, then play again to push it higher." },
+  { icon: "🪙", grad: "linear-gradient(135deg,#eab308,#fde047)", title: "Harder Heat = More Coins", body: "Coins are based on how far you climbed, how accurate you were, and how big your lead over the lava was — then multiplied by your difficulty. Hard pays out way more than Easy for the same clean run." },
+  { icon: "🏔️", grad: "linear-gradient(135deg,#0ea5e9,#67e8f9)", title: "Reach the Summit", body: "Clear every platform to win. Getting caught is a full reset back to platform 1 — no checkpoints, so keep the pace up!" },
+];
+
+function IntroWalkthrough({ onClose }) {
+  const [step, setStep] = useState(0);
+  const [dontShow, setDontShow] = useState(false);
+  const last = step === FIL_INTRO_SLIDES.length - 1;
+  const slide = FIL_INTRO_SLIDES[step];
+
+  const finish = () => {
+    if (dontShow) { try { localStorage.setItem("fil_hide_intro", "1"); } catch { /* ignore */ } }
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(6,3,16,.93)", backdropFilter: "blur(2px)", zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, animation: "filPop .25s ease-out" }}>
+      <button
+        onClick={finish}
+        style={{ position: "absolute", top: 22, right: 22, background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.18)", color: "#e6e2f5", borderRadius: 999, padding: "8px 16px", fontSize: ".76rem", fontWeight: 700, cursor: "pointer" }}
+      >
+        Skip ✕
+      </button>
+
+      <div style={{ width: "100%", maxWidth: 400, borderRadius: 26, overflow: "hidden", background: "#14102a", boxShadow: "0 40px 90px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(124,92,252,.25)" }}>
+        <div key={step} style={{ background: slide.grad, padding: "40px 24px 30px", textAlign: "center", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 50% 0%, rgba(255,255,255,.25), transparent 60%)" }} />
+          <div style={{ fontSize: "3.4rem", animation: "filFloat 1.6s ease-in-out infinite", filter: "drop-shadow(0 0 16px rgba(255,255,255,.55))", position: "relative" }}>
+            {slide.icon}
+          </div>
+        </div>
+
+        <div style={{ padding: "22px 26px 22px", color: "#e6e2f5" }}>
+          <h2 style={{ margin: "0 0 8px", fontSize: "1.18rem", fontWeight: 800 }}>{slide.title}</h2>
+          <p style={{ fontSize: ".92rem", lineHeight: 1.55, color: "#c9c4e0", marginBottom: 20, minHeight: 66 }}>{slide.body}</p>
+
+          <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 18 }}>
+            {FIL_INTRO_SLIDES.map((_, i) => (
+              <span key={i} style={{ width: i === step ? 20 : 7, height: 7, borderRadius: 999, background: i === step ? slide.grad : "#332a5c", transition: "all .25s ease" }} />
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+            {step > 0 && (
+              <button onClick={() => setStep((s) => s - 1)} style={{ padding: "12px 16px", borderRadius: 12, border: "1px solid #34295c", background: "transparent", color: "#e6e2f5", fontWeight: 700, cursor: "pointer" }}>
+                ←
+              </button>
+            )}
+            {!last ? (
+              <button onClick={() => setStep((s) => s + 1)} style={{ flex: 1, padding: "12px 16px", borderRadius: 12, border: "none", fontWeight: 800, cursor: "pointer", background: slide.grad, color: "#fff" }}>
+                Next →
+              </button>
+            ) : (
+              <button onClick={finish} style={{ flex: 1, padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, fontSize: "1rem", cursor: "pointer", background: slide.grad, color: "#fff", boxShadow: "0 10px 24px -8px rgba(124,92,252,.6)" }}>
+                Let's Climb! 🌋
+              </button>
+            )}
+          </div>
+
+          <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: ".76rem", color: "#8a8474", cursor: "pointer" }}>
+            <input type="checkbox" checked={dontShow} onChange={(e) => setDontShow(e.target.checked)} />
+            Don't show this again
+          </label>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────── difficulty select modal ─────────────────────────
+// Shown every run (no "don't show again" here — it's a real setup choice,
+// not a one-time tutorial), same pattern as DungeonCrawler's DifficultyModal.
+
+function DifficultyModal({ onChoose }) {
+  const order = ["easy", "normal", "hard"];
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(6,3,16,.93)", backdropFilter: "blur(2px)", zIndex: 690, display: "flex", alignItems: "center", justifyContent: "center", padding: 18, animation: "filPop .22s ease-out" }}>
+      <div style={{ width: "100%", maxWidth: 420, borderRadius: 26, background: "#14102a", boxShadow: "0 40px 90px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(124,92,252,.25)", padding: "26px 24px 22px" }}>
+        <div style={{ textAlign: "center", marginBottom: 6 }}>
+          <div style={{ fontSize: "2rem" }}>🌋</div>
+          <h2 style={{ margin: "6px 0 4px", fontSize: "1.2rem", fontWeight: 800, color: "#fff" }}>Choose Your Heat</h2>
+          <p style={{ fontSize: ".8rem", color: "#a09a89", marginBottom: 18 }}>Higher difficulty means less time per question and faster-rising lava — but it pays out way more Coins. Easy is chill, but the reward matches it.</p>
+        </div>
+
+        <div style={{ display: "grid", gap: 10 }}>
+          {order.map((key) => {
+            const p = DIFFICULTY_PRESETS[key];
+            return (
+              <button
+                key={key}
+                onClick={() => onChoose(key)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 14, textAlign: "left", padding: "14px 16px", borderRadius: 16,
+                  border: "1px solid rgba(124,92,252,.22)", background: "#1d1740", cursor: "pointer", color: "#e6e2f5",
+                }}
+              >
+                <div style={{ fontSize: "1.7rem", flexShrink: 0 }}>{p.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontWeight: 800, fontSize: ".95rem" }}>{p.label}</span>
+                    <span style={{
+                      fontSize: ".72rem", fontWeight: 800, padding: "3px 9px", borderRadius: 999,
+                      background: p.coinMult >= 1.5 ? "linear-gradient(135deg,#eab308,#fde047)" : p.coinMult === 1 ? "linear-gradient(135deg,#7c5cfc,#a78bfa)" : "#332a5c",
+                      color: p.coinMult >= 1.5 ? "#3a2c00" : "#fff",
+                    }}>
+                      🪙 {p.coinMult}×
+                    </span>
+                  </div>
+                  <div style={{ fontSize: ".76rem", color: "#a099c2", marginTop: 3, lineHeight: 1.4 }}>{p.blurb}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

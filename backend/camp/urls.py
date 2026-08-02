@@ -72,6 +72,8 @@ from .views.admin.challenge import ChallengeView, ChallengeDetailView as AdminCh
 from .views.admin.challenge_question import ChallengeQuestionListView, ChallengeQuestionDetailView, ChallengeAttemptListView
 from .views.admin.assignment_question import AssignmentQuestionListView, AssignmentQuestionDetailView, AssignmentAttemptListView
 from .views.admin.camp_settings import AdminCampSettingsView
+from .views.student.notifications import NotificationListView, NotificationMarkReadView
+
 
 urlpatterns = [
 
@@ -177,7 +179,8 @@ urlpatterns = [
     path("marketplace/<int:pk>/purchase/", MarketplacePurchaseView.as_view()),
     path("marketplace/<int:pk>/equip/", MarketplaceEquipView.as_view()),
     path("profile/", ProfileView.as_view()),
-
+    path("notifications/", NotificationListView.as_view(), name="notification-list"),
+    path("notifications/mark-read/", NotificationMarkReadView.as_view(), name="notification-mark-read"),
 
 
      # ==========================
