@@ -89,6 +89,8 @@ export const adminUploadLessonMaterial = (id, file) => {
   formData.append("material_file", file);
   return camp(`/camp-admin/lessons/${id}/`, { method: "PATCH", adminAuth: true, body: formData });
 };
+export const adminRemoveLessonMaterial = (id) =>
+  camp(`/camp-admin/lessons/${id}/`, { method: "PATCH", adminAuth: true, body: { remove_material: true } });
 
 export const adminGetAssignments = () => camp("/camp-admin/assignments/", { method: "GET", adminAuth: true });
 export const adminCreateAssignment = (body) => camp("/camp-admin/assignments/", { method: "POST", adminAuth: true, body });

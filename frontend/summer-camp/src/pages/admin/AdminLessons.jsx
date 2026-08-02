@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import { adminGetLessons, adminCreateLesson, adminUpdateLesson, adminDeleteLesson, adminGetMissions, adminUploadLessonMaterial } from "../../api/client";
+import { adminGetLessons, adminCreateLesson, adminUpdateLesson, adminDeleteLesson, adminGetMissions, adminUploadLessonMaterial, adminRemoveLessonMaterial } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 
 const PAGE_SIZE = 10;
-const EMPTY_FORM = { mission: "", title: "", description: "", order: "", duration: "" };
+const EMPTY_FORM = { mission: "", title: "", description: "", order: "", duration: "", key_notes: "" };
 
 export default function AdminLessons() {
   const { toasts, toast } = useToast();
@@ -38,7 +38,10 @@ export default function AdminLessons() {
 
   const openCreate = () => { setForm(EMPTY_FORM); setEditing(null); setFormErr(""); setModal("create"); };
   const openEdit = (item) => {
-    setForm({ mission: item.mission || "", title: item.title, description: item.description, order: item.order, duration: item.duration });
+    setForm({
+      mission: item.mission || "", title: item.title, description: item.description, order: item.order, duration: item.duration,
+      key_notes: (item.key_notes || []).join("\n"),
+    });
     setEditing(item); setFormErr(""); setModal("edit");
   };
   const closeModal = () => setModal(null);
@@ -51,7 +54,10 @@ export default function AdminLessons() {
   const handleSave = async () => {
     if (!validate()) return;
     setSaving(true); setFormErr("");
-    const body = { mission: form.mission || null, title: form.title, description: form.description, order: Number(form.order), duration: form.duration };
+    const body = {
+      mission: form.mission || null, title: form.title, description: form.description, order: Number(form.order), duration: form.duration,
+      key_notes: form.key_notes.split("\n").map((n) => n.trim()).filter(Boolean),
+    };
     try {
       if (modal === "edit") { await adminUpdateLesson(editing.id, body); toast("Lesson updated!"); }
       else                  { await adminCreateLesson(body);              toast("Lesson created!"); }
@@ -106,6 +112,20 @@ export default function AdminLessons() {
       toast("Material uploaded!");
     } catch (e) {
       toast(e.data?.detail || e.data?.error || "Upload failed.", "error");
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const handleRemoveMaterial = async (item) => {
+    if (!window.confirm(`Remove "${item.material_filename}" from this lesson?`)) return;
+    setUploadingId(item.id);
+    try {
+      const updated = await adminRemoveLessonMaterial(item.id);
+      setItems((prev) => prev.map((l) => (l.id === item.id ? { ...l, ...updated } : l)));
+      toast("Material removed.");
+    } catch (e) {
+      toast(e.data?.detail || e.data?.error || "Couldn't remove material.", "error");
     } finally {
       setUploadingId(null);
     }
@@ -174,6 +194,16 @@ export default function AdminLessons() {
                           <>📎 Add material</>
                         )}
                       </button>
+                      {l.material_filename && uploadingId !== l.id && (
+                        <button
+                          className="btn btn-danger"
+                          style={{ padding: "4px 8px", fontSize: "0.72rem", marginLeft: 6 }}
+                          onClick={() => handleRemoveMaterial(l)}
+                          title="Remove material"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </td>
                     <td>
                       <button
@@ -216,6 +246,17 @@ export default function AdminLessons() {
             </div>
             <div className="form-group"><label>Title *</label><input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Lesson title" /></div>
             <div className="form-group"><label>Description</label><textarea rows={3} value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} style={{ resize: "vertical" }} /></div>
+            <div className="form-group">
+              <label>Key Notes (one per line)</label>
+              <textarea
+                rows={4}
+                value={form.key_notes}
+                onChange={(e) => setForm((f) => ({ ...f, key_notes: e.target.value }))}
+                placeholder={"Flexbox items shrink before they wrap\nUse gap instead of margin between grid items"}
+                style={{ resize: "vertical" }}
+              />
+              <span style={{ fontSize: "0.76rem", color: "var(--color-text-soft)" }}>Shows as a "Key Notes" card on the student lesson page.</span>
+            </div>
             <div className="form-row">
               <div className="form-group"><label>Order *</label><input type="number" min="1" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))} placeholder="1" /></div>
               <div className="form-group"><label>Duration (HH:MM:SS)</label><input value={form.duration} onChange={(e) => setForm((f) => ({ ...f, duration: e.target.value }))} placeholder="01:00:00" /></div>

@@ -58,7 +58,7 @@ class LessonSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'order', 'duration', 
             'mission', 'is_published', 'locked', 'completed', 'quests_completed',
-            'material_file', 'material_filename', 'material_size',
+            'material_file', 'material_filename', 'material_size', 'key_notes',
         ]
 
     def get_material_filename(self, obj):
@@ -448,7 +448,7 @@ class LessonDetailSerializer(serializers.ModelSerializer):
         model = Lesson
         fields = [
             'id', 'title', 'description', 'order', 'duration', 'assignments', 'challenges', 'is_published',
-            'material_file', 'material_filename', 'material_size',
+            'material_file', 'material_filename', 'material_size', 'key_notes',
         ]
 
     def get_material_filename(self, obj):

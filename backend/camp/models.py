@@ -46,6 +46,10 @@ class Lesson(models.Model):
         null=True,
         validators=[FileExtensionValidator(allowed_extensions=['zip'])],
     )
+    # Short, ordered list of "remember this" bullets shown on the student
+    # lesson page — plain list of strings, no separate model needed since
+    # these are just admin-authored copy, not queryable/relational data.
+    key_notes = models.JSONField(default=list, blank=True)
 
     def __str__(self):
         return f"{self.title} (Mission: {self.mission.title})"

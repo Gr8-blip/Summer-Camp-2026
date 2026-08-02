@@ -47,6 +47,48 @@ function MaterialCard({ lesson }) {
   );
 }
 
+function KeyNotesCard({ notes }) {
+  if (!notes || notes.length === 0) return null;
+  return (
+    <div
+      className="s-card"
+      style={{
+        background: "linear-gradient(160deg, rgba(124,92,252,.14), rgba(20,16,42,.6))",
+        border: "1px solid rgba(124,92,252,.3)",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ position: "absolute", top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "radial-gradient(circle, rgba(167,139,250,.25), transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, position: "relative" }}>
+        <span style={{ fontSize: "1.3rem" }}>🧠</span>
+        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 800, letterSpacing: ".02em" }}>Key Notes</h3>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, position: "relative" }}>
+        {notes.map((note, i) => (
+          <div
+            key={i}
+            style={{
+              display: "flex", gap: 12, alignItems: "flex-start",
+              padding: "10px 12px", borderRadius: 12,
+              background: "rgba(124,92,252,.08)", border: "1px solid rgba(124,92,252,.15)",
+            }}
+          >
+            <span style={{
+              flexShrink: 0, width: 22, height: 22, borderRadius: 7, fontSize: ".72rem", fontWeight: 800,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", color: "#fff",
+            }}>
+              {i + 1}
+            </span>
+            <span style={{ fontSize: ".88rem", lineHeight: 1.5 }}>{note}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function QuestCard({ assignment }) {
   const navigate = useNavigate();
   const locked = assignment.locked;
@@ -103,6 +145,7 @@ export default function LessonDetail() {
           <div className="s-card"><p>{lesson.description}</p></div>
 
           <MaterialCard lesson={lesson} />
+          <KeyNotesCard notes={lesson.key_notes} />
 
           {lesson.assignments?.length > 0 && (
             <>
