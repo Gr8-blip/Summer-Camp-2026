@@ -69,19 +69,11 @@ function KeyNotesCard({ notes }) {
           <div
             key={i}
             style={{
-              display: "flex", gap: 12, alignItems: "flex-start",
               padding: "10px 12px", borderRadius: 12,
               background: "rgba(124,92,252,.08)", border: "1px solid rgba(124,92,252,.15)",
             }}
           >
-            <span style={{
-              flexShrink: 0, width: 22, height: 22, borderRadius: 7, fontSize: ".72rem", fontWeight: 800,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", color: "#fff",
-            }}>
-              {i + 1}
-            </span>
-            <span style={{ fontSize: ".88rem", lineHeight: 1.5 }}>{note}</span>
+            <span style={{ fontSize: ".88rem", lineHeight: 1.5, whiteSpace: "pre-line" }}>{note}</span>
           </div>
         ))}
       </div>

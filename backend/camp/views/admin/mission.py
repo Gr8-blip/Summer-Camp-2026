@@ -5,7 +5,7 @@ from ...models import Mission
 
 class MissionView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    queryset = Mission.objects.all()
+    queryset = Mission.objects.order_by('week')
     serializer_class = MissionListSerializer
 
 

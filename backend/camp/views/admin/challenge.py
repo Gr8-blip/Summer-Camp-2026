@@ -5,7 +5,7 @@ from ...models import Challenge
 
 class ChallengeView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
-    queryset = Challenge.objects.all()
+    queryset = Challenge.objects.order_by('created_at')
     serializer_class = ChallengeSerializer
 
 

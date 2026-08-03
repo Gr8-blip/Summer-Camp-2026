@@ -11,6 +11,7 @@ import { generateWordSearch, matchSelection, straightLine } from "../../componen
 import DungeonCrawler from "../../components/Dungeoncrawler";
 import FloorIsLava from "../../components/Floorislava";
 import EscapeRoom from "../../components/EscapeRoom";
+import AIDefense from "../../components/AIdefense";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
 // Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
@@ -19,6 +20,7 @@ const GAME_COMPONENTS = {
   dungeon_crawler: DungeonCrawler,
   floor_is_lava: FloorIsLava,
   escape_room: EscapeRoom,
+  ai_defense: AIDefense
 };
 
 function shuffled(arr) {
