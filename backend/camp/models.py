@@ -53,6 +53,10 @@ class Lesson(models.Model):
 
     def __str__(self):
         return f"{self.title} (Mission: {self.mission.title})"
+
+
+    class Meta:
+        ordering = ['order']
     
 
 class Badge(models.Model):

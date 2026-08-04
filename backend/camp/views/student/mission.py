@@ -13,5 +13,5 @@ class StudentMissionListView(ListAPIView):
 class StudentMissionDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
 
-    queryset = Mission.objects.order_by('week')
+    queryset = Mission.objects.all()
     serializer_class = MissionDetailSerializer
