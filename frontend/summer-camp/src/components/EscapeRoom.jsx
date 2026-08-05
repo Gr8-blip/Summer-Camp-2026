@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, useCallback, memo } from "react";
+import { createPortal } from "react-dom";
 import { generateWordSearch, matchSelection, straightLine } from "./wordSearchGenerator";
 
 /**
@@ -155,6 +156,36 @@ function visibleFromRadius(cells, size, start, radius) {
 
 const key = (r, c) => `${r},${c}`;
 
+// All animation keyframes, built once at module load instead of every
+// render — a real (if small) render-cost saver, and keeps the JSX below
+// free of a giant inline template string.
+const ER_KEYFRAMES = `
+  @keyframes erPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
+  @keyframes erGlitch { 0%,100%{opacity:1;transform:scale(1) translate(0,0)} 20%{transform:scale(1.08) translate(-1px,1px)} 40%{opacity:.6;transform:scale(.92) translate(1px,-1px)} 60%{transform:scale(1.05) translate(-1px,-1px)} }
+  @keyframes erHealGlow { 0%,100%{filter:drop-shadow(0 0 4px #22c55e); transform:scale(1)} 50%{filter:drop-shadow(0 0 14px #4ade80); transform:scale(1.12)} }
+  @keyframes erVirusPulse { 0%,100%{ border-radius: 42% 58% 55% 45% / 55% 45% 58% 42%; } 50%{ border-radius: 55% 45% 42% 58% / 45% 58% 45% 55%; } }
+  @keyframes erVirusFlicker { 0%,100%{opacity:1} 46%{opacity:1} 48%{opacity:.55} 50%{opacity:1} 74%{opacity:1} 76%{opacity:.4} 79%{opacity:1} }
+  @keyframes erVirusGlitchJitter { 0%,100%{transform:translate(0,0)} 16%{transform:translate(-1px,1px)} 33%{transform:translate(1px,-1px)} 50%{transform:translate(0,0)} 66%{transform:translate(1px,1px)} 83%{transform:translate(-1px,0)} }
+  @keyframes erVirusParticle { 0%{opacity:.9; transform:translate(-50%,-50%) scale(1)} 100%{opacity:0; transform:translate(-50%,-50%) translateY(16px) scale(.3)} }
+  @keyframes erCorruptOrbit { from{transform:translate(-50%,-50%) rotate(0deg) translateX(14px) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg) translateX(14px) rotate(-360deg)} }
+  @keyframes erPlayerFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+  @keyframes erPlayerRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  @keyframes erAmbientMote { 0%,100%{opacity:.2; transform:translateY(0)} 50%{opacity:.9; transform:translateY(-6px)} }
+  @keyframes erStarTwinkle { 0%,100%{opacity:.18; transform:scale(1)} 50%{opacity:1; transform:scale(1.4)} }
+  @keyframes erHealRingPulse { 0%{opacity:.9; transform:scale(.3)} 100%{opacity:0; transform:scale(1)} }
+  @keyframes erHealParticle { 0%{opacity:1; transform:translate(-50%,-50%) scale(1)} 100%{opacity:0; transform:translate(calc(-50% + var(--ex)), calc(-50% + var(--ey))) scale(.4)} }
+  @keyframes erBlink { 0%,100%{opacity:1} 50%{opacity:.25} }
+  @keyframes erPop { from{transform:scale(.85);opacity:0} to{transform:scale(1);opacity:1} }
+  @keyframes erFlashInfect { 0%{opacity:0} 15%{opacity:1} 100%{opacity:0} }
+  @keyframes erFlashCorrupt { 0%{opacity:0} 12%{opacity:.9} 30%{opacity:.2} 45%{opacity:.85} 100%{opacity:0} }
+  @keyframes erFlashHeal { 0%{opacity:0; transform:scale(.7)} 30%{opacity:.85; transform:scale(1.05)} 100%{opacity:0; transform:scale(1.4)} }
+  @keyframes erFlashPickup { 0%{opacity:0; transform:scale(.8)} 25%{opacity:.7; transform:scale(1.02)} 100%{opacity:0; transform:scale(1.2)} }
+  @keyframes erFlashHit { 0%{box-shadow:0 0 0 0 rgba(34,211,238,.55)} 100%{box-shadow:0 0 0 26px rgba(34,211,238,0)} }
+  @keyframes erFlashMiss { 0%{box-shadow:0 0 0 0 rgba(244,63,94,.55)} 100%{box-shadow:0 0 0 26px rgba(244,63,94,0)} }
+  @keyframes erInfectVignette { 0%,100%{opacity:.35} 50%{opacity:.75} }
+  @keyframes erPromptPulse { 0%,100%{opacity:1; transform:translate(-50%,0) scale(1)} 50%{opacity:.7; transform:translate(-50%,0) scale(1.03)} }
+`;
+
 // Deterministic pseudo-random in [0,1), seeded off cell coords + a salt —
 // used for fog static/particles so each hidden tile has a stable look
 // instead of re-randomizing (and thrashing) on every render.
@@ -186,10 +217,10 @@ const FACE_ROTATE = { E: 0, S: 90, W: 180, N: 270 };
 // coinMult rewards actually playing on higher difficulty instead of just
 // making the run miserable for nothing.
 const DIFFICULTY = {
-  easy:    { label: "Easy",    icon: "🦠",       viruses: 1, tickMs: 640, chaseRadius: 6,  chaseChance: 0.62, fogRadius: 5, infectionRate: 2.0, coinMult: 0.5, desc: "One virus, and it's not always paying attention. Good for your first run through the facility." },
-  medium:  { label: "Medium",  icon: "🦠🦠",      viruses: 2, tickMs: 540, chaseRadius: 8,  chaseChance: 0.76, fogRadius: 4, infectionRate: 2.6, coinMult: 1,   desc: "Two viruses actively hunting. The fog closes in a little tighter, too." },
-  hard:    { label: "Hard",    icon: "🦠🦠🦠",     viruses: 3, tickMs: 440, chaseRadius: 10, chaseChance: 0.88, fogRadius: 4, infectionRate: 3.4, coinMult: 1.5, desc: "Three viruses, rarely distracted. You will get cornered — plan your route." },
-  extreme: { label: "Extreme", icon: "☣️",       viruses: 4, tickMs: 340, chaseRadius: 99, chaseChance: 0.96, fogRadius: 3, infectionRate: 4.4, coinMult: 2,   desc: "Four viruses that basically always know where you are. Only for the fearless." },
+  easy:    { label: "Easy",    icon: "🦠",       viruses: 1, tickMs: 640, chaseRadius: 9,  chaseChance: 0.8,  fogRadius: 5, infectionRate: 2.0, coinMult: 0.5, desc: "Just one virus — but it's not dumb. Great for your first try!" },
+  medium:  { label: "Medium",  icon: "🦠🦠",      viruses: 2, tickMs: 540, chaseRadius: 8,  chaseChance: 0.76, fogRadius: 4, infectionRate: 2.6, coinMult: 1,   desc: "Two viruses looking for you. Stay sharp!" },
+  hard:    { label: "Hard",    icon: "🦠🦠🦠",     viruses: 3, tickMs: 440, chaseRadius: 10, chaseChance: 0.88, fogRadius: 4, infectionRate: 3.4, coinMult: 1.5, desc: "Three fast viruses. It's going to get close!" },
+  extreme: { label: "Extreme", icon: "☣️",       viruses: 4, tickMs: 340, chaseRadius: 99, chaseChance: 0.96, fogRadius: 3, infectionRate: 4.4, coinMult: 2,   desc: "Four viruses that always seem to know where you are. Good luck!" },
 };
 
 // ───────────────────────── memoized render layers ─────────────────────────
@@ -199,41 +230,28 @@ const DIFFICULTY = {
 // facility. Fog visibility is folded in as a third render tier.
 
 // Unexplored tiles: still fully opaque (you can't see through fog), but
-// styled as a living haze instead of dead black — a per-cell gradient,
-// a very faint drifting static grain, and one or two slow particles,
-// all seeded off the cell's own coords so nothing reshuffles on repaint.
+// a black-not-pitch starfield instead of dead #000 — a couple of tiny
+// twinkling stars per tile, seeded off the cell's own coords so nothing
+// reshuffles on repaint.
 const FogCell = memo(function FogCell({ left, top, cellPx, r, c }) {
-  const hueSeed = seeded(r, c, 1);
-  const bg = hueSeed < 0.12
-    ? "radial-gradient(circle at 30% 30%, #2a0f2e 0%, #0a0614 60%, #030209 100%)" // rare corrupted-purple pocket
-    : "radial-gradient(circle at 30% 30%, #151033 0%, #0a0818 55%, #03020a 100%)";
-  const p1x = 15 + seeded(r, c, 2) * 70;
-  const p1y = 15 + seeded(r, c, 3) * 70;
-  const p2x = 15 + seeded(r, c, 4) * 70;
-  const p2y = 15 + seeded(r, c, 5) * 70;
-  const delay1 = seeded(r, c, 6) * 4;
-  const delay2 = seeded(r, c, 7) * 4;
-  const showStatic = seeded(r, c, 8) < 0.35;
+  const roll = seeded(r, c, 0);
+  const starCount = roll < 0.35 ? 0 : roll < 0.85 ? 1 : 2;
+  const stars = starCount === 0 ? null : Array.from({ length: starCount }, (_, i) => ({
+    x: 12 + seeded(r, c, i * 4 + 1) * 76,
+    y: 12 + seeded(r, c, i * 4 + 2) * 76,
+    size: seeded(r, c, i * 4 + 3) < 0.75 ? 1 : 2,
+    delay: seeded(r, c, i * 4 + 4) * 3.5,
+    dur: 2.2 + seeded(r, c, i * 4 + 5) * 2.6,
+  }));
   return (
-    <div style={{ position: "absolute", left, top, width: cellPx, height: cellPx, overflow: "hidden", background: bg }}>
-      {showStatic && (
-        <div style={{
-          position: "absolute", inset: 0, opacity: 0.5, mixBlendMode: "screen",
-          backgroundImage: "repeating-linear-gradient(0deg, rgba(120,90,220,.06) 0px, transparent 1px, transparent 3px)",
-          animation: `erFogStatic ${3 + seeded(r, c, 9) * 2}s linear infinite`,
+    <div style={{ position: "absolute", left, top, width: cellPx, height: cellPx, overflow: "hidden", background: "#0b0b10", boxShadow: "inset 0 0 14px rgba(0,0,0,.55)" }}>
+      {stars && stars.map((s, i) => (
+        <span key={i} style={{
+          position: "absolute", left: `${s.x}%`, top: `${s.y}%`, width: s.size, height: s.size, borderRadius: "50%",
+          background: "#f5f7ff", boxShadow: "0 0 3px rgba(245,247,255,.85)",
+          animation: `erStarTwinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
         }} />
-      )}
-      <span style={{
-        position: "absolute", left: `${p1x}%`, top: `${p1y}%`, width: 3, height: 3, borderRadius: "50%",
-        background: "#7dd3fc", opacity: 0.35, filter: "blur(.3px)",
-        animation: `erFogParticle ${5 + seeded(r, c, 2) * 3}s ease-in-out ${delay1}s infinite`,
-      }} />
-      <span style={{
-        position: "absolute", left: `${p2x}%`, top: `${p2y}%`, width: 2, height: 2, borderRadius: "50%",
-        background: "#c084fc", opacity: 0.3, filter: "blur(.3px)",
-        animation: `erFogParticle ${6 + seeded(r, c, 4) * 3}s ease-in-out ${delay2}s infinite`,
-      }} />
-      <div style={{ position: "absolute", inset: 0, boxShadow: "inset 0 0 14px rgba(0,0,0,.6)" }} />
+      ))}
     </div>
   );
 });
@@ -300,13 +318,13 @@ const FacilityCell = memo(function FacilityCell({
 
 const FacilityGrid = memo(function FacilityGrid({
   maze, size, cellPx, encounterMap, resolved, corrupted, carrying, healingKeys,
-  exitR, exitC, allResolved, distNoExit, camR, camC, view, visibleSet, everSeen,
+  exitR, exitC, allResolved, distNoExit, camR, camC, viewX, viewY, visibleSet, everSeen,
 }) {
   const buffer = 1;
   const rStart = Math.max(0, camR - buffer);
-  const rEnd = Math.min(size, camR + view + buffer);
+  const rEnd = Math.min(size, camR + viewY + buffer);
   const cStart = Math.max(0, camC - buffer);
-  const cEnd = Math.min(size, camC + view + buffer);
+  const cEnd = Math.min(size, camC + viewX + buffer);
 
   const cells = [];
   for (let r = rStart; r < rEnd; r++) {
@@ -438,7 +456,7 @@ const HealBurst = memo(function HealBurst({ r, c, cellPx }) {
 
 // ───────────────────────── main component ─────────────────────────
 
-export default function EscapeRoom({ questions, title = "AI Virus Facility", onAnswer, onComplete, onExit, timeLeft }) {
+export default function EscapeRoom({ questions, title = "Escape the Virus!", onAnswer, onComplete, onExit, timeLeft }) {
   const size = Math.min(21, Math.max(13, questions.length + 9));
   const maze = useMemo(() => generateMaze(size), [size]);
   const dist = useMemo(() => distancesFrom(maze, size, { r: 0, c: 0 }), [maze, size]);
@@ -528,6 +546,14 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
   const [victory, setVictory] = useState(false);
   const [invulnerable, setInvulnerable] = useState(false);
   const [nearestVirusDist, setNearestVirusDist] = useState(Infinity);
+  // Rendered through a portal straight onto document.body (see the return
+  // below) so position:fixed truly covers the whole browser viewport even
+  // when this component is mounted deep inside a host app's own layout —
+  // otherwise a transformed/positioned ancestor can quietly cage "fixed"
+  // to something smaller than the real screen. Gate on mount for SSR safety.
+  const [portalReady, setPortalReady] = useState(false);
+  useEffect(() => { setPortalReady(true); }, []);
+
   const [showIntro, setShowIntro] = useState(() => {
     try { return localStorage.getItem("er2_hide_intro") !== "1"; } catch { return true; }
   });
@@ -586,8 +612,13 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
     const t = setInterval(() => {
       if (systemPausedRef.current) return;
       const cells = mazeRef.current;
-      const distToPlayer = distancesFrom(cells, size, playerRef.current);
       const hk = healingKeysRef.current;
+      const pPos = playerRef.current;
+      // Standing in a Healing Center makes you invisible to the hunt —
+      // otherwise viruses path to the nearest reachable tile next to the
+      // door and just sit there pacing, since they can't step inside.
+      const playerSafe = hk.has(key(pPos.r, pPos.c));
+      const distToPlayer = playerSafe ? null : distancesFrom(cells, size, pPos);
 
       let nearest = Infinity;
       setViruses((prev) => prev.map((v) => {
@@ -598,7 +629,7 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
         if (!usable.length) return v;
         const reverse = { N: "S", S: "N", E: "W", W: "E" }[v.dir];
 
-        const myDist = distToPlayer[v.r]?.[v.c] ?? Infinity;
+        const myDist = (!playerSafe && distToPlayer) ? (distToPlayer[v.r]?.[v.c] ?? Infinity) : Infinity;
         if (myDist !== Infinity) nearest = Math.min(nearest, myDist);
         const canChase = myDist !== Infinity && myDist <= diffCfg.chaseRadius && Math.random() < diffCfg.chaseChance;
 
@@ -641,11 +672,11 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
       setCorrupted((s) => new Set(s).add(key(r, c)));
       setActiveEncounter(null);
       flash("corrupt");
-      say("⚠️ Data Fragment Corrupted!");
+      say("⚠️ Oh no! That fragment broke!");
     } else {
       setInfected(true);
       flash("infect");
-      say("👾 TAGGED! Virus infected you!");
+      say("👾 The virus got you! You're sick now!");
     }
     setInvulnerable(true);
     setTimeout(() => setInvulnerable(false), 900);
@@ -680,38 +711,40 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
   }, [activeEncounter, systemPaused, repairQueue]);
 
   const tryMove = useCallback((dr, dc, dir) => {
-    if (systemPaused || activeEncounter) return;
+    if (systemPausedRef.current || activeEncounter) return;
     setFacing(dir);
-    setPlayer((p) => {
-      const cell = mazeRef.current[p.r][p.c];
-      if (cell.walls[dir]) return p;
-      const nr = p.r + dr, nc = p.c + dc;
-      if (nr < 0 || nr >= size || nc < 0 || nc >= size) return p;
 
-      if (nr === exit.r && nc === exit.c && !allResolved) {
-        say("🔒 Sealed — recover and repair every fragment before the exit opens.");
-        return p;
+    const p = playerRef.current;
+    const cell = mazeRef.current[p.r][p.c];
+    if (cell.walls[dir]) return;
+    const nr = p.r + dr, nc = p.c + dc;
+    if (nr < 0 || nr >= size || nc < 0 || nc >= size) return;
+
+    if (nr === exit.r && nc === exit.c && !allResolved) {
+      say("🔒 Locked! Grab and fix every fragment first.");
+      return;
+    }
+
+    const k = key(nr, nc);
+
+    if (healingKeys.has(k)) {
+      if (infected) { setInfected(false); setInfectionPct(0); flash("heal"); say("✅ All better!"); }
+      if (carrying.size) {
+        setRepairQueue((q) => [...q, ...carrying]);
+        setCarrying(new Set());
+        flash("heal");
+        say("🔧 Fixed! Answer it now!");
       }
+    } else if (corrupted.has(k) && !carrying.has(k)) {
+      say("⚠️ This one's broken — press E to grab it, then rush it to a Healing Center!");
+    } else if (encounterMap.has(k) && !resolved.has(k) && !carrying.has(k) && !corrupted.has(k)) {
+      setActiveEncounter({ ...encounterMap.get(k), kind: "fresh" });
+    }
 
-      const k = key(nr, nc);
-
-      if (healingKeys.has(k)) {
-        if (infected) { setInfected(false); setInfectionPct(0); flash("heal"); say("✅ System Restored"); }
-        if (carrying.size) {
-          setRepairQueue((q) => [...q, ...carrying]);
-          setCarrying(new Set());
-          flash("heal");
-          say("🔧 Fragments repaired — answer them now!");
-        }
-      } else if (encounterMap.has(k) && !resolved.has(k) && !carrying.has(k)) {
-        setActiveEncounter({ ...encounterMap.get(k), kind: "fresh" });
-      }
-
-      if (nr === exit.r && nc === exit.c) setVictory(true);
-      return { r: nr, c: nc };
-    });
+    if (nr === exit.r && nc === exit.c) setVictory(true);
+    setPlayer({ r: nr, c: nc });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [systemPaused, activeEncounter, allResolved, resolved, corrupted, carrying, healingKeys, encounterMap, infected, size]);
+  }, [activeEncounter, allResolved, resolved, corrupted, carrying, healingKeys, encounterMap, infected, size, exit]);
 
   // Corrupted fragments no longer auto-pick-up on step — the player must
   // press E while standing on one. Reads current position off the ref so
@@ -720,17 +753,13 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
     if (systemPausedRef.current || activeEncounter) return;
     const p = playerRef.current;
     const k = key(p.r, p.c);
-    setCorrupted((s) => {
-      if (!s.has(k)) return s;
-      const n = new Set(s);
-      n.delete(k);
-      setCarrying((c) => new Set(c).add(k));
-      flash("pickup");
-      say("💾 Corrupted Fragment Collected — get it to a Healing Center!");
-      return n;
-    });
+    if (!corrupted.has(k)) return;
+    setCorrupted((s) => { const n = new Set(s); n.delete(k); return n; });
+    setCarrying((c) => new Set(c).add(k));
+    flash("pickup");
+    say("💾 Got it! Now rush it to a Healing Center!");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeEncounter]);
+  }, [activeEncounter, corrupted]);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -753,9 +782,16 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
     onAnswer?.(question.id, response);
     setResolved((s) => new Set(s).add(key(r, c)));
 
-    if (wasCorrect === false) { flash("miss"); say("⚡ Not quite — but the fragment still decodes."); }
-    else { flash("hit"); say("✅ Fragment recovered!"); }
+    if (wasCorrect === false) { flash("miss"); say("⚡ Not quite — but that's okay, you still got it!"); }
+    else { flash("hit"); say("✅ You got it!"); }
     setActiveEncounter(null);
+  };
+
+  // Bail out of a puzzle without answering — nothing is marked resolved or
+  // corrupted, so the fragment just sits there ready to try again later.
+  const abandonEncounter = () => {
+    setActiveEncounter(null);
+    say("🏃 You ran off — come back to it anytime!");
   };
 
   const respawn = () => {
@@ -796,51 +832,43 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
     return () => ro.disconnect();
   }, []);
 
-  const TARGET_CELL_PX = 48;
-  const shortSide = Math.min(viewportBox.w || 0, viewportBox.h || 0);
-  const VIEW = shortSide ? Math.min(size, Math.max(9, Math.floor(shortSide / TARGET_CELL_PX))) : 11;
-  const cellPx = shortSide ? Math.floor(shortSide / VIEW) : 44;
-  const half = Math.floor(VIEW / 2);
-  const camR = Math.min(Math.max(player.r - half, 0), Math.max(size - VIEW, 0));
-  const camC = Math.min(Math.max(player.c - half, 0), Math.max(size - VIEW, 0));
-  const viewportPx = Math.min(VIEW, size) * cellPx;
+  // Cell size still derives from the tighter dimension (so cells stay
+  // square and readable), but VIEW_X/VIEW_Y are computed independently —
+  // the viewport is a rectangle that fills the whole available area
+  // instead of being cropped down to a centered square.
+  const TARGET_CELL_PX = 42;
+  const MAX_VIEW_X = 60;
+  const MAX_VIEW_Y = 40;
+  const boxW = viewportBox.w || 0;
+  const boxH = viewportBox.h || 0;
+  const shortSide = Math.min(boxW, boxH);
+  const fitCells = shortSide ? Math.max(9, Math.floor(shortSide / TARGET_CELL_PX)) : 11;
+  const provisionalCellPx = shortSide ? Math.max(1, Math.floor(shortSide / fitCells)) : 44;
+  const VIEW_X = boxW ? Math.min(size, Math.max(fitCells, Math.floor(boxW / provisionalCellPx)), MAX_VIEW_X) : 11;
+  const VIEW_Y = boxH ? Math.min(size, Math.max(fitCells, Math.floor(boxH / provisionalCellPx)), MAX_VIEW_Y) : 11;
+  // Recompute cell size off the capped view counts so the viewport still
+  // fills the box exactly even when the cap kicked in (large screens get
+  // modestly bigger cells instead of a gap, rather than hundreds more tiles).
+  const cellPx = (boxW && boxH) ? Math.max(1, Math.floor(Math.min(boxW / VIEW_X, boxH / VIEW_Y))) : provisionalCellPx;
+  const halfX = Math.floor(VIEW_X / 2);
+  const halfY = Math.floor(VIEW_Y / 2);
+  const camR = Math.min(Math.max(player.r - halfY, 0), Math.max(size - VIEW_Y, 0));
+  const camC = Math.min(Math.max(player.c - halfX, 0), Math.max(size - VIEW_X, 0));
+  const viewportPxW = Math.min(VIEW_X, size) * cellPx;
+  const viewportPxH = Math.min(VIEW_Y, size) * cellPx;
 
-  const distTier = nearestVirusDist <= 3 ? "close" : nearestVirusDist <= 7 ? "near" : "far";
-  const distLabel = distTier === "close" ? "Very Close" : distTier === "near" ? "Nearby" : "Far Away";
+  const distTier = nearestVirusDist <= 5 ? "close" : nearestVirusDist <= 14 ? "near" : "far";
+  const distLabel = distTier === "close" ? "Very Close!" : distTier === "near" ? "Getting Close" : "Far Away";
   const distColor = distTier === "close" ? "#f87171" : distTier === "near" ? "#fbbf24" : "#4ade80";
   const progressPct = totalFragments ? Math.round((resolved.size / totalFragments) * 100) : 0;
   const standingKey = key(player.r, player.c);
   const canPickupCorrupted = corrupted.has(standingKey) && !systemPaused && !activeEncounter;
 
-  return (
+  if (!portalReady || typeof document === "undefined") return null;
+
+  return createPortal(
     <div style={{ position: "fixed", inset: 0, zIndex: 300, overflow: "hidden", background: "radial-gradient(circle at 50% -10%, #22d3ee14, transparent 55%), linear-gradient(180deg,#050708,#020204)", display: "flex", flexDirection: "column" }}>
-      <style>{`
-        @keyframes erPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.85)} }
-        @keyframes erGlitch { 0%,100%{opacity:1;transform:scale(1) translate(0,0)} 20%{transform:scale(1.08) translate(-1px,1px)} 40%{opacity:.6;transform:scale(.92) translate(1px,-1px)} 60%{transform:scale(1.05) translate(-1px,-1px)} }
-        @keyframes erHealGlow { 0%,100%{filter:drop-shadow(0 0 4px #22c55e); transform:scale(1)} 50%{filter:drop-shadow(0 0 14px #4ade80); transform:scale(1.12)} }
-        @keyframes erVirusPulse { 0%,100%{ border-radius: 42% 58% 55% 45% / 55% 45% 58% 42%; } 50%{ border-radius: 55% 45% 42% 58% / 45% 58% 45% 55%; } }
-        @keyframes erVirusFlicker { 0%,100%{opacity:1} 46%{opacity:1} 48%{opacity:.55} 50%{opacity:1} 74%{opacity:1} 76%{opacity:.4} 79%{opacity:1} }
-        @keyframes erVirusGlitchJitter { 0%,100%{transform:translate(0,0)} 16%{transform:translate(-1px,1px)} 33%{transform:translate(1px,-1px)} 50%{transform:translate(0,0)} 66%{transform:translate(1px,1px)} 83%{transform:translate(-1px,0)} }
-        @keyframes erVirusParticle { 0%{opacity:.9; transform:translate(-50%,-50%) scale(1)} 100%{opacity:0; transform:translate(-50%,-50%) translateY(16px) scale(.3)} }
-        @keyframes erCorruptOrbit { from{transform:translate(-50%,-50%) rotate(0deg) translateX(14px) rotate(0deg)} to{transform:translate(-50%,-50%) rotate(360deg) translateX(14px) rotate(-360deg)} }
-        @keyframes erPlayerFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
-        @keyframes erPlayerRing { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes erAmbientMote { 0%,100%{opacity:.2; transform:translateY(0)} 50%{opacity:.9; transform:translateY(-6px)} }
-        @keyframes erFogStatic { 0%{transform:translateY(0)} 100%{transform:translateY(6px)} }
-        @keyframes erFogParticle { 0%,100%{opacity:.15; transform:translateY(0)} 50%{opacity:.55; transform:translateY(-5px)} }
-        @keyframes erHealRingPulse { 0%{opacity:.9; transform:scale(.3)} 100%{opacity:0; transform:scale(1)} }
-        @keyframes erHealParticle { 0%{opacity:1; transform:translate(-50%,-50%) scale(1)} 100%{opacity:0; transform:translate(calc(-50% + var(--ex)), calc(-50% + var(--ey))) scale(.4)} }
-        @keyframes erBlink { 0%,100%{opacity:1} 50%{opacity:.25} }
-        @keyframes erPop { from{transform:scale(.85);opacity:0} to{transform:scale(1);opacity:1} }
-        @keyframes erFlashInfect { 0%{opacity:0} 15%{opacity:1} 100%{opacity:0} }
-        @keyframes erFlashCorrupt { 0%{opacity:0} 12%{opacity:.9} 30%{opacity:.2} 45%{opacity:.85} 100%{opacity:0} }
-        @keyframes erFlashHeal { 0%{opacity:0; transform:scale(.7)} 30%{opacity:.85; transform:scale(1.05)} 100%{opacity:0; transform:scale(1.4)} }
-        @keyframes erFlashPickup { 0%{opacity:0; transform:scale(.8)} 25%{opacity:.7; transform:scale(1.02)} 100%{opacity:0; transform:scale(1.2)} }
-        @keyframes erFlashHit { 0%{box-shadow:0 0 0 0 rgba(34,211,238,.55)} 100%{box-shadow:0 0 0 26px rgba(34,211,238,0)} }
-        @keyframes erFlashMiss { 0%{box-shadow:0 0 0 0 rgba(244,63,94,.55)} 100%{box-shadow:0 0 0 26px rgba(244,63,94,0)} }
-        @keyframes erInfectVignette { 0%,100%{opacity:.35} 50%{opacity:.75} }
-        @keyframes erPromptPulse { 0%,100%{opacity:1; transform:translate(-50%,0) scale(1)} 50%{opacity:.7; transform:translate(-50%,0) scale(1.03)} }
-      `}</style>
+      <style>{ER_KEYFRAMES}</style>
 
       {/* full-screen event flashes — infect / corrupt / heal / pickup */}
       {flashKind === "infect" && (
@@ -893,9 +921,8 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
           </>
         )}
 
-        <div style={{ flex: 1 }} />
         {onExit && (
-          <button onClick={onExit} style={{ border: "1px solid rgba(248,113,113,.35)", background: "rgba(248,113,113,.08)", cursor: "pointer", fontSize: ".72rem", color: "#f87171", fontWeight: 700, borderRadius: 8, padding: "6px 10px", flexShrink: 0 }}>
+          <button onClick={onExit} style={{ border: "1px solid rgba(248,113,113,.35)", background: "rgba(248,113,113,.08)", cursor: "pointer", fontSize: ".72rem", color: "#f87171", fontWeight: 700, borderRadius: 8, padding: "6px 10px", flexShrink: 0, marginLeft: "auto" }}>
             Exit ✕
           </button>
         )}
@@ -911,10 +938,10 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
           screen; sizing is measured live so this genuinely scales to the
           device instead of sitting in a small fixed box. ── */}
       <div ref={viewportRef} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: 0, position: "relative" }}>
-        {viewportPx > 0 && (
+        {viewportPxW > 0 && viewportPxH > 0 && (
           <div
             style={{
-              position: "relative", width: viewportPx, height: viewportPx, overflow: "hidden",
+              position: "relative", width: viewportPxW, height: viewportPxH, overflow: "hidden",
               boxShadow: (flashKind === "miss") ? "0 0 0 0 rgba(244,63,94,.6)" : (flashKind === "hit") ? "0 0 0 0 rgba(34,211,238,.55)" : "none",
               animation: flashKind === "hit" ? "erFlashHit .45s ease-out" : flashKind === "miss" ? "erFlashMiss .45s ease-out" : "none",
             }}
@@ -931,24 +958,25 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
                 maze={maze} size={size} cellPx={cellPx} encounterMap={encounterMap}
                 resolved={resolved} corrupted={corrupted} carrying={carrying} healingKeys={healingKeys}
                 exitR={exit.r} exitC={exit.c} allResolved={allResolved} distNoExit={distNoExit}
-                camR={camR} camC={camC} view={VIEW} visibleSet={visibleSet} everSeen={everSeen}
+                camR={camR} camC={camC} viewX={VIEW_X} viewY={VIEW_Y} visibleSet={visibleSet} everSeen={everSeen}
               />
               <VirusesLayer viruses={viruses} cellPx={cellPx} visibleSet={visibleSet} />
               <PlayerSprite r={player.r} c={player.c} cellPx={cellPx} facing={facing} invulnerable={invulnerable} />
               {flashKind === "heal" && <HealBurst key={healBurstId} r={player.r} c={player.c} cellPx={cellPx} />}
             </div>
 
-            {/* fog vignette — reinforces the limited-visibility read even
-                though the underlying cells already gate what's rendered */}
-            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(circle at 50% 50%, transparent 42%, rgba(0,0,0,.55) 78%, rgba(0,0,0,.92) 100%)" }} />
+            {/* fog vignette — ellipse so it hugs a rectangular viewport
+                instead of leaving a circular hole in wide layouts */}
+            <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse at 50% 50%, transparent 46%, rgba(0,0,0,.5) 80%, rgba(0,0,0,.9) 100%)" }} />
           </div>
         )}
 
         {/* "Press E to Pick Up" — shown only while standing on a corrupted,
-            not-yet-recovered fragment */}
+            not-yet-recovered fragment. Anchored to the top of the map,
+            clear of the corner D-pad below. */}
         {canPickupCorrupted && (
           <div style={{
-            position: "absolute", left: "50%", bottom: 96, transform: "translate(-50%,0)", zIndex: 45,
+            position: "absolute", left: "50%", top: 14, transform: "translate(-50%,0)", zIndex: 45,
             display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 999,
             background: "rgba(127,29,29,.85)", border: "1px solid rgba(251,113,133,.5)",
             boxShadow: "0 0 18px rgba(244,63,94,.4)", animation: "erPromptPulse 1.1s ease-in-out infinite",
@@ -958,13 +986,18 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
           </div>
         )}
 
-        {/* D-pad — overlaid on the map itself so exploration keeps the
-            screen, not pushed into its own layout row */}
+        {/* D-pad — tucked into the bottom-right corner, small and mostly
+            see-through, so it stops covering the maze itself. Opacity
+            rises slightly on touch so it's still easy to find by feel. */}
         <div style={{
-          position: "absolute", left: "50%", bottom: 14, transform: "translateX(-50%)", zIndex: 40,
-          display: "grid", gridTemplateColumns: "repeat(3, 46px)", gridTemplateRows: "repeat(2, 46px)", gap: 6,
-          padding: 8, borderRadius: 16, background: "rgba(6,14,16,.55)", backdropFilter: "blur(4px)", border: "1px solid rgba(34,211,238,.15)",
-        }}>
+          position: "absolute", right: 12, bottom: 12, zIndex: 40,
+          display: "grid", gridTemplateColumns: "repeat(3, 36px)", gridTemplateRows: "repeat(2, 36px)", gap: 4,
+          padding: 6, borderRadius: 14, background: "rgba(6,14,16,.32)", backdropFilter: "blur(3px)",
+          border: "1px solid rgba(34,211,238,.12)", opacity: 0.65, transition: "opacity .15s ease",
+        }}
+          onTouchStart={(e) => { e.currentTarget.style.opacity = 1; }}
+          onTouchEnd={(e) => { e.currentTarget.style.opacity = 0.65; }}
+        >
           <div />
           <DpadBtn onClick={() => tryMove(-1, 0, "N")}>↑</DpadBtn>
           <div />
@@ -976,25 +1009,26 @@ export default function EscapeRoom({ questions, title = "AI Virus Facility", onA
 
       {showIntro && <IntroWalkthrough onClose={() => { setShowIntro(false); setShowDifficulty(true); }} />}
       {showDifficulty && <DifficultyModal onChoose={chooseDifficulty} />}
-      {activeEncounter && <EncounterModal encounter={activeEncounter} onResolve={resolveEncounter} />}
+      {activeEncounter && <EncounterModal encounter={activeEncounter} onResolve={resolveEncounter} onAbandon={abandonEncounter} distLabel={distLabel} distColor={distColor} />}
 
       {overridden && (
         <Overlay>
           <div style={{ fontSize: "2.4rem" }}>🦠</div>
-          <h2 style={{ margin: "8px 0" }}>SYSTEM OVERRIDDEN</h2>
-          <p style={{ color: "#a09a89", marginBottom: 18 }}>Mission failed — the infection took over. Recovered fragments stay recovered; you'll respawn at the entrance.</p>
-          <button className="btn btn-primary" onClick={respawn} style={{ background: "linear-gradient(135deg,#f43f5e,#fb7185)", border: "none" }}>Respawn</button>
+          <h2 style={{ margin: "8px 0" }}>You Got Too Sick!</h2>
+          <p style={{ color: "#a09a89", marginBottom: 18 }}>Don't worry — the fragments you already found are safe. You'll start again from the beginning.</p>
+          <button className="btn btn-primary" onClick={respawn} style={{ background: "linear-gradient(135deg,#f43f5e,#fb7185)", border: "none" }}>Try Again</button>
         </Overlay>
       )}
 
       {victory && (
         <Overlay>
           <div style={{ fontSize: "2.4rem" }}>🚪</div>
-          <h2 style={{ margin: "8px 0" }}>Facility cleared!</h2>
-          <p style={{ color: "#a09a89" }}>Submitting your run…</p>
+          <h2 style={{ margin: "8px 0" }}>You Made It Out!</h2>
+          <p style={{ color: "#a09a89" }}>Saving your score…</p>
         </Overlay>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
@@ -1009,16 +1043,16 @@ function HudDivider() {
 
 function HudStat({ icon, label, value, valueColor, barPct, barColor, extra }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 64, flexShrink: 0 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: ".62rem", fontWeight: 800, color: "#7a8a90", textTransform: "uppercase", letterSpacing: ".04em" }}>
-        <span style={{ fontSize: ".8rem" }}>{icon}</span>{label}
+    <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: "1 1 110px", minWidth: 90, maxWidth: 260 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: ".64rem", fontWeight: 800, color: "#7a8a90", textTransform: "uppercase", letterSpacing: ".05em" }}>
+        <span style={{ fontSize: ".85rem" }}>{icon}</span>{label}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: ".82rem", fontWeight: 800, color: valueColor || "#e6faff" }}>{value}</span>
-        {extra && <span style={{ fontSize: ".68rem", fontWeight: 700, color: "#67e8f9" }}>{extra}</span>}
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: ".92rem", fontWeight: 800, color: valueColor || "#e6faff" }}>{value}</span>
+        {extra && <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#67e8f9" }}>{extra}</span>}
       </div>
       {typeof barPct === "number" && (
-        <div style={{ width: 56, height: 4, borderRadius: 999, background: "#131f21", overflow: "hidden" }}>
+        <div style={{ width: "100%", height: 5, borderRadius: 999, background: "#131f21", overflow: "hidden" }}>
           <div style={{ height: "100%", width: `${Math.max(0, Math.min(100, barPct))}%`, borderRadius: 999, background: barColor, transition: "width .4s ease" }} />
         </div>
       )}
@@ -1028,7 +1062,7 @@ function HudStat({ icon, label, value, valueColor, barPct, barColor, extra }) {
 
 function DpadBtn({ children, onClick }) {
   return (
-    <button onClick={onClick} style={{ width: 48, height: 48, borderRadius: 12, border: "none", fontSize: "1.2rem", fontWeight: 800, background: "linear-gradient(135deg,#0e2a2e,#134048)", color: "#e6faff", cursor: "pointer" }}>
+    <button onClick={onClick} style={{ width: 36, height: 36, borderRadius: 10, border: "none", fontSize: "1rem", fontWeight: 800, background: "linear-gradient(135deg,#0e2a2e,#134048)", color: "#e6faff", cursor: "pointer" }}>
       {children}
     </button>
   );
@@ -1047,13 +1081,14 @@ function Overlay({ children }) {
 // ───────────────────────── intro walkthrough ─────────────────────────
 
 const INTRO_SLIDES = [
-  { icon: "🦠", grad: "linear-gradient(135deg,#f43f5e,#fb7185)", title: "Containment Breached", body: "An experimental AI Virus escaped and the facility went into lockdown. Recover every AI Data Fragment and reach the exit — alive." },
-  { icon: "🌫️", grad: "linear-gradient(135deg,#0891b2,#22d3ee)", title: "Fog of War", body: "You can only see a short distance around yourself. Explore carefully — you never know what's around the next corner." },
-  { icon: "👾", grad: "linear-gradient(135deg,#f43f5e,#f97316)", title: "The Virus Hunts You", body: "One or more Viruses actively path toward you. They don't wander randomly — they're smart. Use the Virus Distance readout to judge how close is too close." },
-  { icon: "💾", grad: "linear-gradient(135deg,#22d3ee,#67e8f9)", title: "Recover Fragments", body: "Step on a Data Fragment to open a quick question pulled from what you've been learning. Answer every one to unlock the exit." },
-  { icon: "⚠️", grad: "linear-gradient(135deg,#eab308,#fde047)", title: "Solving Isn't Safe", body: "The virus keeps moving even while you're mid-question. Get tagged during a puzzle and the fragment corrupts — glitching in place until you press E to pick it up and carry it to a Healing Center for repair." },
-  { icon: "🦠", grad: "linear-gradient(135deg,#f43f5e,#fda4af)", title: "Infection", body: "Get tagged while exploring and you're infected — a meter climbs until you reach a Healing Center. Let it hit 100% and the mission fails." },
-  { icon: "🏥", grad: "linear-gradient(135deg,#22c55e,#86efac)", title: "Healing Centers", body: "They cure infection, repair carried fragments on the spot, and viruses can't step onto them — a real safe zone if you can find one in time." },
+  { icon: "🦠", grad: "linear-gradient(135deg,#f43f5e,#fb7185)", title: "A Virus Got Loose!", body: "A virus is loose and it's coming for you! Grab every fragment and make it to the exit safely." },
+  { icon: "🌫️", grad: "linear-gradient(135deg,#0891b2,#22d3ee)", title: "You Can't See Far", body: "It's foggy, so you can only see a little bit around you. Explore slowly and watch out for corners." },
+  { icon: "👾", grad: "linear-gradient(135deg,#f43f5e,#f97316)", title: "The Virus Is Hunting You", body: "It's not just wandering — it's coming for YOU. Check the Virus meter up top to see how close it is." },
+  { icon: "💾", grad: "linear-gradient(135deg,#22d3ee,#67e8f9)", title: "Grab the Fragments", body: "Walk onto a fragment to answer a quick question. Answer them all to unlock the exit!" },
+  { icon: "🏃", grad: "linear-gradient(135deg,#38bdf8,#a5f3fc)", title: "Need to Run?", body: "If a question pops up at a bad time, tap the Run Away button to skip it and keep moving. You can always come back to it later." },
+  { icon: "⚠️", grad: "linear-gradient(135deg,#eab308,#fde047)", title: "Careful While You Answer", body: "The virus keeps moving even while you're answering. Get caught mid-question and that fragment breaks — press E to grab it, then bring it to a Healing Center to fix it." },
+  { icon: "🦠", grad: "linear-gradient(135deg,#f43f5e,#fda4af)", title: "Don't Get Caught!", body: "If the virus touches you, you get sick and a meter starts filling up. Reach a Healing Center before it fills all the way, or it's game over." },
+  { icon: "🏥", grad: "linear-gradient(135deg,#22c55e,#86efac)", title: "Healing Centers Are Safe", body: "They make you better, fix any broken fragments you're carrying, and the virus can never step inside. Run there when things get scary!" },
 ];
 
 function IntroWalkthrough({ onClose }) {
@@ -1106,7 +1141,7 @@ function IntroWalkthrough({ onClose }) {
               </button>
             ) : (
               <button onClick={finish} style={{ flex: 1, padding: "14px 16px", borderRadius: 12, border: "none", fontWeight: 800, fontSize: "1rem", cursor: "pointer", background: slide.grad, color: "#fff", boxShadow: "0 10px 24px -8px rgba(34,211,238,.6)" }}>
-                Enter the Facility 🚪
+                Let's Go! 🚪
               </button>
             )}
           </div>
@@ -1129,8 +1164,8 @@ function DifficultyModal({ onChoose }) {
       <div style={{ width: "100%", maxWidth: 420, borderRadius: 26, background: "#0a1214", boxShadow: "0 40px 90px -20px rgba(0,0,0,.7), 0 0 0 1px rgba(34,211,238,.2)", padding: "26px 24px 22px" }}>
         <div style={{ textAlign: "center", marginBottom: 6 }}>
           <div style={{ fontSize: "2rem" }}>☣️</div>
-          <h2 style={{ margin: "6px 0 4px", fontSize: "1.2rem", fontWeight: 800, color: "#fff" }}>Choose Containment Level</h2>
-          <p style={{ fontSize: ".8rem", color: "#7a8a90", marginBottom: 18 }}>More viruses, smarter and faster, tighter fog — but a real Coins multiplier to match.</p>
+          <h2 style={{ margin: "6px 0 4px", fontSize: "1.2rem", fontWeight: 800, color: "#fff" }}>Pick Your Difficulty</h2>
+          <p style={{ fontSize: ".8rem", color: "#7a8a90", marginBottom: 18 }}>Harder means more viruses and less to see — but way more coins!</p>
         </div>
 
         <div style={{ display: "grid", gap: 10 }}>
@@ -1182,12 +1217,12 @@ const TYPE_THEME = {
   image_reveal:    { grad: "linear-gradient(135deg,#f43f5e,#fda4af)", label: "Image Reveal" },
 };
 
-function EncounterModal({ encounter, onResolve }) {
+function EncounterModal({ encounter, onResolve, onAbandon, distLabel, distColor }) {
   const { question, kind } = encounter;
   const content = question.content || {};
   const theme = TYPE_THEME[question.question_type] || TYPE_THEME.multiple_choice;
-  const verb = kind === "repaired" ? "Decode" : "Decode";
-  const eyebrow = kind === "repaired" ? "Repaired Fragment" : "AI Data Fragment";
+  const verb = "Answer";
+  const eyebrow = kind === "repaired" ? "Fixed Fragment" : "Fragment";
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(2,5,7,.82)", backdropFilter: "blur(3px)", zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
@@ -1197,15 +1232,36 @@ function EncounterModal({ encounter, onResolve }) {
         boxShadow: "0 30px 70px -20px rgba(0,0,0,.65), 0 0 0 1px rgba(255,255,255,.03) inset",
         animation: "erPop .22s ease-out",
       }}>
-        <div style={{ background: theme.grad, padding: "24px 30px", display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 46, height: 46, borderRadius: 15, background: "rgba(255,255,255,.2)", border: "1px solid rgba(255,255,255,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
-            {ICONS[question.question_type] || "❓"}
-          </div>
-          <div>
-            <div style={{ fontSize: ".68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em", color: "rgba(255,255,255,.85)", marginBottom: 2 }}>
-              {eyebrow}
+        <div style={{ background: theme.grad, padding: "18px 20px 22px" }}>
+          {/* live threat readout + a clear way out, so a puzzle never
+              feels like a trap — you can always see the virus and always
+              have a one-tap way to bail */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "rgba(0,0,0,.28)", borderRadius: 999, padding: "5px 12px" }}>
+              <span style={{ fontSize: ".85rem" }}>📏</span>
+              <span style={{ fontSize: ".72rem", fontWeight: 800, color: distColor || "#fff" }}>{distLabel}</span>
             </div>
-            <div style={{ fontWeight: 800, color: "#fff", fontSize: "1.08rem" }}>{theme.label}</div>
+            {onAbandon && (
+              <button onClick={onAbandon} style={{
+                display: "flex", alignItems: "center", gap: 6, border: "1px solid rgba(255,255,255,.4)",
+                background: "rgba(0,0,0,.28)", color: "#fff", fontWeight: 800, fontSize: ".72rem",
+                borderRadius: 999, padding: "6px 12px", cursor: "pointer",
+              }}>
+                🏃 Run Away
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <div style={{ width: 46, height: 46, borderRadius: 15, background: "rgba(255,255,255,.2)", border: "1px solid rgba(255,255,255,.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>
+              {ICONS[question.question_type] || "❓"}
+            </div>
+            <div>
+              <div style={{ fontSize: ".68rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: ".08em", color: "rgba(255,255,255,.85)", marginBottom: 2 }}>
+                {eyebrow}
+              </div>
+              <div style={{ fontWeight: 800, color: "#fff", fontSize: "1.08rem" }}>{theme.label}</div>
+            </div>
           </div>
         </div>
 
