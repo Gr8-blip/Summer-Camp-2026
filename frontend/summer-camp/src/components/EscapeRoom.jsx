@@ -782,8 +782,8 @@ export default function EscapeRoom({ questions, title = "Escape the Virus!", onA
     onAnswer?.(question.id, response);
     setResolved((s) => new Set(s).add(key(r, c)));
 
-    if (wasCorrect === false) { flash("miss"); say("⚡ Not quite — but that's okay, you still got it!"); }
-    else { flash("hit"); say("✅ You got it!"); }
+    flash("hit");
+    say("✅ Puzzle Completed");
     setActiveEncounter(null);
   };
 
