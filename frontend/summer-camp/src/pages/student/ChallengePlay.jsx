@@ -596,11 +596,7 @@ export default function ChallengePlay() {
               </button>
             </>
           ) : (
-            <button
-              className="btn btn-primary"
-              style={{ background: "linear-gradient(135deg,#7c5cfc,#a78bfa)", border: "none" }}
-              onClick={begin}
-            >
+            <button className="btn btn-primary" onClick={begin}>
               Start Challenge
             </button>
           )}
@@ -773,7 +769,7 @@ export default function ChallengePlay() {
             <button
               type="button"
               onClick={handleExit}
-              style={{ border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", color: "#c7473f", fontWeight: 700 }}
+              style={{ border: "none", background: "none", cursor: "pointer", fontSize: ".78rem", color: "var(--color-danger)", fontWeight: 700 }}
             >
               Exit Challenge ✕
             </button>
@@ -836,7 +832,7 @@ export default function ChallengePlay() {
                     onDragEnd={() => setDragFrom(null)}
                     style={{
                       display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderRadius: 12,
-                      cursor: "grab", border: "2px solid var(--color-border, #ddd)", background: "#fff",
+                      cursor: "grab", border: "2px solid var(--color-border)", background: "var(--color-bg-alt)",
                       opacity: dragFrom === i ? 0.4 : 1, transition: "opacity .15s ease",
                     }}
                   >
@@ -873,8 +869,8 @@ export default function ChallengePlay() {
                         padding: "14px 16px",
                         borderRadius: 12,
                         cursor: selectedRightIndex !== null ? "pointer" : "default",
-                        border: matchIdx[leftKey] !== undefined ? "2px solid var(--color-purple, #7c5cfc)" : "2px dashed var(--color-border, #ddd)",
-                        background: matchIdx[leftKey] !== undefined ? "rgba(124,92,252,.08)" : "#fff",
+                        border: matchIdx[leftKey] !== undefined ? "2px solid var(--color-purple)" : "2px dashed var(--color-border)",
+                        background: matchIdx[leftKey] !== undefined ? "color-mix(in srgb, var(--color-purple) 8%, transparent)" : "var(--color-bg-alt)",
                         display: "flex",
                         flexDirection: "column",
                         gap: 4,
@@ -882,14 +878,14 @@ export default function ChallengePlay() {
                     >
                       <strong>{leftKey}</strong>
                       {matchIdx[leftKey] !== undefined ? (
-                        <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".85rem", color: "var(--color-purple, #7c5cfc)" }}>
+                        <span style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".85rem", color: "var(--color-purple)" }}>
                           ↔ {matchRightPool[matchIdx[leftKey]]}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               unassign(leftKey);
                             }}
-                            style={{ border: "none", background: "none", cursor: "pointer", color: "#c7473f" }}
+                            style={{ border: "none", background: "none", cursor: "pointer", color: "var(--color-danger)" }}
                           >
                             ✕
                           </button>
@@ -925,8 +921,8 @@ export default function ChallengePlay() {
                           padding: "14px 16px",
                           borderRadius: 12,
                           cursor: used ? "default" : "grab",
-                          border: isSelected ? "2px solid var(--color-purple, #7c5cfc)" : "2px solid var(--color-border, #ddd)",
-                          background: used ? "#f3f2ee" : "#fff",
+                          border: isSelected ? "2px solid var(--color-purple)" : "2px solid var(--color-border)",
+                          background: used ? "var(--color-border)" : "var(--color-bg-alt)",
                           opacity: used ? 0.4 : 1,
                           fontWeight: 600,
                         }}
@@ -956,10 +952,10 @@ export default function ChallengePlay() {
                       disabled={isMatched}
                       style={{
                         cursor: isMatched ? "default" : "pointer",
-                        background: isFlipped ? grad.memory_tiles : "linear-gradient(135deg,#e9e5da,#d8d3c5)",
+                        background: isFlipped ? grad.memory_tiles : "linear-gradient(135deg, var(--color-border), var(--color-bg-alt))",
                         color: isFlipped ? "white" : "transparent",
                         animation: isMatched ? "tileMatchPulse 1s ease-out" : isWrong ? "tileWrongShake .4s" : "none",
-                        boxShadow: isMatched ? "0 0 0 2px #14b8a6 inset" : "none",
+                        boxShadow: isMatched ? "0 0 0 2px var(--color-success) inset" : "none",
                       }}
                     >
                       {isFlipped ? tile.label : "🧠"}
@@ -1000,11 +996,11 @@ export default function ChallengePlay() {
                         style={{
                           aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                           borderRadius: 6, fontWeight: 800, fontSize: ".8rem", cursor: "pointer",
-                          color: isFound || isSelecting ? "white" : "#3a3628",
+                          color: isFound || isSelecting ? "white" : "var(--color-text)",
                           background: isFound ? "linear-gradient(135deg,#06b6d4,#22d3ee)"
-                            : isSelecting ? "linear-gradient(135deg,#7c5cfc,#a78bfa)"
-                              : "#fdfcf8",
-                          border: "1px solid #e6e2da",
+                            : isSelecting ? "var(--gradient-cta)"
+                              : "var(--color-bg-alt)",
+                          border: "1px solid var(--color-border)",
                         }}
                       >
                         {letter}
@@ -1019,8 +1015,8 @@ export default function ChallengePlay() {
                     key={word}
                     style={{
                       fontWeight: 700, fontSize: ".78rem", padding: "6px 12px", borderRadius: 999,
-                      background: foundWords.has(word) ? "#06b6d4" : "#f3f2ee",
-                      color: foundWords.has(word) ? "white" : "#7a7568",
+                      background: foundWords.has(word) ? "#06b6d4" : "var(--color-border)",
+                      color: foundWords.has(word) ? "white" : "var(--color-text-soft)",
                       textDecoration: foundWords.has(word) ? "line-through" : "none",
                     }}
                   >
@@ -1051,13 +1047,13 @@ export default function ChallengePlay() {
                   disabled={guessState === "correct"}
                   style={{
                     flex: 1, fontSize: "1rem", padding: "12px 14px", borderRadius: 12,
-                    border: guessState === "wrong" ? "2px solid #f43f5e" : guessState === "correct" ? "2px solid #22c55e" : "2px solid var(--color-border, #ddd)",
+                    border: guessState === "wrong" ? "2px solid var(--color-danger)" : guessState === "correct" ? "2px solid var(--color-success)" : "2px solid var(--color-border)",
                     animation: guessState === "wrong" ? "tileWrongShake .4s" : "none",
                   }}
                 />
                 <button
                   className="btn btn-primary"
-                  style={{ background: guessState === "correct" ? "#22c55e" : grad.image_reveal, border: "none" }}
+                  style={{ background: guessState === "correct" ? "var(--color-success)" : grad.image_reveal, border: "none" }}
                   onClick={submitGuess}
                   disabled={guessState === "correct" || !guess.trim()}
                 >
@@ -1091,13 +1087,13 @@ export default function ChallengePlay() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              background: "#fff", borderRadius: 20, padding: "28px 26px", maxWidth: 380,
-              width: "100%", textAlign: "center", boxShadow: "0 24px 60px rgba(20,15,45,.35)",
+              background: "var(--color-bg-alt)", borderRadius: 20, padding: "28px 26px", maxWidth: 380,
+              width: "100%", textAlign: "center", boxShadow: "var(--shadow-card)",
             }}
           >
             <div style={{ fontSize: "2rem", marginBottom: 8 }}>⚠️</div>
-            <h3 style={{ margin: "0 0 8px" }}>Exit this challenge?</h3>
-            <p style={{ fontSize: ".88rem", color: "#7a7568", margin: "0 0 22px", lineHeight: 1.5 }}>
+            <h3 style={{ margin: "0 0 8px", color: "var(--color-text)" }}>Exit this challenge?</h3>
+            <p style={{ fontSize: ".88rem", color: "var(--color-text-soft)", margin: "0 0 22px", lineHeight: 1.5 }}>
               Your answers on this page will be cleared — you'll need to start over from question 1 next time.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
@@ -1106,7 +1102,7 @@ export default function ChallengePlay() {
               </button>
               <button
                 className="btn"
-                style={{ flex: 1, background: "#c7473f", color: "#fff", border: "none" }}
+                style={{ flex: 1, background: "var(--color-danger)", color: "#fff", border: "none" }}
                 onClick={confirmExit}
               >
                 Exit Challenge
