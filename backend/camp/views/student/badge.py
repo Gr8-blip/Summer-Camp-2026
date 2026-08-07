@@ -4,11 +4,15 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from ...models import (
-    Badge, StudentBadge, Lesson, Assignment, AssignmentAttempt, Challenge, Submission,
+    Badge, StudentBadge, Lesson, Mission, Assignment, AssignmentAttempt, Challenge, Submission,
     ChallengeAttempt,
 )
 from ...serializers import StudentBadgeSerializer
-from ...utils.achievements import countable_lessons, countable_assignments
+from ...utils.achievements import (
+    countable_lessons,
+    countable_assignments,
+    mission_quests_and_challenges_complete,
+)
 
 
 # Badge model only stores name/icon/rarity — the human-readable requirement
@@ -26,6 +30,7 @@ BADGE_REQUIREMENTS = {
     "XP Hunter": "Reach 100 XP.",
     "Rising Star": "Reach 500 XP.",
     "Consistency": "Attend every live lesson.",
+    "Attendance Hero": "Complete every quest and challenge in 2 missions.",
     "Boss Slayer": "Complete 5 challenges.",
     "Challenge Conqueror": "Complete 5 challenges.",
     "Perfect Score": "Score 100% in any challenge.",
@@ -34,7 +39,6 @@ BADGE_REQUIREMENTS = {
     "Flawless Victory": "Complete a quest on your first attempt with 100% accuracy.",
     "AI Explorer": "Reach 1000 XP.",
     "Puzzle Master": "Complete every puzzle type at least once.",
-    "Attendance Hero": "Attend every lesson in the bootcamp.",
     "Challenge Champion": "Complete every challenge in the camp.",
     "Mission Completionist": "Achieve 100% completion of an entire mission — every lesson attended and every quest completed.",
     "AI Master": "Complete every lesson and finish every quest in the camp.",
@@ -77,11 +81,17 @@ def _progress_for(badge, student, ctx):
     if name == "Future Innovator":
         return {"current": min(student.xp, 2000), "target": 2000, "label": "XP"}
 
-    if name in ("Attendance Hero", "Consistency"):
+    if name == "Consistency":
         return {
             "current": min(ctx["attended_lessons"], ctx["total_lessons"]),
             "target": ctx["total_lessons"],
             "label": "Lessons",
+        }
+    if name == "Attendance Hero":
+        return {
+            "current": min(ctx["missions_completed"], 2),
+            "target": 2,
+            "label": "Missions",
         }
     if name == "Learning Begins":
         return {
@@ -191,6 +201,11 @@ class StudentBadgeGridView(APIView):
         total_challenges = Challenge.objects.filter(is_published=True).count()
         perfect_score_count = student.challenge_attempts.filter(accuracy=100).count()
 
+        missions_completed = sum(
+            1 for mission in Mission.objects.all()
+            if mission_quests_and_challenges_complete(student, mission)
+        )
+
         owned_non_legendary = StudentBadge.objects.filter(
             student=student
         ).exclude(badge__rarity="legendary").count()
@@ -207,6 +222,7 @@ class StudentBadgeGridView(APIView):
             "completed_attempt_count": completed_attempt_count,
             "total_challenges": total_challenges,
             "perfect_score_count": perfect_score_count,
+            "missions_completed": missions_completed,
             "owned_non_legendary": owned_non_legendary,
             "total_non_legendary": total_non_legendary,
         }

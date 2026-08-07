@@ -2,6 +2,7 @@ from camp.models import (
     Badge,
     Challenge,
     Lesson,
+    Mission,
     Assignment,
     Submission,
     PuzzleCompletion, 
@@ -21,19 +22,18 @@ PUZZLE_TYPES = {
 
 def countable_lessons():
     """The set of lessons that actually count toward completion badges —
-    must be published themselves AND belong to a published mission.
     Shared with badge.py so the awarding logic and the progress-bar
     logic can never disagree on the denominator."""
-    return Lesson.objects.filter(is_published=True, mission__is_published=True)
-
+    return Lesson.objects.all()
 
 def countable_assignments():
-    """Same idea as countable_lessons(), for quests."""
-    return Assignment.objects.filter(
-        is_published=True,
-        lesson__is_published=True,
-        lesson__mission__is_published=True,
-    )
+    """Same idea as countable_lessons(), for quests.
+
+    Only filters on the Assignment's own is_published — a lesson's or
+    mission's published state no longer gates badge counting, so every
+    lesson/quest in the camp counts toward badges regardless of the
+    lesson/mission publish flag."""
+    return Assignment.objects.filter(is_published=True)
 
 
 def _awarded(*results):
@@ -64,6 +64,37 @@ def _distinct_attended_lesson_count(student):
     return student.attendances.filter(lesson__in=countable_lessons()).values("lesson").distinct().count()
 
 
+def _mission_challenges_complete(student, mission):
+    """True when every Challenge belonging to this mission has a completed
+    ChallengeAttempt from the student (vacuously true if the mission has
+    no challenges)."""
+    challenge_ids = set(Challenge.objects.filter(mission=mission).values_list("id", flat=True))
+    if not challenge_ids:
+        return True
+
+    completed_challenge_ids = set(
+        student.challenge_attempts.filter(
+            completed_at__isnull=False, challenge_id__in=challenge_ids
+        ).values_list("challenge_id", flat=True)
+    )
+    return challenge_ids <= completed_challenge_ids
+
+
+def mission_quests_and_challenges_complete(student, mission):
+    """
+    True once every Quest belonging to the mission's lessons (see
+    lesson_fully_complete) AND every Challenge belonging to the mission
+    has been completed by the student. Unlike mission_fully_complete,
+    this doesn't require lesson attendance — it's purely about finishing
+    the quests/challenges, which is what Attendance Hero counts.
+    """
+    for lesson in Lesson.objects.filter(mission=mission):
+        if not lesson_fully_complete(student, lesson):
+            return False
+
+    return _mission_challenges_complete(student, mission)
+
+
 def check_attendance(student):
     results = []
     attendance_count = student.attendances.count()
@@ -75,8 +106,14 @@ def check_attendance(student):
     attended_lessons = _distinct_attended_lesson_count(student)
 
     if total_lessons and attended_lessons >= total_lessons:
-        results.append(award_badge(student, "Attendance Hero"))
         results.append(award_badge(student, "Consistency"))
+
+    completed_missions = sum(
+        1 for mission in Mission.objects.all()
+        if mission_quests_and_challenges_complete(student, mission)
+    )
+    if completed_missions >= 2:
+        results.append(award_badge(student, "Attendance Hero"))
 
     return _awarded(*results)
 
@@ -208,13 +245,13 @@ def lesson_fully_complete(student, lesson):
 
 def mission_fully_complete(student, mission):
     """
-    True once EVERY published Lesson in the mission has attendance
-    recorded AND every Quest in every one of those lessons is complete
-    (see lesson_fully_complete). This is the "100% mission completion"
-    bar used by both the Mission Completionist badge and the Mission
-    Completion coin bonus.
+    True once EVERY Lesson in the mission (published or not) has
+    attendance recorded AND every Quest in every one of those lessons is
+    complete (see lesson_fully_complete). This is the "100% mission
+    completion" bar used by both the Mission Completionist badge and the
+    Mission Completion coin bonus.
     """
-    lessons = Lesson.objects.filter(mission=mission, is_published=True)
+    lessons = Lesson.objects.filter(mission=mission)
     if not lessons.exists():
         return False
 
