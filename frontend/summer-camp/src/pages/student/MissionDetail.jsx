@@ -57,7 +57,8 @@ export default function MissionDetail() {
             const locked = l.locked;
             const completed = l.completed; 
             const questsCompleted = l.quests_completed;
-            const questPending = completed && !questsCompleted;
+            const questInProgress = l.quests_in_progress;
+            const questPending = completed && !questsCompleted && !questInProgress;
 
             return (
               <div
@@ -73,11 +74,19 @@ export default function MissionDetail() {
                   </div>
                   <div className="s-card-badges">
                     {completed && <span className="s-badge s-badge-green">✅ Attended</span>}
-                    
-                    {/* 🔥 COOL UX BADGE FOR PENDING QUEST */}
+
+                    {/* Never touched at all */}
                     {questPending && (
                       <span className="s-badge s-badge-quest-pending">
                         ⚡ Quest Pending
+                      </span>
+                    )}
+
+                    {/* Started, but hasn't hit 100% yet — different badge so
+                        it doesn't read as "you haven't done anything" */}
+                    {completed && questInProgress && (
+                      <span className="s-badge" style={{ background: "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "#3D2B00" }}>
+                        🔄 Quest In Progress
                       </span>
                     )}
 

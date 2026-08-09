@@ -84,6 +84,8 @@ function KeyNotesCard({ notes }) {
 function QuestCard({ assignment }) {
   const navigate = useNavigate();
   const locked = assignment.locked;
+  const attempted = assignment.attempted;
+  const bestAccuracy = assignment.best_accuracy;
 
   return (
     <div className="s-card s-quest-card">
@@ -102,6 +104,15 @@ function QuestCard({ assignment }) {
         </div>
       ) : assignment.already_submitted ? (
         <div className="s-submit-success">✅ Quest complete — nice work!</div>
+      ) : attempted ? (
+        <>
+          <div className="s-quest-lock-banner" style={{ background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.3)" }}>
+            <span>🔄 You've tried this one{bestAccuracy != null ? ` — scored ${Math.round(bestAccuracy)}% last time` : ""}. Retry for 100%!</span>
+          </div>
+          <button className="btn btn-primary s-start-btn" onClick={() => navigate(`/quests/${assignment.id}`)}>
+            🔁 Retry Quest
+          </button>
+        </>
       ) : (
         <button className="btn btn-primary s-start-btn" onClick={() => navigate(`/quests/${assignment.id}`)}>
           🗺️ Start Quest

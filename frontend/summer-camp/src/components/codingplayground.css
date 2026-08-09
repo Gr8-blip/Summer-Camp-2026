@@ -1,0 +1,273 @@
+/* ── Fullscreen student mode ─────────────────────────────────────────── */
+.cp-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  animation: cp-fade-in 0.18s ease-out;
+}
+
+@keyframes cp-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.cp-inline {
+  position: relative;
+}
+
+.cp-inline .cp-shell {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.cp-shell {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 16px 20px;
+  gap: 12px;
+}
+
+.cp-topbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cp-topbar-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cp-instruction {
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-purple-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-height: 25vh;
+  overflow-y: auto;
+  line-height: 1.5;
+}
+
+/* Mock browser tab — updates live via postMessage from the sandboxed
+   iframe's title MutationObserver, so students see title changes as they
+   type, while the actual grading still reads the real DOM at submit time. */
+.cp-title-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: 10px 10px 0 0;
+  padding: 8px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cp-title-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-success);
+  flex-shrink: 0;
+}
+
+.cp-exit-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: var(--color-danger);
+  font-weight: 700;
+  padding: 6px 4px;
+  flex-shrink: 0;
+}
+.cp-exit-btn:hover { text-decoration: underline; }
+
+.cp-grid {
+  display: grid;
+  grid-template-columns: 180px 1fr 1fr;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .cp-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr 1fr;
+  }
+}
+
+.cp-filetree {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  overflow-y: auto;
+}
+
+.cp-file-btn {
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 0.82rem;
+  font-family: monospace;
+  color: var(--color-text-soft);
+}
+
+.cp-file-btn.active {
+  background: var(--color-purple);
+  color: white;
+  font-weight: 700;
+}
+
+.cp-editor-wrap,
+.cp-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.cp-editor {
+  flex: 1;
+  min-height: 0;
+  resize: none;
+  border: none;
+  outline: none;
+  font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  padding: 14px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  tab-size: 2;
+}
+
+.cp-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--color-bg-alt);
+  border-bottom: 1px solid var(--color-border);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  flex-shrink: 0;
+}
+
+.cp-run-btn {
+  padding: 6px 14px !important;
+  font-size: 0.78rem !important;
+}
+
+.cp-iframe {
+  flex: 1;
+  min-height: 0;
+  border: none;
+  background: white;
+}
+
+/* Admin "Test Quest" inline results footer — students never see this */
+.cp-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.cp-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.cp-check-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-soft);
+}
+
+.cp-check-pill.pass { background: var(--color-success); color: white; border-color: transparent; }
+.cp-check-pill.fail { background: var(--color-danger); color: white; border-color: transparent; }
+
+.cp-summary {
+  font-size: 0.85rem;
+  color: var(--color-text-soft);
+  font-weight: 600;
+}
+
+/* Student nav footer rendered inside the fullscreen overlay itself, since
+   the overlay sits above everything else in the app including the quest's
+   normal Back/Next footer. */
+/* Blocking loader while the final Run+validate happens before Next/Finish
+   proceeds — the button spinner alone was easy to miss and made the ~1-2.5s
+   wait feel like nothing was happening. */
+.cp-submit-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: color-mix(in srgb, var(--color-bg) 88%, transparent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.cp-submit-overlay .spinner {
+  width: 34px;
+  height: 34px;
+  border-width: 4px;
+  border-color: var(--color-purple-soft);
+  border-top-color: var(--color-purple);
+}
+
+.cp-submit-overlay p {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.cp-nav-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}

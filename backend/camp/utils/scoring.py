@@ -39,6 +39,22 @@ def score_fraction(question, response):
             return 0.0
         return len(words & found) / len(words)
  
+    if qtype == 'interactive_coding':
+        # Same trust model as memory_tiles above: the sandboxed iframe is
+        # the only thing with access to the rendered DOM/CSS, so it runs the
+        # checks itself and reports back which ones passed. We just verify
+        # shape and award fractional credit — never re-run untrusted
+        # student JS server-side.
+        checks = content.get('checks', [])
+        if not checks or not isinstance(response, dict):
+            return 0.0
+        results = response.get('results')
+        if not isinstance(results, list) or len(results) != len(checks):
+            # Malformed or stale payload — never award for it.
+            return 0.0
+        passed = sum(1 for r in results if r is True)
+        return passed / len(checks)
+
     if qtype == 'image_reveal':
         got = str(response or '').strip().lower()
         want = str(expected or '').strip().lower()

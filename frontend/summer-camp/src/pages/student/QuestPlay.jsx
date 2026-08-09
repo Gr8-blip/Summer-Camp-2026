@@ -12,6 +12,7 @@ import DungeonCrawler from "../../components/Dungeoncrawler";
 import FloorIsLava from "../../components/Floorislava";
 import EscapeRoom from "../../components/EscapeRoom";
 import AIDefense from "../../components/AIdefense";
+import CodingPlayground from "../../components/CodingPlayground";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
 // Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
@@ -114,7 +115,7 @@ export default function QuestPlay() {
 
   useEffect(() => {
     getQuest(id)
-      .then((q) => {
+      .then(async (q) => {
         setQuest(q);
         if (!q.camp_started) { setStep("locked"); return; }
         if (q.completed) {
@@ -130,11 +131,25 @@ export default function QuestPlay() {
         try {
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
           if (saved) {
+            // Re-affirm the attempt exists server-side before jumping
+            // straight into the game. startQuest is a safe get_or_create
+            // on the backend, so this is a no-op when it's already there
+            // — but it guarantees Finish Quest never 400s with "Start the
+            // quest first" on a resumed session where an attempt somehow
+            // never got created (stale localStorage from an earlier
+            // session, a backend reset, etc.) — previously ONLY the
+            // intro screen's "Start Quest" button ever called this, and
+            // the resume path skipped straight past it.
+            await startQuest(id);
             setAnswers(saved.answers || {});
             setIndex(saved.index || 0);
             setStep("game");
           }
         } catch {
+          // Covers a corrupt saved blob AND startQuest failing (deadline
+          // passed, already completed, etc.) — either way, drop the
+          // stale progress and fall back to the normal intro screen
+          // rather than stranding the student in a broken game step.
           localStorage.removeItem(STORAGE_KEY);
         }
       })
@@ -355,11 +370,12 @@ export default function QuestPlay() {
     }
   };
 
-  const finish = async (coinsEarned) => {
+  const finish = async (coinsEarned, answersOverride) => {
     if (step === "submitting" || !quest) return;
     setStep("submitting");
     try {
-      const data = await submitQuest(id, { answers, coins_earned: coinsEarned || 0 });
+      const payloadAnswers = answersOverride || answers;
+      const data = await submitQuest(id, { answers: payloadAnswers, coins_earned: coinsEarned || 0 });
       setResult(data);
       if (data.is_complete) {
         localStorage.removeItem(STORAGE_KEY);
@@ -594,7 +610,7 @@ export default function QuestPlay() {
 
           <div className="game-progress"><i style={{ width: `${progress}%` }} /></div>
 
-          {question.question_type !== "image_reveal" && (
+          {question.question_type !== "image_reveal" && question.question_type !== "interactive_coding" && (
             <h2 key={question.id} style={{ animation: "fadeSlideIn .25s ease-out" }}>
               {content.question || content.task || "Complete this activity"}
             </h2>
@@ -842,17 +858,45 @@ export default function QuestPlay() {
             </div>
           )}
 
-          <footer>
-            <button className="btn btn-secondary" disabled={!index} onClick={() => setIndex(index - 1)}>Back</button>
-            <button
-              className="btn btn-primary"
-              onClick={() => (index === quest.questions.length - 1 ? finish() : setIndex(index + 1))}
-            >
-              {index === quest.questions.length - 1 ? "Finish Quest" : "Next"}
-            </button>
-          </footer>
+          {step === "game" && question.question_type === "interactive_coding" && (
+            <CodingPlayground
+              key={question.id}
+              content={content}
+              storageKey={`coding-${question.id}`}
+              onResult={(results) => answer(results)}
+              onExit={handleExit}
+              canGoBack={!!index}
+              onBack={() => setIndex(index - 1)}
+              isLast={index === quest.questions.length - 1}
+              onNext={(freshResult) => {
+                // freshResult is passed directly rather than read back out
+                // of `answers` state, since the state update from
+                // onResult() above isn't guaranteed to have flushed yet —
+                // this fires from a postMessage listener, not a React
+                // synthetic event.
+                const finalAnswers = freshResult
+                  ? { ...answers, [question.id]: freshResult }
+                  : answers;
+                if (index === quest.questions.length - 1) finish(undefined, finalAnswers);
+                else setIndex(index + 1);
+              }}
+            />
+          )}
+
+          {question.question_type !== "interactive_coding" && (
+            <footer>
+              <button className="btn btn-secondary" disabled={!index} onClick={() => setIndex(index - 1)}>Back</button>
+              <button
+                className="btn btn-primary"
+                onClick={() => (index === quest.questions.length - 1 ? finish() : setIndex(index + 1))}
+              >
+                {index === quest.questions.length - 1 ? "Finish Quest" : "Next"}
+              </button>
+            </footer>
+          )}
         </section>
       )}
+
 
       {showExitConfirm && (
         <div
@@ -860,7 +904,7 @@ export default function QuestPlay() {
           style={{
             position: "fixed", inset: 0, background: "rgba(20,15,45,.55)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 1000, padding: 20,
+            zIndex: 1000000, padding: 20,
           }}
         >
           <div

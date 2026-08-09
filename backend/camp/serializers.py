@@ -50,6 +50,7 @@ class LessonSerializer(serializers.ModelSerializer):
     locked = serializers.SerializerMethodField()
     completed = serializers.SerializerMethodField()
     quests_completed = serializers.SerializerMethodField()
+    quests_in_progress = serializers.SerializerMethodField()
     material_filename = serializers.SerializerMethodField()
     material_size = serializers.SerializerMethodField()
 
@@ -58,6 +59,7 @@ class LessonSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'order', 'duration', 
             'mission', 'is_published', 'locked', 'completed', 'quests_completed',
+            'quests_in_progress',
             'material_file', 'material_filename', 'material_size', 'key_notes',
         ]
 
@@ -108,9 +110,35 @@ class LessonSerializer(serializers.ModelSerializer):
 
         return True
 
+    def get_quests_in_progress(self, obj):
+        """
+        True when at least one of this lesson's question-based quests has
+        an AssignmentAttempt (they started it) that isn't completed (they
+        haven't hit 100% yet) — lets the frontend tell "never touched"
+        apart from "tried, fell short" instead of lumping both under one
+        pending badge.
+        """
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return False
+
+        student = request.user.student
+        for assignment in obj.assignments.filter(is_published=True):
+            if not assignment.questions.exists():
+                continue  # legacy free-text assignments have no retry state
+            attempted = AssignmentAttempt.objects.filter(assignment=assignment, student=student).exists()
+            completed = AssignmentAttempt.objects.filter(
+                assignment=assignment, student=student, completed_at__isnull=False
+            ).exists()
+            if attempted and not completed:
+                return True
+        return False
+
 
 class AssignmentSerializer(serializers.ModelSerializer):
     already_submitted = serializers.SerializerMethodField(read_only=True)
+    attempted = serializers.SerializerMethodField(read_only=True)
+    best_accuracy = serializers.SerializerMethodField(read_only=True)
     has_questions = serializers.SerializerMethodField()
     locked = serializers.SerializerMethodField()
     is_expired = serializers.SerializerMethodField()
@@ -120,7 +148,8 @@ class AssignmentSerializer(serializers.ModelSerializer):
         model = Assignment
         fields = [
             'id', 'title', 'description', 'xp_reward', 'deadline', 
-            'lesson', 'lesson_title', 'already_submitted', 'is_published', 
+            'lesson', 'lesson_title', 'already_submitted', 'attempted',
+            'best_accuracy', 'is_published', 
             'locked', 'has_questions', 'is_expired', 'game_type'
         ]
 
@@ -145,6 +174,32 @@ class AssignmentSerializer(serializers.ModelSerializer):
             assignment=obj,
             student=student
         ).exists()
+
+    def get_attempted(self, obj):
+        """True once the student has an AssignmentAttempt row at all,
+        completed or not — the "tried this before" signal the frontend
+        uses to swap Start Quest for Retry Quest."""
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return False
+        if not obj.questions.exists():
+            return False  # legacy free-text assignments have no retry state
+        student = request.user.student
+        return AssignmentAttempt.objects.filter(assignment=obj, student=student).exists()
+
+    def get_best_accuracy(self, obj):
+        """Latest attempt's accuracy (0-100), or None if never attempted /
+        a legacy free-text assignment. Quests are retryable in place — one
+        AssignmentAttempt row per student per assignment — so "latest" is
+        also the only one."""
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return None
+        if not obj.questions.exists():
+            return None
+        student = request.user.student
+        attempt = AssignmentAttempt.objects.filter(assignment=obj, student=student).first()
+        return attempt.accuracy if attempt else None
     
     def get_has_questions(self, obj):
         return obj.questions.exists()
@@ -352,6 +407,17 @@ class StudentAssignmentQuestionSerializer(AssignmentQuestionSerializer):
 
         for key in ('answer', 'answers', 'solution', 'example_solution'):
             content.pop(key, None)
+
+        if instance.question_type == 'interactive_coding':
+            # `checks` and `files` are meant to reach the student (the
+            # client needs them to seed the editor and run validation in
+            # the sandboxed iframe) — but scrub any stray solution field an
+            # admin might accidentally paste into an individual check.
+            checks = content.get('checks', [])
+            content['checks'] = [
+                {k: v for k, v in c.items() if k not in ('solution', 'reference_answer')}
+                for c in checks
+            ]
 
         if instance.question_type == 'match_pairs':
             pairs = instance.content.get('pairs', {})

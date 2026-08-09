@@ -17,6 +17,7 @@ from .badges import award_badge
 PUZZLE_TYPES = {
     "drag_order", "match_pairs", "memory_tiles",
     "word_search", "image_reveal", "prompt_build",
+    "interactive_coding",
 }
 
 
@@ -276,6 +277,48 @@ def check_mission_completionist(student, mission):
     """
     if mission_fully_complete(student, mission):
         return _awarded(award_badge(student, "Mission Completionist"))
+    return []
+
+
+def check_code_cracker(student):
+    """
+    Award once ever, the first time the student completes ANY quest that
+    contains at least one interactive_coding question. Call this
+    alongside check_coding_cadet() on every quest submit — it's a no-op
+    once already earned since award_badge() is idempotent per student.
+    """
+    completed_assignment_ids = AssignmentAttempt.objects.filter(
+        student=student, completed_at__isnull=False
+    ).values_list("assignment_id", flat=True)
+
+    has_coding_quest = Assignment.objects.filter(
+        id__in=completed_assignment_ids,
+        questions__question_type="interactive_coding",
+    ).exists()
+
+    if has_coding_quest:
+        return _awarded(award_badge(student, "Code Cracker"))
+    return []
+
+
+def check_flawless_coder(student, attempt):
+    """
+    Award once ever, the first time a student completes a quest that
+    contains at least one interactive_coding question, on their very
+    first attempt (attempt.attempt_count == 1), with 100% accuracy.
+    Call this from QuestSubmitView right alongside check_flawless_victory
+    — same attempt_count==1 guard, so it's safe to call on every
+    completion.
+    """
+    if attempt.attempt_count != 1 or attempt.accuracy != 100:
+        return []
+
+    has_coding_question = attempt.assignment.questions.filter(
+        question_type="interactive_coding"
+    ).exists()
+
+    if has_coding_question:
+        return _awarded(award_badge(student, "Flawless Coder"))
     return []
 
 

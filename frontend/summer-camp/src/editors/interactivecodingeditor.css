@@ -1,0 +1,210 @@
+/* ═══════════════════════════════════════════════════════════
+   Interactive Coding question editor — admin builder styling.
+   Matches AdminLayout.css conventions: white cards, soft shadow,
+   purple accents, pill radii — so it doesn't look bolted on.
+   ═══════════════════════════════════════════════════════════ */
+
+.ice {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ice-field label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--color-text);
+  margin-bottom: 8px;
+}
+
+.ice-hint {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  margin-left: 4px;
+}
+
+.ice-field textarea,
+.ice-field input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: #FDFDFF;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.ice-field > textarea:focus,
+.ice-field input:focus {
+  border-color: var(--color-purple-light);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+}
+
+.ice-field > textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+/* ── File editor: tabbed, like the student's, not a stacked wall ─────── */
+.ice-file-editor {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(36, 28, 63, 0.07);
+  overflow: hidden;
+}
+
+.ice-file-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 10px 10px 0;
+  background: #FAFAFA;
+  border-bottom: 2px solid var(--color-border);
+}
+
+.ice-file-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px 10px 0 0;
+  font-family: monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.ice-file-tab.active {
+  background: white;
+  color: var(--color-purple);
+  box-shadow: 0 -2px 8px rgba(36, 28, 63, 0.05);
+}
+
+.ice-file-tab-add {
+  color: var(--color-purple);
+  opacity: 0.7;
+}
+.ice-file-tab-add:hover { opacity: 1; }
+
+.ice-file-tab-close {
+  font-size: 0.7rem;
+  opacity: 0.5;
+  border-radius: 50%;
+  padding: 1px 4px;
+}
+.ice-file-tab-close:hover { opacity: 1; background: #FEE2E2; color: #DC2626; }
+
+.ice-code-area {
+  width: 100%;
+  min-height: 180px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  padding: 16px;
+  font-family: "SFMono-Regular", Consolas, Menlo, monospace;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  background: white;
+  color: var(--color-text);
+  tab-size: 2;
+}
+
+/* ── Check cards ───────────────────────────────────────────────────── */
+.ice-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ice-check-card {
+  background: white;
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 12px rgba(36, 28, 63, 0.05);
+  transition: border-color 0.15s;
+}
+.ice-check-card:focus-within { border-color: var(--color-purple-light); }
+
+.ice-check-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ice-check-head select {
+  flex: 1;
+  appearance: none;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 36px 8px 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: #FDFDFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center;
+  cursor: pointer;
+}
+
+.ice-check-remove {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: none;
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ice-check-remove:hover { opacity: 0.85; }
+
+.ice-check-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.ice-check-body input {
+  padding: 9px 12px;
+  font-size: 0.82rem;
+}
+
+.ice-add-check {
+  align-self: flex-start;
+  background: var(--color-purple-soft);
+  color: var(--color-purple);
+  border: 2px dashed var(--color-purple-light);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.ice-add-check:hover { background: var(--color-purple-light); color: white; }
+
+/* ── Test Quest toggle + frame ────────────────────────────────────── */
+.ice-test-toggle {
+  align-self: flex-start;
+  background: var(--color-bg-alt);
+  border: 2px solid var(--color-purple-light);
+  color: var(--color-purple);
+  border-radius: var(--radius-pill);
+  padding: 10px 20px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.ice-test-toggle:hover { background: var(--color-purple-soft); }
+
+.ice-test-frame {
+  border: 2px dashed var(--color-border);
+  border-radius: 16px;
+  padding: 14px;
+  background: var(--color-bg);
+}

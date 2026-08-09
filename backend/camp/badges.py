@@ -37,6 +37,11 @@ BADGES = [
         "icon": "⚡",
         "rarity": "common",
     },
+    {
+        "name": "Code Cracker",
+        "icon": "🧩",
+        "rarity": "common",
+    },
 
     # =========================
     # 🔵 RARE
@@ -74,6 +79,11 @@ BADGES = [
     {
         "name": "Flawless Victory",
         "icon": "🎯",
+        "rarity": "rare",
+    },
+    {
+        "name": "Flawless Coder",
+        "icon": "💯",
         "rarity": "rare",
     },
 

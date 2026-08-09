@@ -67,6 +67,13 @@ export const ACTIVITY_TYPES = [
     tint: "var(--cb-reveal)",
     blurb: "Guess the answer as the image comes into focus.",
   },
+  {
+    type: "interactive_coding",
+    label: "Interactive Coding",
+    icon: "💻",
+    tint: "var(--cb-coding, #38bdf8)",
+    blurb: "Students edit a real HTML/CSS/JS project in a sandboxed preview.",
+  },
 ];
 
 export const activityMeta = (type) =>
@@ -92,6 +99,17 @@ export function blankContent(type) {
       return { question: "", words: [] };
     case "image_reveal":
       return { image: "", question: "", answer: "" };
+    case "interactive_coding":
+      return {
+        instruction: "",
+        languages: ["html", "css", "js"],
+        files: [
+          { path: "index.html", content: "<!doctype html>\n<html>\n<head>\n  <title>My Page</title>\n</head>\n<body>\n  <h1>Hello</h1>\n</body>\n</html>" },
+          { path: "styles.css", content: "h1 {\n  color: #333;\n}" },
+          { path: "script.js", content: "// optional" },
+        ],
+        checks: [],
+      };
     default:
       return {};
   }

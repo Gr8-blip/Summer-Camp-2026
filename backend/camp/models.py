@@ -162,6 +162,23 @@ class ChallengeQuestion(models.Model):
         ("memory_tiles", "Memory Tiles"),
         ("word_search", "Word Search"),
         ("image_reveal", "Image Reveal"),
+
+        # NEW — coding challenges. content JSON shape:
+        # {
+        #   "instruction": "...",
+        #   "languages": ["html", "css", "js"],
+        #   "files": [{"path": "index.html", "content": "..."}, ...],
+        #   "checks": [
+        #     {"type": "element_text", "selector": "h1", "expected": "Mission Control"},
+        #     {"type": "css_property", "selector": "h1", "property": "color", "expected": "blue"},
+        #     {"type": "element_exists", "selector": "button"},
+        #     {"type": "element_attribute", "selector": "img", "attribute": "alt", "expected": "logo"},
+        #     {"type": "document_title", "expected": "My Mission"}
+        #   ]
+        # }
+        # `points` (below) is split evenly across `checks` for partial credit
+        # — see utils/scoring.py.
+        ("interactive_coding", "Interactive Coding"),
     ]
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="questions")
     question_type = models.CharField(max_length=32, choices=QUESTION_TYPES)

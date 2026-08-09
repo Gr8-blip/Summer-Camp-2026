@@ -138,6 +138,7 @@ class QuestSubmitView(APIView):
 
             new_badges += achievements.check_quest_completion(student)
             new_badges += achievements.check_coding_cadet(student)
+            new_badges += achievements.check_code_cracker(student)
             new_badges += achievements.check_xp(student)
             new_badges += achievements.check_legend(student)
 
@@ -179,6 +180,7 @@ class QuestSubmitView(APIView):
                     if paid:
                         coin_events.append({"amount": paid, "reason": "Flawless Victory — first try, 100%! ⚡"})
                     new_badges += achievements.check_flawless_victory(student, attempt)
+                    new_badges += achievements.check_flawless_coder(student, attempt)
 
             # ── Lesson completion bonus (once per lesson) ─────────────
             lesson = attempt.assignment.lesson
