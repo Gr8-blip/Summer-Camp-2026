@@ -12,7 +12,7 @@ import DungeonCrawler from "../../components/Dungeoncrawler";
 import FloorIsLava from "../../components/Floorislava";
 import EscapeRoom from "../../components/EscapeRoom";
 import AIDefense from "../../components/AIdefense";
-import CodingPlayground from "../../components/CodingPlayground";
+import CodingPlayground from "../../components/CodingPlayGround";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
 // Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
