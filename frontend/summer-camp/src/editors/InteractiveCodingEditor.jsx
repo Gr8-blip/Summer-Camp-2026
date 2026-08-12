@@ -1,5 +1,5 @@
 import { useState } from "react";
-import CodingPlayground from "../components/CodingPlayground";
+import CodingPlayground from "../components/CodingPlayGround";
 import "./interactivecodingeditor.css";
 
 // Fits the same {content, onChange} contract every other editor in editors/
