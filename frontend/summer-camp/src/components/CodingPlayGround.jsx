@@ -50,6 +50,25 @@ const VALIDATOR_SCRIPT = `
       if (check.type === "document_title") {
         return document.title.trim() === String(check.expected || "").trim();
       }
+      if (check.type === "js_variable") {
+        // Handled before any selector/element logic below — this check has
+        // no DOM target at all, it reads a variable out of the student's
+        // own script.js. eval() here (not Function/new Function) is
+        // deliberate: it resolves through the normal scope chain, which is
+        // the only way to see a top-level let/const declared in the
+        // student's separate <script> tag — those bindings live in the
+        // shared global LEXICAL environment, not on window, so bracket
+        // access (window[name]) would silently miss anything the student
+        // declared with let/const instead of var.
+        var val;
+        try { val = eval(check.variable); } catch (e) { return false; }
+        var expected = check.expected;
+        if (typeof val === "object" && val !== null) {
+          try { return JSON.stringify(val) === JSON.stringify(JSON.parse(expected)); }
+          catch (e2) { return JSON.stringify(val) === String(expected || "").trim(); }
+        }
+        return String(val).trim() === String(expected || "").trim();
+      }
       var el = check.selector ? document.querySelector(check.selector) : null;
       if (check.type === "element_exists") return !!el;
       if (!el) return false;
@@ -57,8 +76,25 @@ const VALIDATOR_SCRIPT = `
         return el.textContent.trim() === String(check.expected || "").trim();
       }
       if (check.type === "css_property") {
-        var val = getComputedStyle(el)[check.property];
-        return normColor(val) === normColor(check.expected);
+        // Custom properties (--foo) don't resolve through bracket-notation
+        // style access — getPropertyValue is required, and works equally
+        // well on :root (document.querySelector(":root") already returns
+        // document.documentElement, so no special-casing needed there).
+        var isVar = check.property && check.property.indexOf("--") === 0;
+        var got = isVar
+          ? getComputedStyle(el).getPropertyValue(check.property)
+          : getComputedStyle(el)[check.property];
+        got = String(got || "").trim();
+        var expected = String(check.expected || "").trim();
+        // Try a plain match first — covers non-color values (numbers,
+        // keywords, font stacks, custom property values of any kind).
+        // Only fall back to color-aware comparison when that fails, so
+        // "16px" vs "16px" or "Poppins, sans-serif" vs itself doesn't get
+        // incorrectly routed through color parsing (which would silently
+        // fail on anything that isn't a real color).
+        if (got === expected) return true;
+        var gotColor = normColor(got);
+        return gotColor !== "" && gotColor === normColor(expected);
       }
       if (check.type === "element_attribute") {
         return (el.getAttribute(check.attribute) || "") === String(check.expected || "");
@@ -94,9 +130,28 @@ function buildSrcDoc(files) {
   const cssBlocks = files.filter((f) => extOf(f.path) === "css").map((f) => `<style>\n${f.content}\n</style>`).join("\n");
   const jsBlocks = files.filter((f) => extOf(f.path) === "js").map((f) => `<script>\n${f.content}\n<\/script>`).join("\n");
 
-  let doc = html ? html.content : "<!doctype html><html><head></head><body></body></html>";
-  if (!/<\/head>/i.test(doc)) doc = doc.replace(/<html[^>]*>/i, (m) => `${m}<head></head>`);
-  if (!/<\/body>/i.test(doc)) doc = doc.replace(/<\/html>/i, `</body></html>`);
+  let doc = html ? html.content : "";
+
+  // Guarantee a full <html><head>...</head><body>...</body></html>
+  // skeleton exists no matter what shape the starter file is in — a bare
+  // fragment with no <html> tag at all (e.g. an admin just pastes
+  // "<h1>Hello</h1>"), a body-only snippet, or a complete document are
+  // all things an admin might type in. Previously the repair steps below
+  // only fired off an existing <html>/</html> match, so a plain fragment
+  // matched neither branch and silently ended up with no </head> and no
+  // </body> in the string at all — which meant the CSS/JS AND the
+  // injected validator script never made it in either, so checks just
+  // stayed unresolved forever with no visible error.
+  if (!/<html[\s\S]*<\/html>/i.test(doc)) {
+    doc = `<!doctype html><html><head></head><body>${doc}</body></html>`;
+  }
+  if (!/<head[\s\S]*<\/head>/i.test(doc)) {
+    doc = doc.replace(/<html([^>]*)>/i, `<html$1><head></head>`);
+  }
+  if (!/<\/body>/i.test(doc)) {
+    doc = doc.replace(/<\/html>/i, `</body></html>`);
+  }
+
   doc = doc.replace(/<\/head>/i, `${cssBlocks}\n</head>`);
   doc = doc.replace(/<\/body>/i, `${jsBlocks}\n${VALIDATOR_SCRIPT}\n</body>`);
   return doc;

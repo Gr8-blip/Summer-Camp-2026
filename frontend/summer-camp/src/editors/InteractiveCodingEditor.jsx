@@ -1,5 +1,5 @@
 import { useState } from "react";
-import CodingPlayground from "../components/CodingPlayGround";
+import CodingPlayground from "../components/CodingPlayground";
 import "./interactivecodingeditor.css";
 
 // Fits the same {content, onChange} contract every other editor in editors/
@@ -12,10 +12,11 @@ const CHECK_TYPES = [
   { value: "css_property", label: "CSS property equals", icon: "🎨", fields: ["selector", "property", "expected"] },
   { value: "element_attribute", label: "Attribute equals", icon: "🏷️", fields: ["selector", "attribute", "expected"] },
   { value: "document_title", label: "Page title equals", icon: "🔖", fields: ["expected"] },
+  { value: "js_variable", label: "JS variable equals", icon: "🔢", fields: ["variable", "expected"] },
 ];
 
 function blankCheck() {
-  return { type: "element_exists", selector: "", property: "", attribute: "", expected: "" };
+  return { type: "element_exists", selector: "", property: "", attribute: "", expected: "", variable: "" };
 }
 
 export default function InteractiveCodingEditor({ content, onChange }) {
@@ -108,10 +109,13 @@ export default function InteractiveCodingEditor({ content, onChange }) {
                 </div>
                 <div className="ice-check-body">
                   {def.fields.includes("selector") && (
-                    <input placeholder="CSS selector — e.g. h1" value={c.selector} onChange={(e) => updateCheck(i, { selector: e.target.value })} />
+                    <input placeholder="CSS selector — e.g. h1, .my-class, #my-id, or :root for CSS variables" value={c.selector} onChange={(e) => updateCheck(i, { selector: e.target.value })} />
+                  )}
+                  {def.fields.includes("variable") && (
+                    <input placeholder="JS variable name — e.g. score, playerName" value={c.variable} onChange={(e) => updateCheck(i, { variable: e.target.value })} />
                   )}
                   {def.fields.includes("property") && (
-                    <input placeholder="CSS property — e.g. color" value={c.property} onChange={(e) => updateCheck(i, { property: e.target.value })} />
+                    <input placeholder="CSS property — e.g. color, or --main-color" value={c.property} onChange={(e) => updateCheck(i, { property: e.target.value })} />
                   )}
                   {def.fields.includes("attribute") && (
                     <input placeholder="Attribute — e.g. alt" value={c.attribute} onChange={(e) => updateCheck(i, { attribute: e.target.value })} />
