@@ -11,7 +11,7 @@ import MemoryTilesEditor from "../editors/MemoryTilesEditor";
 import WordSearchEditor from "../editors/WordSearchEditor";
 import ImageRevealEditor from "../editors/ImageRevealEditor";
 import InteractiveCodingEditor from "../editors/InteractiveCodingEditor";
-import AdminCodingChallengeEditor from "../editors/AdminCodingChallengeEditor";
+import AdminCodingChallengeEditor from "../editors/Admincodingchallengeeditor";
 
 const EDITORS = {
   multiple_choice: MultipleChoiceEditor,
