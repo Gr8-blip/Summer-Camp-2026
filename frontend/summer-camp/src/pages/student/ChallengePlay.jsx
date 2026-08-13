@@ -14,7 +14,7 @@ import EscapeRoom from "../../components/EscapeRoom";
 import FloorIsLava from "../../components/Floorislava";
 import Avatar from "../../components/Avatar";
 import CodingPlayground from "../../components/CodingPlayGround";
-import CodingChallengePlayground from "../../components/CodingChallengePlayground";
+import CodingChallengePlayground from "../../components/Codingchallengeplayground";
 import "./challenge.css";
 
 // Maps a Challenge's `game_type` to the component that renders it.
