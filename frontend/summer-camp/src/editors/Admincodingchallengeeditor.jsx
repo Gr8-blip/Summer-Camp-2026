@@ -1,5 +1,5 @@
 import { useState } from "react";
-import CodingChallengePlayground from "../components/CodingChallengePlayground";
+import CodingChallengePlayground from "../components/Codingchallengeplayground";
 // Reuses the same visual language as InteractiveCodingEditor (ice-*
 // classes) so it doesn't look bolted on — no new CSS file needed.
 import "./interactivecodingeditor.css";
