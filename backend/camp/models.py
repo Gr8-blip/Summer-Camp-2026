@@ -179,6 +179,7 @@ class ChallengeQuestion(models.Model):
         # `points` (below) is split evenly across `checks` for partial credit
         # — see utils/scoring.py.
         ("interactive_coding", "Interactive Coding"),
+        ("coding_challenge", "Coding Challenge"),
     ]
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="questions")
     question_type = models.CharField(max_length=32, choices=QUESTION_TYPES)

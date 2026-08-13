@@ -11,6 +11,7 @@ import MemoryTilesEditor from "../editors/MemoryTilesEditor";
 import WordSearchEditor from "../editors/WordSearchEditor";
 import ImageRevealEditor from "../editors/ImageRevealEditor";
 import InteractiveCodingEditor from "../editors/InteractiveCodingEditor";
+import AdminCodingChallengeEditor from "../editors/AdminCodingChallengeEditor";
 
 const EDITORS = {
   multiple_choice: MultipleChoiceEditor,
@@ -23,6 +24,7 @@ const EDITORS = {
   word_search: WordSearchEditor,
   image_reveal: ImageRevealEditor,
   interactive_coding: InteractiveCodingEditor,
+  coding_challenge: AdminCodingChallengeEditor,
 };
 
 export default function QuestionEditorPanel({ type, initialContent, initialPoints, isEditing, onBack, onSave, saving }) {
@@ -36,6 +38,13 @@ export default function QuestionEditorPanel({ type, initialContent, initialPoint
     if (type === "word_search") return (content.words || []).length >= 1;
     if (type === "image_reveal") return !!content.image && !!content.answer;
     if (type === "interactive_coding") {
+      return (
+        (content.instruction || "").trim().length > 0 &&
+        (content.files || []).some((f) => f.path.endsWith(".html")) &&
+        (content.checks || []).length >= 1
+      );
+    }
+    if (type === "coding_challenge") {
       return (
         (content.instruction || "").trim().length > 0 &&
         (content.files || []).some((f) => f.path.endsWith(".html")) &&

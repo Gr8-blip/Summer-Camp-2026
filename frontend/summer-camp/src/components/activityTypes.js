@@ -74,6 +74,13 @@ export const ACTIVITY_TYPES = [
     tint: "var(--cb-coding, #38bdf8)",
     blurb: "Students edit a real HTML/CSS/JS project in a sandboxed preview.",
   },
+  {
+    type: "coding_challenge",
+    label: "Coding Challenge",
+    icon: "🚀",
+    tint: "var(--cb-challenge, #22c55e)",
+    blurb: "Students customize a complete starter project their own way — no exact answers.",
+  },
 ];
 
 export const activityMeta = (type) =>
@@ -109,6 +116,34 @@ export function blankContent(type) {
           { path: "script.js", content: "// optional" },
         ],
         checks: [],
+      };
+    case "coding_challenge":
+      return {
+        instruction: "Customize this AI assistant using everything you've learned. Change its content, appearance, and personality while keeping it functional.",
+        files: [
+          {
+            path: "index.html",
+            content: "<!doctype html>\n<html>\n<head>\n  <title>My AI Assistant</title>\n</head>\n<body>\n  <h1>Chat With Me</h1>\n  <h2>Your friendly helper</h2>\n  <script src=\"script.js\"></script>\n</body>\n</html>",
+          },
+          {
+            path: "styles.css",
+            content: "body {\n  font-family: sans-serif;\n  background: #ffffff;\n}\nh1 {\n  color: #333333;\n}",
+          },
+          {
+            path: "script.js",
+            content: "const PROMPT = `You are a friendly, helpful assistant.`;\n// build on this however you like",
+          },
+        ],
+        // See CodingChallengePlayground.jsx for the full check-type list
+        // and how "substantial change" + not_applicable are decided.
+        checks: [
+          { type: "title_changed", points: 10 },
+          { type: "element_text_changed", selector: "h1", points: 10 },
+          { type: "element_text_changed", selector: "h2", points: 10 },
+          { type: "prompt_changed", variable: "PROMPT", points: 20 },
+          { type: "css_changed", selector: "body", property: "backgroundColor", points: 10 },
+          { type: "functionality", points: 30 },
+        ],
       };
     default:
       return {};

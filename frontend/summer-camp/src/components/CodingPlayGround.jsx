@@ -160,6 +160,19 @@ function buildSrcDoc(files) {
 export default function CodingPlayground({
   content, onResult, storageKey, testMode = false, fullscreen = !testMode,
   onBack, onNext, canGoBack = false, isLast = false, onExit,
+  // Same component is now used from both Quests and Boss Battles (and
+  // admin's own "Test Quest" preview), which want different copy on the
+  // exit/finish buttons ("Exit Quest" vs "Exit Challenge", "Finish Quest"
+  // vs "Finish Battle") — callers pass their own labels instead of this
+  // component guessing which context it's in.
+  exitLabel = "Exit Quest ✕",
+  finishLabel = "Finish Quest",
+  // Boss Battles run on a countdown; Quests don't. When the caller passes
+  // a number of seconds here, a timer badge renders in the topbar — this
+  // component is portaled fullscreen over everything (including whatever
+  // timer the parent screen renders), so without this the clock would be
+  // invisible the entire time a student is inside a coding question.
+  timeLeft = null,
 }) {
   const files = content.files || [];
   const checks = content.checks || [];
@@ -299,7 +312,12 @@ export default function CodingPlayground({
         <div className="cp-topbar">
           <div className="cp-topbar-controls">
             {fullscreen && onExit && (
-              <button type="button" className="cp-exit-btn" onClick={onExit}>Exit Quest ✕</button>
+              <button type="button" className="cp-exit-btn" onClick={onExit}>{exitLabel}</button>
+            )}
+            {timeLeft !== null && (
+              <span className="cp-timer-badge">
+                ⏱ {`${String(Math.max(0, Math.floor(timeLeft / 60))).padStart(2, "0")}:${String(Math.max(0, timeLeft % 60)).padStart(2, "0")}`}
+              </span>
             )}
             <div className="cp-title-tab" title="Live browser tab title">
               <span className="cp-title-tab-dot" />
@@ -361,7 +379,7 @@ export default function CodingPlayground({
           <div className="cp-nav-footer">
             <button className="btn btn-secondary" disabled={!canGoBack || submitting} onClick={onBack}>Back</button>
             <button className="btn btn-primary" onClick={handleNext} disabled={submitting}>
-              {submitting ? <span className="spinner" /> : isLast ? "Finish Quest" : "Next"}
+              {submitting ? <span className="spinner" /> : isLast ? finishLabel : "Next"}
             </button>
           </div>
         )}

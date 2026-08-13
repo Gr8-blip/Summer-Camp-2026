@@ -13,6 +13,8 @@ import DungeonCrawler from "../../components/Dungeoncrawler";
 import EscapeRoom from "../../components/EscapeRoom";
 import FloorIsLava from "../../components/Floorislava";
 import Avatar from "../../components/Avatar";
+import CodingPlayground from "../../components/CodingPlayGround";
+import CodingChallengePlayground from "../../components/CodingChallengePlayground";
 import "./challenge.css";
 
 // Maps a Challenge's `game_type` to the component that renders it.
@@ -497,11 +499,16 @@ export default function ChallengePlay() {
     }
   };
 
-  const finish = async (coinsEarned) => {
+  const finish = async (coinsEarned, answersOverride) => {
     if (step === "submitting" || !challenge) return;
     setStep("submitting");
     try {
-      const data = await submitChallenge(id, { answers, coins_earned: coinsEarned || 0 });
+      // answersOverride lets coding_challenge (and any other postMessage-
+      // driven playground) pass its freshly-graded result directly rather
+      // than relying on `answers` state having flushed by the time this
+      // runs — same fix QuestPlay already uses for interactive_coding.
+      const payloadAnswers = answersOverride || answers;
+      const data = await submitChallenge(id, { answers: payloadAnswers, coins_earned: coinsEarned || 0 });
       localStorage.removeItem(STORAGE_KEY);
       const board = await getChallengeLeaderboard(id);
 
@@ -777,7 +784,9 @@ export default function ChallengePlay() {
 
           <div className="game-progress"><i style={{ width: `${progress}%` }} /></div>
 
-          {question.question_type !== "image_reveal" && (
+          {question.question_type !== "image_reveal" &&
+            question.question_type !== "interactive_coding" &&
+            question.question_type !== "coding_challenge" && (
             <h2 key={question.id} style={{ animation: "fadeSlideIn .25s ease-out" }}>
               {content.question || content.task || "Complete this activity"}
             </h2>
@@ -1063,15 +1072,76 @@ export default function ChallengePlay() {
             </div>
           )}
 
-          <footer>
-            <button className="btn btn-secondary" disabled={!index} onClick={() => setIndex(index - 1)}>Back</button>
-            <button
-              className="btn btn-primary"
-              onClick={() => (index === challenge.questions.length - 1 ? finish() : setIndex(index + 1))}
-            >
-              {index === challenge.questions.length - 1 ? "Finish Battle" : "Next"}
-            </button>
-          </footer>
+          {/* NEW — interactive_coding, same exact-check playground Quests
+              use. It portals fullscreen over the whole screen (including
+              the ⏱ timer in the header above), so timeLeft/exitLabel/
+              finishLabel are passed through explicitly rather than relying
+              on anything from this page still being visible underneath. */}
+          {step === "game" && question.question_type === "interactive_coding" && (
+            <CodingPlayground
+              key={question.id}
+              content={content}
+              storageKey={`challenge-coding-classic-${question.id}`}
+              onResult={(results) => answer(results)}
+              onExit={handleExit}
+              canGoBack={!!index}
+              onBack={() => setIndex(index - 1)}
+              isLast={index === challenge.questions.length - 1}
+              timeLeft={left}
+              exitLabel="Exit Challenge ✕"
+              finishLabel="Finish Battle"
+              onNext={(freshResult) => {
+                // freshResult passed directly rather than read back out of
+                // `answers` state, since that update isn't guaranteed to
+                // have flushed by the time this fires — it comes from a
+                // postMessage listener, not a React synthetic event.
+                const finalAnswers = freshResult
+                  ? { ...answers, [question.id]: freshResult }
+                  : answers;
+                if (index === challenge.questions.length - 1) finish(undefined, finalAnswers);
+                else setIndex(index + 1);
+              }}
+            />
+          )}
+
+          {/* NEW — coding_challenge, same open-ended playground QuestPlay
+              uses. Same deal as above — pass timeLeft/labels explicitly
+              since the fullscreen overlay covers this page's own timer. */}
+          {step === "game" && question.question_type === "coding_challenge" && (
+            <CodingChallengePlayground
+              key={question.id}
+              content={content}
+              storageKey={`challenge-coding-${question.id}`}
+              onResult={(results) => answer(results)}
+              onExit={handleExit}
+              canGoBack={!!index}
+              onBack={() => setIndex(index - 1)}
+              isLast={index === challenge.questions.length - 1}
+              timeLeft={left}
+              exitLabel="Exit Challenge ✕"
+              finishLabel="Finish Battle"
+              onNext={(freshResult) => {
+                const finalAnswers = freshResult
+                  ? { ...answers, [question.id]: freshResult }
+                  : answers;
+                if (index === challenge.questions.length - 1) finish(undefined, finalAnswers);
+                else setIndex(index + 1);
+              }}
+            />
+          )}
+
+          {question.question_type !== "interactive_coding" &&
+            question.question_type !== "coding_challenge" && (
+            <footer>
+              <button className="btn btn-secondary" disabled={!index} onClick={() => setIndex(index - 1)}>Back</button>
+              <button
+                className="btn btn-primary"
+                onClick={() => (index === challenge.questions.length - 1 ? finish() : setIndex(index + 1))}
+              >
+                {index === challenge.questions.length - 1 ? "Finish Battle" : "Next"}
+              </button>
+            </footer>
+          )}
         </section>
       )}
 
@@ -1081,7 +1151,14 @@ export default function ChallengePlay() {
           style={{
             position: "fixed", inset: 0, background: "rgba(20,15,45,.55)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 1000, padding: 20,
+            // Was 1000 — invisible behind CodingPlayground/
+            // CodingChallengePlayground's fullscreen portal (z-index
+            // 999999), which made "Exit Challenge" look broken for
+            // interactive_coding/coding_challenge questions: the click
+            // registered and set showExitConfirm=true, the dialog just
+            // rendered underneath the coding overlay where no one could
+            // see or click it.
+            zIndex: 1000000, padding: 20,
           }}
         >
           <div

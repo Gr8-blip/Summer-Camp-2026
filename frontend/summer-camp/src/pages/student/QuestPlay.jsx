@@ -13,6 +13,7 @@ import FloorIsLava from "../../components/Floorislava";
 import EscapeRoom from "../../components/EscapeRoom";
 import AIDefense from "../../components/AIdefense";
 import CodingPlayground from "../../components/CodingPlayGround";
+import CodingChallengePlayground from "../../components/CodingChallengePlayground";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
 // Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
@@ -610,7 +611,9 @@ export default function QuestPlay() {
 
           <div className="game-progress"><i style={{ width: `${progress}%` }} /></div>
 
-          {question.question_type !== "image_reveal" && question.question_type !== "interactive_coding" && (
+          {question.question_type !== "image_reveal" &&
+            question.question_type !== "interactive_coding" &&
+            question.question_type !== "coding_challenge" && (
             <h2 key={question.id} style={{ animation: "fadeSlideIn .25s ease-out" }}>
               {content.question || content.task || "Complete this activity"}
             </h2>
@@ -868,6 +871,8 @@ export default function QuestPlay() {
               canGoBack={!!index}
               onBack={() => setIndex(index - 1)}
               isLast={index === quest.questions.length - 1}
+              exitLabel="Exit Quest ✕"
+              finishLabel="Finish Quest"
               onNext={(freshResult) => {
                 // freshResult is passed directly rather than read back out
                 // of `answers` state, since the state update from
@@ -883,7 +888,33 @@ export default function QuestPlay() {
             />
           )}
 
-          {question.question_type !== "interactive_coding" && (
+          {/* NEW — coding_challenge: a separate, open-ended playground.
+              Never touches the interactive_coding block above. Quests have
+              no timer, so timeLeft is left unset (no badge renders). */}
+          {step === "game" && question.question_type === "coding_challenge" && (
+            <CodingChallengePlayground
+              key={question.id}
+              content={content}
+              storageKey={`challenge-${question.id}`}
+              onResult={(results) => answer(results)}
+              onExit={handleExit}
+              canGoBack={!!index}
+              onBack={() => setIndex(index - 1)}
+              isLast={index === quest.questions.length - 1}
+              exitLabel="Exit Quest ✕"
+              finishLabel="Finish Quest"
+              onNext={(freshResult) => {
+                const finalAnswers = freshResult
+                  ? { ...answers, [question.id]: freshResult }
+                  : answers;
+                if (index === quest.questions.length - 1) finish(undefined, finalAnswers);
+                else setIndex(index + 1);
+              }}
+            />
+          )}
+
+          {question.question_type !== "interactive_coding" &&
+            question.question_type !== "coding_challenge" && (
             <footer>
               <button className="btn btn-secondary" disabled={!index} onClick={() => setIndex(index - 1)}>Back</button>
               <button

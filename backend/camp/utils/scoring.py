@@ -55,6 +55,47 @@ def score_fraction(question, response):
         passed = sum(1 for r in results if r is True)
         return passed / len(checks)
 
+    if qtype == 'coding_challenge':
+        # Separate grading model from interactive_coding above — this is
+        # NOT exact-value checking. The browser (CodingChallengePlayground)
+        # is the only thing that can run the "substantial change" diff
+        # against the student's live files, so it computes per-check
+        # {type, points, status} results and reports them back. Server
+        # just verifies shape and turns them into a weighted,
+        # not_applicable-aware fraction — it never re-derives the diff
+        # itself, and never re-runs untrusted student JS server-side.
+        checks = content.get('checks', [])
+        if not checks or not isinstance(response, dict):
+            return 0.0
+        results = response.get('results')
+        if not isinstance(results, list) or len(results) != len(checks):
+            # Malformed/stale payload — never award for it.
+            return 0.0
+
+        # Only checks that are actually applicable to THIS starter project
+        # count toward the denominator. A check marked not_applicable
+        # (e.g. an H2 check on a starter with no H2) is excluded entirely
+        # — its points neither help nor hurt the student, so a starter
+        # missing some optional element can still net 100%.
+        applicable = [
+            r for r in results
+            if isinstance(r, dict) and r.get('status') in ('pass', 'fail')
+        ]
+        if not applicable:
+            # Nothing on this starter project was gradable at all — don't
+            # penalize the student for a builder-side edge case.
+            return 1.0
+
+        total_points = sum(max(0, int(r.get('points', 0) or 0)) for r in applicable)
+        if total_points <= 0:
+            return 1.0
+
+        earned_points = sum(
+            max(0, int(r.get('points', 0) or 0))
+            for r in applicable if r.get('status') == 'pass'
+        )
+        return earned_points / total_points
+
     if qtype == 'image_reveal':
         got = str(response or '').strip().lower()
         want = str(expected or '').strip().lower()
