@@ -13,11 +13,12 @@ import FloorIsLava from "../../components/Floorislava";
 import EscapeRoom from "../../components/EscapeRoom";
 import AIDefense from "../../components/AIdefense";
 import CodingPlayground from "../../components/CodingPlayGround";
-import CodingChallengePlayground from "../../components/CodingChallengePlayground";
+import CodingChallengePlayground from "../../components/Codingchallengeplayground";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
 // Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
 // through to the existing question-list flow below.
+
 const GAME_COMPONENTS = {
   dungeon_crawler: DungeonCrawler,
   floor_is_lava: FloorIsLava,
