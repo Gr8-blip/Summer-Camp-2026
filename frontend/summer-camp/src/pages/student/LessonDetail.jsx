@@ -86,6 +86,9 @@ function QuestCard({ assignment }) {
   const locked = assignment.locked;
   const attempted = assignment.attempted;
   const bestAccuracy = assignment.best_accuracy;
+  // Deadline's passed and they never landed a 100% completion — whether
+  // they started it or not, it's no longer continuable.
+  const missed = !locked && assignment.is_expired && !assignment.already_submitted;
 
   return (
     <div className="s-card s-quest-card">
@@ -104,6 +107,17 @@ function QuestCard({ assignment }) {
         </div>
       ) : assignment.already_submitted ? (
         <div className="s-submit-success">✅ Quest complete — nice work!</div>
+      ) : missed ? (
+        <div
+          className="s-quest-lock-banner"
+          style={{ background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.3)" }}
+        >
+          <span>
+            {attempted
+              ? `⌛ You started this one${bestAccuracy != null ? ` (best: ${Math.round(bestAccuracy)}%)` : ""} but the deadline passed before you hit 100%. It's locked now.`
+              : "⌛ Deadline passed — this quest closed before you got a chance to start it."}
+          </span>
+        </div>
       ) : attempted ? (
         <>
           <div className="s-quest-lock-banner" style={{ background: "rgba(245,158,11,.12)", border: "1px solid rgba(245,158,11,.3)" }}>

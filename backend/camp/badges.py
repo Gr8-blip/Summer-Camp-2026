@@ -86,6 +86,16 @@ BADGES = [
         "icon": "💯",
         "rarity": "rare",
     },
+    {
+        "name": "Code Blitz",
+        "icon": "⚡",
+        "rarity": "rare",
+    },
+    {
+        "name": "Coding Goat",
+        "icon": "🐐",
+        "rarity": "rare",
+    },
 
     # =========================
     # 🟣 EPIC

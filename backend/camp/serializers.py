@@ -11,6 +11,30 @@ def _mission_locked(mission):
     return (not mission.is_published) or (not camp_is_started())
 
 
+def _lesson_class_missed(student, lesson):
+    """True when this lesson's attendance window has fully closed (an
+    AttendanceSession for it expired) and the student never got a
+    StudentAttendance recorded — a permanently missed class, distinct from
+    "hasn't happened yet"."""
+    from django.utils import timezone
+    if StudentAttendance.objects.filter(student=student, lesson=lesson).exists():
+        return False
+    return lesson.attendance_sessions.filter(expires_at__lt=timezone.now()).exists()
+
+
+def _mission_attendance_resolved(student, mission):
+    """A mission's Challenge unlocks once every published lesson's
+    attendance window has been resolved one way or another — attended OR
+    missed (session expired without attendance) — so a single missed class
+    doesn't permanently lock the boss battle out for the rest of the week."""
+    for lesson in mission.lessons.filter(is_published=True):
+        if StudentAttendance.objects.filter(student=student, lesson=lesson).exists():
+            continue
+        if not _lesson_class_missed(student, lesson):
+            return False
+    return True
+
+
 def _avatar_key(student):
     """Shared helper: returns the equipped avatar's key, or None if the
     student hasn't equipped one yet. Used by both attempt serializers so
@@ -22,10 +46,11 @@ class MissionListSerializer(serializers.ModelSerializer):
     lesson_count = serializers.SerializerMethodField()
     progress = serializers.SerializerMethodField()
     locked = serializers.SerializerMethodField()
+    missed_lesson_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Mission
-        fields = ['id', 'week', 'title', 'description', 'xp_reward', 'lesson_count', 'is_published', 'progress', 'locked']
+        fields = ['id', 'week', 'title', 'description', 'xp_reward', 'lesson_count', 'is_published', 'progress', 'locked', 'missed_lesson_count']
 
     def get_lesson_count(self, obj):
         return obj.lessons.count()
@@ -45,12 +70,23 @@ class MissionListSerializer(serializers.ModelSerializer):
     def get_locked(self, obj):
         return _mission_locked(obj)
 
+    def get_missed_lesson_count(self, obj):
+        student = self._student()
+        if not student:
+            return 0
+        return sum(
+            1 for lesson in obj.lessons.filter(is_published=True)
+            if _lesson_class_missed(student, lesson)
+        )
+
 
 class LessonSerializer(serializers.ModelSerializer):
     locked = serializers.SerializerMethodField()
     completed = serializers.SerializerMethodField()
     quests_completed = serializers.SerializerMethodField()
     quests_in_progress = serializers.SerializerMethodField()
+    quests_missed = serializers.SerializerMethodField()
+    class_missed = serializers.SerializerMethodField()
     material_filename = serializers.SerializerMethodField()
     material_size = serializers.SerializerMethodField()
 
@@ -59,7 +95,7 @@ class LessonSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'title', 'description', 'order', 'duration', 
             'mission', 'is_published', 'locked', 'completed', 'quests_completed',
-            'quests_in_progress',
+            'quests_in_progress', 'quests_missed', 'class_missed',
             'material_file', 'material_filename', 'material_size', 'key_notes',
         ]
 
@@ -133,6 +169,38 @@ class LessonSerializer(serializers.ModelSerializer):
             if attempted and not completed:
                 return True
         return False
+
+    def get_quests_missed(self, obj):
+        """True when at least one of this lesson's quests had a started
+        (but never completed) attempt AND its deadline has now passed —
+        the student had a shot and ran out of time, as opposed to
+        quests_in_progress where there's still time left."""
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return False
+        from django.utils import timezone
+        student = request.user.student
+        now = timezone.now()
+        for assignment in obj.assignments.filter(is_published=True):
+            if not assignment.questions.exists():
+                continue
+            if now < assignment.deadline:
+                continue
+            completed = AssignmentAttempt.objects.filter(
+                assignment=assignment, student=student, completed_at__isnull=False
+            ).exists()
+            if completed:
+                continue
+            attempted = AssignmentAttempt.objects.filter(assignment=assignment, student=student).exists()
+            if attempted:
+                return True
+        return False
+
+    def get_class_missed(self, obj):
+        request = self.context.get("request")
+        if not request or not hasattr(request.user, "student"):
+            return False
+        return _lesson_class_missed(request.user.student, obj)
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
@@ -295,12 +363,13 @@ class ChallengeSerializer(serializers.ModelSerializer):
 
         student = request.user.student
 
-        completed = MissionCompletion.objects.filter(
-            student=student,
-            mission=obj.mission,
-        ).exists()
+        # Used to require a full MissionCompletion (100% attendance) before
+        # the boss battle would open. Changed so a missed class doesn't
+        # permanently lock a student out — the challenge unlocks once every
+        # lesson's attendance window has been resolved, attended or missed.
+        resolved = _mission_attendance_resolved(student, obj.mission)
 
-        return (not obj.is_published) or (not camp_is_started()) or (not completed)
+        return (not obj.is_published) or (not camp_is_started()) or (not resolved)
 
     def get_already_completed(self, obj):
         request = self.context.get("request")

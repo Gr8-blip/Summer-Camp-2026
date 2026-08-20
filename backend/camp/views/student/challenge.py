@@ -119,6 +119,8 @@ class ChallengeSubmitView(APIView):
 
         new_badges = []
         new_badges += achievements.check_challenge(student, attempt)
+        new_badges += achievements.check_code_blitz(student, attempt)
+        new_badges += achievements.check_coding_goat(student, attempt)
 
         newly_completed_puzzle_types = set()
         for q in questions:

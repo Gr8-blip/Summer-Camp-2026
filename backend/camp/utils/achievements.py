@@ -20,6 +20,9 @@ PUZZLE_TYPES = {
     "interactive_coding",
 }
 
+# Question types that count as "coding" for Code Blitz / Coding Goat.
+CODING_QUESTION_TYPES = {"interactive_coding", "coding_challenge"}
+
 
 def countable_lessons():
     """The set of lessons that actually count toward completion badges —
@@ -149,6 +152,43 @@ def check_challenge(student, attempt=None):
         results.append(award_badge(student, "Ultimate Challenger"))
 
     return _awarded(*results)
+
+
+def check_code_blitz(student, attempt):
+    """
+    Award once ever, the first time a student completes a coding
+    challenge (a Challenge containing at least one coding question) in
+    under 10 minutes. Call this from ChallengeSubmitView right alongside
+    check_challenge(student, attempt) on every completed attempt.
+    """
+    if attempt is None or attempt.completed_at is None or attempt.time_taken >= 600:
+        return []
+
+    has_coding_question = attempt.challenge.questions.filter(
+        question_type__in=CODING_QUESTION_TYPES
+    ).exists()
+
+    if has_coding_question:
+        return _awarded(award_badge(student, "Code Blitz"))
+    return []
+
+
+def check_coding_goat(student, attempt):
+    """
+    Award once ever, the first time a student scores above 70% accuracy
+    on a coding challenge (a Challenge containing at least one coding
+    question). Call alongside check_challenge(student, attempt).
+    """
+    if attempt is None or attempt.completed_at is None or attempt.accuracy <= 70:
+        return []
+
+    has_coding_question = attempt.challenge.questions.filter(
+        question_type__in=CODING_QUESTION_TYPES
+    ).exists()
+
+    if has_coding_question:
+        return _awarded(award_badge(student, "Coding Goat"))
+    return []
 
 
 def check_puzzle(student):

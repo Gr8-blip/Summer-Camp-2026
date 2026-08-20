@@ -58,7 +58,9 @@ export default function MissionDetail() {
             const completed = l.completed; 
             const questsCompleted = l.quests_completed;
             const questInProgress = l.quests_in_progress;
-            const questPending = completed && !questsCompleted && !questInProgress;
+            const questMissed = l.quests_missed;
+            const classMissed = l.class_missed;
+            const questPending = completed && !questsCompleted && !questInProgress && !questMissed;
 
             return (
               <div
@@ -75,6 +77,13 @@ export default function MissionDetail() {
                   <div className="s-card-badges">
                     {completed && <span className="s-badge s-badge-green">✅ Attended</span>}
 
+                    {/* Attendance window closed and they never checked in */}
+                    {!completed && classMissed && (
+                      <span className="s-badge" style={{ background: "linear-gradient(135deg,#EF4444,#F87171)", color: "#fff" }}>
+                        😢 Class Missed
+                      </span>
+                    )}
+
                     {/* Never touched at all */}
                     {questPending && (
                       <span className="s-badge s-badge-quest-pending">
@@ -87,6 +96,13 @@ export default function MissionDetail() {
                     {completed && questInProgress && (
                       <span className="s-badge" style={{ background: "linear-gradient(135deg,#F59E0B,#FBBF24)", color: "#3D2B00" }}>
                         🔄 Quest In Progress
+                      </span>
+                    )}
+
+                    {/* Started, deadline passed before hitting 100% — can't be continued */}
+                    {questMissed && (
+                      <span className="s-badge" style={{ background: "linear-gradient(135deg,#EF4444,#F87171)", color: "#fff" }}>
+                        ⌛ Quest Missed
                       </span>
                     )}
 
