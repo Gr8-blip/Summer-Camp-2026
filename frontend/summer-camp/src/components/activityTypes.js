@@ -81,6 +81,13 @@ export const ACTIVITY_TYPES = [
     tint: "var(--cb-challenge, #22c55e)",
     blurb: "Students customize a complete starter project their own way — no exact answers.",
   },
+  {
+    type: "project_submission",
+    label: "Project Submission",
+    icon: "📦",
+    tint: "var(--cb-submission, #f59e0b)",
+    blurb: "Students submit a live URL and/or a ZIP of their project for automated checks.",
+  },
 ];
 
 export const activityMeta = (type) =>
@@ -143,6 +150,15 @@ export function blankContent(type) {
           { type: "prompt_changed", variable: "PROMPT", points: 20 },
           { type: "css_changed", selector: "body", property: "backgroundColor", points: 10 },
           { type: "functionality", points: 30 },
+        ],
+      };
+    case "project_submission":
+      return {
+        instruction: "Prepare your website for launch.",
+        submission: { url: true, zip: true },
+        checks: [
+          { type: "url_status", target: "url", expected: 200 },
+          { type: "file_exists", target: "zip", path: "index.html" },
         ],
       };
     default:

@@ -12,6 +12,7 @@ import WordSearchEditor from "../editors/WordSearchEditor";
 import ImageRevealEditor from "../editors/ImageRevealEditor";
 import InteractiveCodingEditor from "../editors/InteractiveCodingEditor";
 import AdminCodingChallengeEditor from "../editors/Admincodingchallengeeditor";
+import ProjectSubmissionEditor from "../editors/ProjectSubmissionEditor";
 
 const EDITORS = {
   multiple_choice: MultipleChoiceEditor,
@@ -25,6 +26,7 @@ const EDITORS = {
   image_reveal: ImageRevealEditor,
   interactive_coding: InteractiveCodingEditor,
   coding_challenge: AdminCodingChallengeEditor,
+  project_submission: ProjectSubmissionEditor,
 };
 
 export default function QuestionEditorPanel({ type, initialContent, initialPoints, isEditing, onBack, onSave, saving }) {
@@ -48,6 +50,14 @@ export default function QuestionEditorPanel({ type, initialContent, initialPoint
       return (
         (content.instruction || "").trim().length > 0 &&
         (content.files || []).some((f) => f.path.endsWith(".html")) &&
+        (content.checks || []).length >= 1
+      );
+    }
+    if (type === "project_submission") {
+      const submission = content.submission || {};
+      return (
+        (content.instruction || "").trim().length > 0 &&
+        (submission.url || submission.zip) &&
         (content.checks || []).length >= 1
       );
     }

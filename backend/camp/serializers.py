@@ -2,7 +2,7 @@ import random
 from rest_framework import serializers
 from users.serializers import StudentSerializer
 from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage, MissionCompletion
-from .models import AssignmentQuestion, AssignmentAttempt, CampSettings
+from .models import AssignmentQuestion, AssignmentAttempt, CampSettings, ProjectSubmission
 from .utils.mission_progress import mission_progress
 
 
@@ -647,3 +647,9 @@ class StudentCosmeticSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudentCosmetic
         fields = ['item', 'acquired_at']
+
+class ProjectSubmissionResultSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProjectSubmission
+        fields = ['id', 'submitted_url', 'submitted_zip', 'results', 'score_fraction', 'created_at']
+        read_only_fields = fields

@@ -92,8 +92,12 @@ class ChallengeSubmitView(APIView):
         if attempt.completed_at: return Response({'detail': 'This boss battle has already been completed.'}, status=409)
         questions = list(attempt.challenge.questions.all())
         answers = request.data.get('answers', {})
-        earned = round(sum(q.points * score_fraction(q, answers.get(str(q.id), answers.get(q.id))) for q in questions))
-        
+        student = attempt.student
+        earned = round(sum(
+            q.points * score_fraction(q, answers.get(str(q.id), answers.get(q.id)), student=student)
+            for q in questions
+        ))
+
         possible = sum(q.points for q in questions)
         accuracy = round((earned / possible * 100) if possible else 0, 2)
         seconds = min(int((timezone.now() - attempt.started_at).total_seconds()), attempt.challenge.time_limit)

@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════════
+   Student-facing Project Submission inputs — styled to match
+   CodingPlayground (instruction box) so it doesn't look bolted on.
+   No check button / results here anymore — verification happens
+   automatically when the student hits Finish.
+   ═══════════════════════════════════════════════════════════ */
+
+.psp {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: fadeSlideIn 0.25s ease-out;
+}
+
+/* Same look as CodingPlayground's .cp-instruction box, so switching
+   between an interactive_coding question and a project_submission
+   question feels like one consistent app, not two different tools. */
+.psp-instruction {
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-purple-soft);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.psp-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.psp-field label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  color: var(--color-text);
+}
+
+.psp-field input[type="url"] {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: var(--color-bg-alt);
+  color: var(--color-text);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.psp-field input[type="url"]:focus {
+  border-color: var(--color-purple);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-purple) 15%, transparent);
+}
+
+/* File picker styled like a big tappable card, not a bare <input> —
+   much friendlier on mobile and matches option-grid's button feel. */
+.psp-file-drop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px;
+  border: 2px dashed var(--color-border);
+  border-radius: 14px;
+  background: var(--color-bg-alt);
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--color-text-soft);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, color 0.15s;
+}
+.psp-file-drop:hover {
+  border-color: var(--color-purple);
+  color: var(--color-purple);
+}
+.psp-file-drop input[type="file"] {
+  display: none;
+}
+
+.psp-note {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}

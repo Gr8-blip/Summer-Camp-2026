@@ -69,6 +69,22 @@ export const startChallenge = (id) => camp(`/challenges/${id}/start/`, { method:
 export const submitChallenge = (id, body) => camp(`/challenges/${id}/submit/`, { method: "POST", studentAuth: true, body });
 export const getChallengeLeaderboard = (id) => camp(`/challenges/${id}/leaderboard/`, { method: "GET", studentAuth: true });
 export const getChallengeStats = () => camp("/challenges/stats/", { method: "GET", studentAuth: true });
+
+// ── Project submission (interactive_coding-style check-before-submit flow) ──
+// Runs server-side verification against a URL and/or ZIP and returns a
+// submission_id + per-check results. The caller feeds that submission_id
+// into answers[question.id] = {submission_id} for the normal
+// submitChallenge/submitQuest call — same pattern as every other
+// checks-based question type, just verified server-side instead of
+// client-side.
+export const checkProjectSubmission = (questionKind, questionId, { url, zip } = {}) => {
+  const formData = new FormData();
+  formData.append("question_kind", questionKind); // "challenge" | "assignment"
+  formData.append("question_id", questionId);
+  if (url) formData.append("url", url);
+  if (zip) formData.append("zip", zip);
+  return camp("/project-submission/check/", { method: "POST", studentAuth: true, body: formData });
+};
 export const getAttendance = () => camp("/attendance/", { method: "GET", studentAuth: true });
 export const checkInAttendance = (code) => camp("/attendance/check-in/", { method: "POST", studentAuth: true, body: { code } });
 

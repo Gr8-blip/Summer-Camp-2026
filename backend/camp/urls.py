@@ -41,6 +41,8 @@ from .views.student.challenge import (
     ChallengeListView, ChallengeDetailView as StudentChallengeDetailView, ChallengeStartView, ChallengeSubmitView, ChallengeLeaderboardView, StudentChallengeStatsView,
 )
 
+from .views.student.project_submission import ProjectSubmissionCheckView
+
 from .views.student.attendance import (
     StudentAttendanceListView,
     AttendanceCheckInView,
@@ -181,6 +183,7 @@ urlpatterns = [
     path("profile/", ProfileView.as_view()),
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
     path("notifications/mark-read/", NotificationMarkReadView.as_view(), name="notification-mark-read"),
+    path('project-submission/check/', ProjectSubmissionCheckView.as_view()),
 
 
      # ==========================

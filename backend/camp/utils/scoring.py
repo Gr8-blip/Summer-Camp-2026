@@ -5,7 +5,7 @@ def _norm(x):
     return str(x).strip().lower()
 
 
-def score_fraction(question, response):
+def score_fraction(question, response, student=None):
     content = question.content
     qtype = question.question_type
     expected = content.get('answer', content.get('answers'))
@@ -95,6 +95,32 @@ def score_fraction(question, response):
             for r in applicable if r.get('status') == 'pass'
         )
         return earned_points / total_points
+
+    if qtype == 'project_submission':
+        # Different trust model from interactive_coding/coding_challenge
+        # above: those trust a client-run diff because only the sandboxed
+        # iframe can see the rendered DOM. Here the server itself can (and
+        # does) independently verify the submission — a live URL fetch and
+        # a safely-extracted ZIP — so we never take the student's word for
+        # pass/fail. `response` is expected to be {"submission_id": <int>},
+        # the id returned by ProjectSubmissionCheckView after running the
+        # checks server-side; we re-fetch that row and confirm it actually
+        # belongs to this student AND this exact question before trusting
+        # its stored score_fraction, so a student can't hand back someone
+        # else's (or a different question's) passing submission_id.
+        from ..models import ProjectSubmission
+
+        if not isinstance(response, dict):
+            return 0.0
+        submission_id = response.get('submission_id')
+        if not submission_id or student is None:
+            return 0.0
+
+        submission = ProjectSubmission.objects.filter(pk=submission_id, student=student).first()
+        if not submission or submission.question != question:
+            return 0.0
+
+        return float(submission.score_fraction)
 
     if qtype == 'image_reveal':
         got = str(response or '').strip().lower()

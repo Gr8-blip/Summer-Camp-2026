@@ -94,8 +94,10 @@ class QuestSubmitView(APIView):
 
         questions = list(attempt.assignment.questions.all())
         answers = request.data.get('answers', {})
+        student = attempt.student
         earned = round(sum(
-            q.points * score_fraction(q, answers.get(str(q.id), answers.get(q.id))) for q in questions
+            q.points * score_fraction(q, answers.get(str(q.id), answers.get(q.id)), student=student)
+            for q in questions
         ))
         possible = sum(q.points for q in questions)
         accuracy = round((earned / possible * 100) if possible else 0, 2)

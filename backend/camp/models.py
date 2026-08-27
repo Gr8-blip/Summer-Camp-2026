@@ -1,6 +1,7 @@
 import uuid
 from django.core.validators import FileExtensionValidator
 from django.db import models
+from django.db.models import Q
 from users.models import Student
 
 # Shared by Challenge and Assignment — the "classic" list-of-questions flow
@@ -180,6 +181,28 @@ class ChallengeQuestion(models.Model):
         # — see utils/scoring.py.
         ("interactive_coding", "Interactive Coding"),
         ("coding_challenge", "Coding Challenge"),
+
+        # NEW — project submission. content JSON shape:
+        # {
+        #   "instruction": "Prepare your website for launch.",
+        #   "submission": {"url": true, "zip": true},   # which inputs to show/require
+        #   "checks": [
+        #     {"type": "url_status", "target": "url", "expected": 200},
+        #     {"type": "file_exists", "target": "zip", "path": "index.html"},
+        #     {"type": "same_directory", "target": "zip",
+        #      "files": ["index.html", "style.css", "script.js"]},
+        #     {"type": "text_exists", "target": "zip", "path": "index.html", "text": "Mission Control"},
+        #     {"type": "text_exists", "target": "url", "text": "Mission Control"},
+        #     {"type": "element_exists", "target": "zip", "path": "index.html", "selector": "h1"},
+        #     {"type": "element_exists", "target": "url", "selector": "h1"}
+        #   ]
+        # }
+        # `target` picks where a check runs — "zip" inspects the extracted
+        # archive, "url" inspects the live site. Verification always runs
+        # server-side (utils/project_verifier.py); the student's reported
+        # pass/fail is never trusted directly — see utils/scoring.py and
+        # ProjectSubmission below.
+        ("project_submission", "Project Submission"),
     ]
     challenge = models.ForeignKey(Challenge, on_delete=models.CASCADE, related_name="questions")
     question_type = models.CharField(max_length=32, choices=QUESTION_TYPES)
@@ -436,3 +459,68 @@ class Notification(models.Model):
         indexes = [
             models.Index(fields=["student", "read_at"]),
         ]
+
+# ─────────────────────────────────────────────────────────────────────────
+# PROJECT SUBMISSION verification runs (question_type="project_submission")
+# ─────────────────────────────────────────────────────────────────────────
+
+def project_submission_zip_upload_to(instance, filename):
+    return f"project_submissions/{instance.student_id}/{filename}"
+
+
+class ProjectSubmission(models.Model):
+    """
+    One row per verification run for a `project_submission` question.
+    Created by the check endpoint (utils/project_verifier.py via
+    api/project_submission.py) every time a student submits a URL and/or
+    ZIP to be checked — a student can re-check freely before the final
+    quiz submit. `challenge_question` / `assignment_question` mirror the
+    ChallengeQuestion/AssignmentQuestion split used everywhere else
+    (PuzzleCompletion above does the same thing) since a project_submission
+    question can live on either a Challenge or a Quest.
+
+    score_fraction is computed by the verifier and stored here — the
+    Challenge/Quest submit views look it up by id (see utils/scoring.py)
+    rather than trusting anything the client sends back, same "never trust
+    client-supplied credit" rule ChallengeSubmitView already follows for
+    coins.
+    """
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="project_submissions")
+    challenge_question = models.ForeignKey(
+        ChallengeQuestion, on_delete=models.CASCADE, null=True, blank=True,
+        related_name="project_submissions",
+    )
+    assignment_question = models.ForeignKey(
+        AssignmentQuestion, on_delete=models.CASCADE, null=True, blank=True,
+        related_name="project_submissions",
+    )
+    submitted_url = models.URLField(blank=True)
+    submitted_zip = models.FileField(
+        upload_to=project_submission_zip_upload_to,
+        blank=True, null=True,
+        validators=[FileExtensionValidator(allowed_extensions=["zip"])],
+    )
+    # Per-check pass/fail detail — see utils/project_verifier.py:run_checks
+    results = models.JSONField(default=list)
+    score_fraction = models.DecimalField(max_digits=4, decimal_places=3, default=0)  # 0.000–1.000
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(challenge_question__isnull=False, assignment_question__isnull=True) |
+                    Q(challenge_question__isnull=True, assignment_question__isnull=False)
+                ),
+                name="project_submission_exactly_one_question",
+            )
+        ]
+
+    @property
+    def question(self):
+        return self.challenge_question or self.assignment_question
+
+    def __str__(self):
+        return f"{self.student.full_name} project submission ({self.score_fraction})"

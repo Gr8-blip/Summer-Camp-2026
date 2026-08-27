@@ -5,6 +5,7 @@ import {
   getChallengeLeaderboard,
   startChallenge,
   submitChallenge,
+  checkProjectSubmission,
 } from "../../api/client";
 import StudentLayout from "./StudentLayout";
 import VictoryEffect from "../../components/VictoryEffect";
@@ -15,6 +16,7 @@ import FloorIsLava from "../../components/Floorislava";
 import Avatar from "../../components/Avatar";
 import CodingPlayground from "../../components/CodingPlayGround";
 import CodingChallengePlayground from "../../components/Codingchallengeplayground";
+import ProjectSubmissionPlayer from "../../components/ProjectSubmissionPlayer";
 import "./challenge.css";
 
 // Maps a Challenge's `game_type` to the component that renders it.
@@ -109,7 +111,23 @@ const GAME_KEYFRAMES = `
 @keyframes fadeSlideIn { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
 @keyframes tileMatchPulse { 0%,100% { box-shadow: 0 0 0 0 rgba(20,184,166,.5); } 50% { box-shadow: 0 0 0 8px rgba(20,184,166,0); } }
 @keyframes tileWrongShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+@keyframes cpSpin { to { transform: rotate(360deg); } }
 `;
+
+// Tiny inline spinner for buttons mid-request — no extra CSS file needed.
+function ButtonSpinner({ dark }) {
+  return (
+    <span
+      style={{
+        display: "inline-block", width: 14, height: 14, marginRight: 8,
+        border: dark ? "2px solid var(--color-border)" : "2px solid rgba(255,255,255,.4)",
+        borderTopColor: dark ? "var(--color-purple)" : "#fff",
+        borderRadius: "50%", animation: "cpSpin .6s linear infinite",
+        verticalAlign: "-2px",
+      }}
+    />
+  );
+}
 
 export default function ChallengePlay() {
   const { id } = useParams();
@@ -124,6 +142,13 @@ export default function ChallengePlay() {
   const [result, setResult] = useState(null);
   const [board, setBoard] = useState({ results: [], is_finalized: false, champion_id: null, champion_name: null });
   const [error, setError] = useState("");
+  // Recoverable, inline error (bad URL, failed zip check, submit hiccup) —
+  // deliberately separate from `error` above. `error` renders a full-page
+  // takeover (challenge unavailable / already completed) with no way back
+  // into the game; a bad project URL shouldn't strand the student behind
+  // that wall with no way to fix it and hit Finish again. This clears on
+  // every new finish attempt and lives inline near the Finish button.
+  const [submitError, setSubmitError] = useState("");
   const [confettiKey, setConfettiKey] = useState(0);
   const [victoryEffectKey, setVictoryEffectKey] = useState(null);
   const [pendingDoneData, setPendingDoneData] = useState(null);
@@ -207,7 +232,7 @@ export default function ChallengePlay() {
     if (left <= 0) {
       if (!autoFinishedRef.current) {
         autoFinishedRef.current = true;
-        finish();
+        finishWithProjectChecks();
       }
       return;
     }
@@ -501,6 +526,7 @@ export default function ChallengePlay() {
 
   const finish = async (coinsEarned, answersOverride) => {
     if (step === "submitting" || !challenge) return;
+    setSubmitError("");
     setStep("submitting");
     try {
       // answersOverride lets coding_challenge (and any other postMessage-
@@ -530,7 +556,49 @@ export default function ChallengePlay() {
         revealDone();
       }
     } catch (e) {
-      setError(e.data?.detail || "Could not submit your answers.");
+      setSubmitError(e.data?.detail || "Could not submit your answers.");
+      setStep("game");
+    }
+  };
+
+  // Project Submission questions are verified server-side — this runs
+  // automatically the moment the student hits Finish (from any trigger:
+  // the footer button, the timer running out, or a game shell's own
+  // "done" callback), so scoring always reflects what was actually
+  // submitted instead of whatever was last typed into the box. There is
+  // no separate "check" button for students to skip anymore.
+  const finishWithProjectChecks = async (coinsEarned, answersOverride) => {
+    const baseAnswers = answersOverride || answers;
+    const projectQuestions = (challenge?.questions || []).filter(
+      (q) => q.question_type === "project_submission"
+    );
+    if (projectQuestions.length === 0) {
+      return finish(coinsEarned, answersOverride);
+    }
+    setSubmitError("");
+    setStep("submitting");
+    try {
+      const merged = { ...baseAnswers };
+      for (const q of projectQuestions) {
+        const raw = merged[q.id];
+        // Only verify if this question doesn't already have a checked
+        // submission_id (e.g. it was already resolved on a previous
+        // finish attempt that then hit an error elsewhere).
+        if (raw && typeof raw === "object" && !raw.submission_id) {
+          const data = await checkProjectSubmission("challenge", q.id, {
+            url: raw.url,
+            zip: raw.zip,
+          });
+          merged[q.id] = { submission_id: data.submission_id };
+        }
+      }
+      return finish(coinsEarned, merged);
+    } catch (e) {
+      // Inline + recoverable — the student hasn't actually submitted
+      // anything yet (submitChallenge hasn't run), so letting them fix
+      // the URL/zip and hit Finish Battle again isn't a second "trial"
+      // of the challenge, it's just correcting the check that gates it.
+      setSubmitError(e.data?.detail || "Could not check your project submission.");
       setStep("game");
     }
   };
@@ -761,7 +829,7 @@ export default function ChallengePlay() {
               title={challenge.title}
               timeLeft={left}   // 👈 add this one line
               onAnswer={(qid, val) => setAnswers((old) => ({ ...old, [qid]: val }))}
-              onComplete={(finalAnswers, coinsEarned) => finish(coinsEarned)}
+              onComplete={(finalAnswers, coinsEarned) => finishWithProjectChecks(coinsEarned)}
               onExit={handleExit}
             />
           </>
@@ -784,9 +852,22 @@ export default function ChallengePlay() {
 
           <div className="game-progress"><i style={{ width: `${progress}%` }} /></div>
 
+          {/* Covers the interactive_coding / coding_challenge case: those
+              playgrounds only render while step === "game" and unmount the
+              instant we flip to "submitting" to run the project checks, so
+              without this the screen would just go blank with nothing
+              telling the student something's happening. */}
+          {step === "submitting" && (question.question_type === "interactive_coding" || question.question_type === "coding_challenge") && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "16px 4px", color: "var(--color-text-soft)", fontWeight: 700 }}>
+              <ButtonSpinner dark />
+              Checking your submission...
+            </div>
+          )}
+
           {question.question_type !== "image_reveal" &&
             question.question_type !== "interactive_coding" &&
-            question.question_type !== "coding_challenge" && (
+            question.question_type !== "coding_challenge" &&
+            question.question_type !== "project_submission" && (
             <h2 key={question.id} style={{ animation: "fadeSlideIn .25s ease-out" }}>
               {content.question || content.task || "Complete this activity"}
             </h2>
@@ -1072,6 +1153,21 @@ export default function ChallengePlay() {
             </div>
           )}
 
+          {/* project_submission — a simple form (URL/ZIP), not fullscreen
+              like the coding playgrounds below. Verification runs
+              automatically when Finish is clicked (see
+              finishWithProjectChecks above) — there's no separate "check"
+              button students could skip. It stays inside the normal
+              question card and keeps the ordinary Back/Next footer. */}
+          {question.question_type === "project_submission" && (
+            <ProjectSubmissionPlayer
+              key={question.id}
+              question={question}
+              questionKind="challenge"
+              onAnswer={(value) => answer(value)}
+            />
+          )}
+
           {/* NEW — interactive_coding, same exact-check playground Quests
               use. It portals fullscreen over the whole screen (including
               the ⏱ timer in the header above), so timeLeft/exitLabel/
@@ -1098,7 +1194,7 @@ export default function ChallengePlay() {
                 const finalAnswers = freshResult
                   ? { ...answers, [question.id]: freshResult }
                   : answers;
-                if (index === challenge.questions.length - 1) finish(undefined, finalAnswers);
+                if (index === challenge.questions.length - 1) finishWithProjectChecks(undefined, finalAnswers);
                 else setIndex(index + 1);
               }}
             />
@@ -1124,7 +1220,7 @@ export default function ChallengePlay() {
                 const finalAnswers = freshResult
                   ? { ...answers, [question.id]: freshResult }
                   : answers;
-                if (index === challenge.questions.length - 1) finish(undefined, finalAnswers);
+                if (index === challenge.questions.length - 1) finishWithProjectChecks(undefined, finalAnswers);
                 else setIndex(index + 1);
               }}
             />
@@ -1132,15 +1228,43 @@ export default function ChallengePlay() {
 
           {question.question_type !== "interactive_coding" &&
             question.question_type !== "coding_challenge" && (
-            <footer>
-              <button className="btn btn-secondary" disabled={!index} onClick={() => setIndex(index - 1)}>Back</button>
-              <button
-                className="btn btn-primary"
-                onClick={() => (index === challenge.questions.length - 1 ? finish() : setIndex(index + 1))}
-              >
-                {index === challenge.questions.length - 1 ? "Finish Battle" : "Next"}
-              </button>
-            </footer>
+            <>
+              {submitError && (
+                <p
+                  style={{
+                    color: "var(--color-danger)", fontWeight: 700, fontSize: ".85rem",
+                    margin: "0 0 4px", animation: "fadeSlideIn .2s ease-out",
+                  }}
+                >
+                  ⚠️ {submitError}
+                </p>
+              )}
+              <footer>
+                <button
+                  className="btn btn-secondary"
+                  disabled={!index || step === "submitting"}
+                  onClick={() => setIndex(index - 1)}
+                >
+                  Back
+                </button>
+                <button
+                  className="btn btn-primary"
+                  disabled={step === "submitting"}
+                  onClick={() => (index === challenge.questions.length - 1 ? finishWithProjectChecks() : setIndex(index + 1))}
+                >
+                  {step === "submitting" ? (
+                    <>
+                      <ButtonSpinner />
+                      {question.question_type === "project_submission" ? "Checking submission..." : "Submitting..."}
+                    </>
+                  ) : index === challenge.questions.length - 1 ? (
+                    "Finish Battle"
+                  ) : (
+                    "Next"
+                  )}
+                </button>
+              </footer>
+            </>
           )}
         </section>
       )}
