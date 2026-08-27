@@ -1,4 +1,5 @@
 import { useState } from "react";
+import Markdown from "./Markdown";
 import "./projectsubmissionplayer.css";
 
 /**
@@ -28,7 +29,9 @@ export default function ProjectSubmissionPlayer({ question, onAnswer }) {
 
   return (
     <div className="psp">
-      {content.instruction && <p className="psp-instruction">{content.instruction}</p>}
+      {content.instruction && (
+        <Markdown as="div" className="psp-instruction" text={content.instruction} />
+      )}
 
       <div className="psp-inputs">
         {submission.url && (

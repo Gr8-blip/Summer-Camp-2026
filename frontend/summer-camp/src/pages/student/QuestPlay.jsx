@@ -16,6 +16,7 @@ import AIDefense from "../../components/AIdefense";
 import CodingPlayground from "../../components/CodingPlayGround";
 import CodingChallengePlayground from "../../components/Codingchallengeplayground";
 import ProjectSubmissionPlayer from "../../components/ProjectSubmissionPlayer";
+import Markdown from "../../components/Markdown";
 import "./challenge.css"; // reused as-is — same puzzle visuals for Quests
 
 // Same map as ChallengePlay — "classic" (or an unbuilt game_type) falls
@@ -691,9 +692,13 @@ export default function QuestPlay() {
             question.question_type !== "interactive_coding" &&
             question.question_type !== "coding_challenge" &&
             question.question_type !== "project_submission" && (
-            <h2 key={question.id} style={{ animation: "fadeSlideIn .25s ease-out" }}>
-              {content.question || content.task || "Complete this activity"}
-            </h2>
+            <Markdown
+              key={question.id}
+              as="div"
+              className="game-question-heading"
+              style={{ fontWeight: 800, fontSize: "1.3rem", lineHeight: 1.3, animation: "fadeSlideIn .25s ease-out" }}
+              text={content.question || content.task || "Complete this activity"}
+            />
           )}
 
           {question.question_type === "multiple_choice" && (
@@ -911,7 +916,12 @@ export default function QuestPlay() {
                   style={{ width: "100%", maxHeight: 280, objectFit: "cover", filter: `blur(${blur}px)`, transition: "filter .6s ease" }}
                 />
               </div>
-              <h2 style={{ animation: "fadeSlideIn .25s ease-out" }}>{content.question}</h2>
+              <Markdown
+                as="div"
+                className="game-question-heading"
+                style={{ fontWeight: 800, fontSize: "1.3rem", lineHeight: 1.3, animation: "fadeSlideIn .25s ease-out" }}
+                text={content.question}
+              />
               <div style={{ display: "flex", gap: 10, maxWidth: 360, margin: "0 auto" }}>
                 <input
                   type="text"

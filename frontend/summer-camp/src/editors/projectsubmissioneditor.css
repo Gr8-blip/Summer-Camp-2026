@@ -1,91 +1,135 @@
 /* ═══════════════════════════════════════════════════════════
-   Student-facing Project Submission inputs — styled to match
-   CodingPlayground (instruction box) so it doesn't look bolted on.
-   No check button / results here anymore — verification happens
-   automatically when the student hits Finish.
+   Project Submission question editor — admin builder styling.
+   Mirrors interactivecodingeditor.css conventions (white cards,
+   soft shadow, purple accents, pill radii).
    ═══════════════════════════════════════════════════════════ */
 
-.psp {
+.pse {
   display: flex;
   flex-direction: column;
-  gap: 18px;
-  animation: fadeSlideIn 0.25s ease-out;
+  gap: 20px;
 }
 
-/* Same look as CodingPlayground's .cp-instruction box, so switching
-   between an interactive_coding question and a project_submission
-   question feels like one consistent app, not two different tools. */
-.psp-instruction {
-  font-weight: 600;
+.pse-field label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.82rem;
   color: var(--color-text);
-  background: var(--color-purple-soft);
-  border-radius: 14px;
-  padding: 14px 16px;
-  margin: 0;
-  line-height: 1.5;
+  margin-bottom: 8px;
 }
 
-.psp-inputs {
+.pse-hint {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--color-text-soft);
+  margin-left: 4px;
+}
+
+.pse-field textarea,
+.pse-field input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background: #FDFDFF;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.pse-field > textarea:focus,
+.pse-field input:focus {
+  border-color: var(--color-purple-light);
+  background: white;
+  box-shadow: 0 0 0 4px rgba(167, 139, 250, 0.15);
+}
+
+.pse-field > textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+.pse-submission-toggles {
   display: flex;
-  flex-direction: column;
   gap: 16px;
 }
 
-.psp-field label {
-  display: block;
+.pse-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 700;
   font-size: 0.85rem;
-  margin-bottom: 8px;
   color: var(--color-text);
 }
 
-.psp-field input[type="url"] {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 14px 16px;
+.pse-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pse-check-card {
+  background: white;
   border: 2px solid var(--color-border);
   border-radius: 14px;
-  font-size: 0.95rem;
-  font-family: inherit;
-  background: var(--color-bg-alt);
-  color: var(--color-text);
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  padding: 12px 14px;
+  box-shadow: 0 2px 12px rgba(36, 28, 63, 0.05);
+  transition: border-color 0.15s;
 }
-.psp-field input[type="url"]:focus {
-  border-color: var(--color-purple);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-purple) 15%, transparent);
-}
+.pse-check-card:focus-within { border-color: var(--color-purple-light); }
 
-/* File picker styled like a big tappable card, not a bare <input> —
-   much friendlier on mobile and matches option-grid's button feel. */
-.psp-file-drop {
+.pse-check-head {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 8px;
-  padding: 18px;
-  border: 2px dashed var(--color-border);
-  border-radius: 14px;
-  background: var(--color-bg-alt);
-  font-weight: 700;
-  font-size: 0.88rem;
-  color: var(--color-text-soft);
-  cursor: pointer;
-  text-align: center;
-  transition: border-color 0.15s, color 0.15s;
-}
-.psp-file-drop:hover {
-  border-color: var(--color-purple);
-  color: var(--color-purple);
-}
-.psp-file-drop input[type="file"] {
-  display: none;
+  margin-bottom: 10px;
 }
 
-.psp-note {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--color-text-soft);
+.pse-check-head select {
+  flex: 1;
+  border: 2px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text);
+  background: #FDFDFF;
+  cursor: pointer;
 }
+
+.pse-check-remove {
+  background: #FEE2E2;
+  color: #DC2626;
+  border: none;
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.pse-check-remove:hover { opacity: 0.85; }
+
+.pse-check-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+}
+
+.pse-check-body input {
+  padding: 9px 12px;
+  font-size: 0.82rem;
+}
+
+.pse-add-check {
+  align-self: flex-start;
+  background: var(--color-purple-soft);
+  color: var(--color-purple);
+  border: 2px dashed var(--color-purple-light);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+.pse-add-check:hover:not(:disabled) { background: var(--color-purple-light); color: white; }
+.pse-add-check:disabled { opacity: 0.5; cursor: not-allowed; }
