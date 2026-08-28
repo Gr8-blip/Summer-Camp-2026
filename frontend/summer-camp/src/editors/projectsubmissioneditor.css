@@ -133,3 +133,14 @@
 }
 .pse-add-check:hover:not(:disabled) { background: var(--color-purple-light); color: white; }
 .pse-add-check:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.pse-check-note {
+  margin: 8px 2px 0;
+}
+.pse-check-note code {
+  background: var(--color-purple-soft);
+  color: var(--color-purple);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 0.75rem;
+}
