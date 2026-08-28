@@ -17,6 +17,7 @@ import Avatar from "../../components/Avatar";
 import CodingPlayground from "../../components/CodingPlayGround";
 import CodingChallengePlayground from "../../components/Codingchallengeplayground";
 import ProjectSubmissionPlayer from "../../components/ProjectSubmissionPlayer";
+import ProjectMegaCelebration from "../../components/ProjectMegaCelebration";
 import Markdown from "../../components/Markdown";
 import "./challenge.css";
 
@@ -155,6 +156,10 @@ export default function ChallengePlay() {
   const [pendingDoneData, setPendingDoneData] = useState(null);
   const [xpFlash, setXpFlash] = useState(0);
   const [coinsWon, setCoinsWon] = useState(0);
+  // Set only when this finish included a project_submission question —
+  // gates the one-time MEGA coin celebration below `finish()` so every
+  // other question type keeps the classic confetti/coin-pill treatment.
+  const [projectCelebration, setProjectCelebration] = useState(null);
   // Guards the timeout-triggered auto-finish below so it can only ever
   // fire once per game session — without this, a failed submit that
   // bounces step back to "game" while left is still <= 0 would re-trigger
@@ -525,7 +530,7 @@ export default function ChallengePlay() {
     }
   };
 
-  const finish = async (coinsEarned, answersOverride) => {
+  const finish = async (coinsEarned, answersOverride, isProjectFinish) => {
     if (step === "submitting" || !challenge) return;
     setSubmitError("");
     setStep("submitting");
@@ -550,7 +555,17 @@ export default function ChallengePlay() {
         setConfettiKey((k) => k + 1);
       };
 
-      if (data.victory_effect_key) {
+      // A finish that included a verified project_submission gets its own
+      // full-screen MEGA coin celebration instead of the classic confetti
+      // pop — shipping a real project is a bigger moment than clearing a
+      // quiz question, and the payout (up to 800 coins) deserves to feel
+      // different from every other completion. It plays once, then hands
+      // off into the normal done screen via the same callback pattern
+      // VictoryEffect already uses below.
+      if (isProjectFinish && (data.coins_gained || 0) > 0) {
+        setPendingDoneData(() => revealDone);
+        setProjectCelebration({ coins: data.coins_gained || 0 });
+      } else if (data.victory_effect_key) {
         setPendingDoneData(() => revealDone);
         setVictoryEffectKey(data.victory_effect_key);
       } else {
@@ -593,7 +608,7 @@ export default function ChallengePlay() {
           merged[q.id] = { submission_id: data.submission_id };
         }
       }
-      return finish(coinsEarned, merged);
+      return finish(coinsEarned, merged, true);
     } catch (e) {
       // Inline + recoverable — the student hasn't actually submitted
       // anything yet (submitChallenge hasn't run), so letting them fix
@@ -644,6 +659,17 @@ export default function ChallengePlay() {
           effectKey={victoryEffectKey}
           onDone={() => {
             setVictoryEffectKey(null);
+            pendingDoneData?.();
+            setPendingDoneData(null);
+          }}
+        />
+      )}
+
+      {projectCelebration && (
+        <ProjectMegaCelebration
+          coins={projectCelebration.coins}
+          onDone={() => {
+            setProjectCelebration(null);
             pendingDoneData?.();
             setPendingDoneData(null);
           }}

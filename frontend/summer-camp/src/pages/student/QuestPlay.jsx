@@ -8,6 +8,7 @@ import {
 } from "../../api/client";
 import StudentLayout from "./StudentLayout";
 import VictoryEffect from "../../components/VictoryEffect";
+import ProjectMegaCelebration from "../../components/ProjectMegaCelebration";
 import { generateWordSearch, matchSelection, straightLine } from "../../components/wordSearchGenerator";
 import DungeonCrawler from "../../components/Dungeoncrawler";
 import FloorIsLava from "../../components/Floorislava";
@@ -133,6 +134,10 @@ export default function QuestPlay() {
   const [pendingDoneData, setPendingDoneData] = useState(null);
   const [xpFlash, setXpFlash] = useState(0);
   const [coinsWon, setCoinsWon] = useState(0);
+  // Set only when this finish included a verified project_submission —
+  // gates the MEGA coin celebration so ordinary quest completions keep
+  // the classic confetti/coin-pill treatment.
+  const [projectCelebration, setProjectCelebration] = useState(null);
 
   const celebrate = (xp = 5) => {
     setConfettiKey((k) => k + 1);
@@ -397,7 +402,7 @@ export default function QuestPlay() {
     }
   };
 
-  const finish = async (coinsEarned, answersOverride) => {
+  const finish = async (coinsEarned, answersOverride, isProjectFinish) => {
     if (step === "submitting" || !quest) return;
     setSubmitError("");
     setStep("submitting");
@@ -416,7 +421,14 @@ export default function QuestPlay() {
           setConfettiKey((k) => k + 1);
         };
 
-        if (data.victory_effect_key) {
+        // A finish that included a verified project_submission gets its
+        // own full-screen MEGA coin celebration (up to 800 coins) instead
+        // of the classic confetti pop, so shipping a real project feels
+        // distinctly bigger than clearing an ordinary quest question.
+        if (isProjectFinish && (coinsEarned || 0) > 0) {
+          setPendingDoneData(() => revealDone);
+          setProjectCelebration({ coins: coinsEarned || 0 });
+        } else if (data.victory_effect_key) {
           setPendingDoneData(() => revealDone);
           setVictoryEffectKey(data.victory_effect_key);
         } else {
@@ -459,7 +471,7 @@ export default function QuestPlay() {
           merged[q.id] = { submission_id: data.submission_id };
         }
       }
-      return finish(coinsEarned, merged);
+      return finish(coinsEarned, merged, true);
     } catch (e) {
       // Inline + recoverable, not the fatal full-page `error` — the
       // student hasn't submitted anything yet (submitQuest hasn't run),
@@ -509,6 +521,17 @@ export default function QuestPlay() {
           effectKey={victoryEffectKey}
           onDone={() => {
             setVictoryEffectKey(null);
+            pendingDoneData?.();
+            setPendingDoneData(null);
+          }}
+        />
+      )}
+
+      {projectCelebration && (
+        <ProjectMegaCelebration
+          coins={projectCelebration.coins}
+          onDone={() => {
+            setProjectCelebration(null);
             pendingDoneData?.();
             setPendingDoneData(null);
           }}
