@@ -218,7 +218,7 @@ class LessonQuestionCreateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return LessonQuestion.objects.create(
             lesson=self.context["lesson"],
-            student=self.context["request"].student,  # however your StudentAuth middleware attaches the student
+            student=self.context["request"].user.student,
             **validated_data,
         )
 
