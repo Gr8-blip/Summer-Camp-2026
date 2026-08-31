@@ -45,6 +45,8 @@ import AdminXP from "./pages/admin/AdminXP";
 import AdminBadges from "./pages/admin/AdminBadges";
 import AdminChallenges from "./pages/admin/AdminChallenges";
 import AdminCampControl from "./pages/admin/Admincampcontrol";
+import AdminQA from "./pages/admin/AdminQA";
+
 
 function ProtectedRoute({ children }) {
   const { isAuthenticated, isStudentAuthenticated } = useAuth();
@@ -125,6 +127,7 @@ export default function App() {
           <Route path="/camp-admin/attendance" element={<AdminRoute><AdminAttendance /></AdminRoute>} />
           <Route path="/camp-admin/xp" element={<AdminRoute><AdminXP /></AdminRoute>} />
           <Route path="/camp-admin/badges" element={<AdminRoute><AdminBadges /></AdminRoute>} />
+          <Route path="/camp-admin/qa" element={<AdminRoute><AdminQA /></AdminRoute>} />
           <Route path="/camp-admin/challenges" element={<AdminRoute><AdminChallenges /></AdminRoute>} />
           <Route path="/admin/camp-control" element={<AdminCampControl />} />  {/* admin router */}
 

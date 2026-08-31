@@ -1,7 +1,7 @@
 import random
 from rest_framework import serializers
 from users.serializers import StudentSerializer
-from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage, MissionCompletion
+from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage, LessonQuestion
 from .models import AssignmentQuestion, AssignmentAttempt, CampSettings, ProjectSubmission
 from .utils.mission_progress import mission_progress
 
@@ -96,7 +96,7 @@ class LessonSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'order', 'duration', 
             'mission', 'is_published', 'locked', 'completed', 'quests_completed',
             'quests_in_progress', 'quests_missed', 'class_missed',
-            'material_file', 'material_filename', 'material_size', 'key_notes',
+            'material_file', 'material_filename', 'material_size', 'key_notes'
         ]
 
     def get_material_filename(self, obj):
@@ -201,6 +201,37 @@ class LessonSerializer(serializers.ModelSerializer):
         if not request or not hasattr(request.user, "student"):
             return False
         return _lesson_class_missed(request.user.student, obj)
+
+
+class LessonQuestionCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonQuestion
+        fields = ["text", "category"]
+
+    def validate(self, attrs):
+        lesson = self.context["lesson"]
+        if not lesson.qa_enabled:
+            raise serializers.ValidationError("Q&A isn't open for this lesson.")
+        return attrs
+
+    def create(self, validated_data):
+        return LessonQuestion.objects.create(
+            lesson=self.context["lesson"],
+            student=self.context["request"].student,  # however your StudentAuth middleware attaches the student
+            **validated_data,
+        )
+
+
+class LessonQuestionAdminSerializer(serializers.ModelSerializer):
+    student_name = serializers.CharField(source="student.name", read_only=True)
+    lesson_title = serializers.CharField(source="lesson.title", read_only=True)
+
+    class Meta:
+        model = LessonQuestion
+        fields = ["id", "lesson", "lesson_title", "student_name", "text", "category", "status", "created_at"]
+        read_only_fields = ["id", "lesson", "lesson_title", "student_name", "text", "category", "created_at"]
+        # only `status` is writable via PATCH — the teacher marks
+        # answered/hidden, never edits the question text or who asked
 
 
 class AssignmentSerializer(serializers.ModelSerializer):
@@ -578,12 +609,13 @@ class LessonDetailSerializer(serializers.ModelSerializer):
     challenges = ChallengeSerializer(many=True, read_only=True)
     material_filename = serializers.SerializerMethodField()
     material_size = serializers.SerializerMethodField()
+    qa_enabled = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = Lesson
         fields = [
             'id', 'title', 'description', 'order', 'duration', 'assignments', 'challenges', 'is_published',
-            'material_file', 'material_filename', 'material_size', 'key_notes',
+            'material_file', 'material_filename', 'material_size', 'key_notes', 'qa_enabled',
         ]
 
     def get_material_filename(self, obj):

@@ -87,6 +87,12 @@ export const checkProjectSubmission = (questionKind, questionId, { url, zip } = 
 };
 export const getAttendance = () => camp("/attendance/", { method: "GET", studentAuth: true });
 export const checkInAttendance = (code) => camp("/attendance/check-in/", { method: "POST", studentAuth: true, body: { code } });
+export const submitLessonQuestion = (lessonId, text, category) =>
+  camp(`/lessons/${lessonId}/questions/`, {
+    method: "POST",
+    studentAuth: true,
+    body: { text, category },
+  });
 
 // ── Admin ──────────────────────────────────────────────────────────────────────
 export const getAdminDashboard = () => camp("/camp-admin/dashboard/", { method: "GET", adminAuth: true });
@@ -139,6 +145,15 @@ export const adminGetChallengeQuestions = (id) => camp(`/camp-admin/challenges/$
 export const adminCreateChallengeQuestion = (id, body) => camp(`/camp-admin/challenges/${id}/questions/`, { method: "POST", adminAuth: true, body });
 export const adminUpdateChallengeQuestion = (id, body) => camp(`/camp-admin/questions/${id}/`, { method: "PATCH", adminAuth: true, body });
 export const adminDeleteChallengeQuestion = (id) => camp(`/camp-admin/questions/${id}/`, { method: "DELETE", adminAuth: true });
+
+export const adminGetQAQuestions = () =>
+  camp("/camp-admin/qa-questions/", { method: "GET", adminAuth: true });
+
+export const adminUpdateQAQuestion = (id, body) =>
+  camp(`/camp-admin/qa-questions/${id}/`, { method: "PATCH", adminAuth: true, body });
+
+export const adminDeleteQAQuestion = (id) =>
+  camp(`/camp-admin/qa-questions/${id}/`, { method: "DELETE", adminAuth: true }); 
 
 // ── Quests (student-facing, mirrors the Challenge play functions above) ─────────
 export const getQuest = (id) => camp(`/quests/${id}/`, { method: "GET", studentAuth: true });

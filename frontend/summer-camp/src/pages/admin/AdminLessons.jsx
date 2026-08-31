@@ -4,7 +4,7 @@ import AdminLayout from "./AdminLayout";
 import { useToast, ToastContainer } from "../../components/Toast";
 
 const PAGE_SIZE = 10;
-const EMPTY_FORM = { mission: "", title: "", description: "", order: "", duration: "", key_notes: "" };
+const EMPTY_FORM = { mission: "", title: "", description: "", order: "", duration: "", key_notes: "", qa_enabled: false };
 
 export default function AdminLessons() {
   const { toasts, toast } = useToast();
@@ -40,7 +40,7 @@ export default function AdminLessons() {
   const openEdit = (item) => {
     setForm({
       mission: item.mission || "", title: item.title, description: item.description, order: item.order, duration: item.duration,
-      key_notes: (item.key_notes || []).join("\n"),
+      key_notes: (item.key_notes || []).join("\n"), qa_enabled: item.qa_enabled || false,
     });
     setEditing(item); setFormErr(""); setModal("edit");
   };
@@ -57,6 +57,7 @@ export default function AdminLessons() {
     const body = {
       mission: form.mission || null, title: form.title, description: form.description, order: Number(form.order), duration: form.duration,
       key_notes: form.key_notes.split("\n").map((n) => n.trim()).filter(Boolean),
+      qa_enabled: form.qa_enabled,
     };
     try {
       if (modal === "edit") { await adminUpdateLesson(editing.id, body); toast("Lesson updated!"); }
@@ -93,6 +94,18 @@ export default function AdminLessons() {
         prev.map((l) => (l.id === item.id ? { ...l, is_published: item.is_published } : l))
       );
       toast(e.data?.detail || e.data?.error || "Couldn't update status.", "error");
+    }
+  };
+
+  const toggleQA = async (item) => {
+    const updated = !item.qa_enabled;
+    setItems((prev) => prev.map((l) => (l.id === item.id ? { ...l, qa_enabled: updated } : l)));
+    try {
+      await adminUpdateLesson(item.id, { ...item, qa_enabled: updated });
+      toast(updated ? "Q&A enabled for this lesson." : "Q&A disabled for this lesson.");
+    } catch (e) {
+      setItems((prev) => prev.map((l) => (l.id === item.id ? { ...l, qa_enabled: item.qa_enabled } : l)));
+      toast(e.data?.detail || e.data?.error || "Couldn't update Q&A status.", "error");
     }
   };
 
@@ -159,12 +172,13 @@ export default function AdminLessons() {
                   <th>Mission</th>
                   <th>Duration</th>
                   <th>Material</th>
+                  <th>Q&A</th>
                   <th>Published</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {paged.length === 0 && <tr><td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No lessons found.</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--color-text-soft)" }}>No lessons found.</td></tr>}
                 {paged.map((l) => (
                   <tr key={l.id}>
                     <td><span className="a-badge a-badge-purple">{l.order}</span></td>
@@ -204,6 +218,16 @@ export default function AdminLessons() {
                           ✕
                         </button>
                       )}
+                    </td>
+                    <td>
+                      <button
+                        className={`a-badge ${l.qa_enabled ? "a-badge-green" : ""}`}
+                        style={{ border: "1px solid var(--color-border)", cursor: "pointer" }}
+                        onClick={() => toggleQA(l)}
+                        title={l.qa_enabled ? "Students see a Q&A box for this lesson on Week 6" : "Turn on the Q&A box for this lesson"}
+                      >
+                        {l.qa_enabled ? "💬 On" : "Off"}
+                      </button>
                     </td>
                     <td>
                       <button
@@ -256,6 +280,17 @@ export default function AdminLessons() {
                 style={{ resize: "vertical" }}
               />
               <span style={{ fontSize: "0.76rem", color: "var(--color-text-soft)" }}>Shows as a "Key Notes" card on the student lesson page.</span>
+            </div>
+            <div className="form-group">
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={form.qa_enabled}
+                  onChange={(e) => setForm((f) => ({ ...f, qa_enabled: e.target.checked }))}
+                />
+                💬 Enable Q&A for this lesson
+              </label>
+              <span style={{ fontSize: "0.76rem", color: "var(--color-text-soft)" }}>Adds a "What's on your mind?" box for this lesson on the Week 6 hub.</span>
             </div>
             <div className="form-row">
               <div className="form-group"><label>Order *</label><input type="number" min="1" value={form.order} onChange={(e) => setForm((f) => ({ ...f, order: e.target.value }))} placeholder="1" /></div>

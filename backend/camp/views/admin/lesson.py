@@ -1,8 +1,8 @@
-from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.permissions import IsAuthenticated
-from ...serializers import LessonSerializer, LessonDetailSerializer
-from ...models import Lesson
+from ...serializers import LessonSerializer, LessonDetailSerializer, LessonQuestionAdminSerializer
+from ...models import Lesson, LessonQuestion
 
 class LessonView(ListCreateAPIView):
     permission_classes = [IsAuthenticated]
@@ -26,3 +26,15 @@ class LessonDetailView(RetrieveUpdateDestroyAPIView):
         remove = self.request.data.get('remove_material')
         if str(remove).lower() in ('1', 'true'):
             instance.material_file.delete(save=True)
+
+
+class AdminQAQuestionListView(ListAPIView):
+    serializer_class = LessonQuestionAdminSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = LessonQuestion.objects.select_related("student", "lesson").all()
+
+
+class AdminQAQuestionDetailView(RetrieveUpdateDestroyAPIView):
+    serializer_class = LessonQuestionAdminSerializer
+    permission_classes = [IsAuthenticated]
+    queryset = LessonQuestion.objects.all()

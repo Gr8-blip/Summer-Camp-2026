@@ -47,6 +47,10 @@ class Lesson(models.Model):
         null=True,
         validators=[FileExtensionValidator(allowed_extensions=['zip'])],
     )
+    qa_enabled = models.BooleanField(
+        default=False,
+        help_text="If on, students see a Q&A box for this lesson on the Week 6 hub.",
+    )
     # Short, ordered list of "remember this" bullets shown on the student
     # lesson page — plain list of strings, no separate model needed since
     # these are just admin-authored copy, not queryable/relational data.
@@ -58,6 +62,27 @@ class Lesson(models.Model):
 
     class Meta:
         ordering = ['order']
+
+
+class LessonQuestion(models.Model):
+    STATUS_PENDING = "pending"
+    STATUS_ANSWERED = "answered"
+    STATUS_HIDDEN = "hidden"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ANSWERED, "Answered"),
+        (STATUS_HIDDEN, "Hidden"),
+    ]
+
+    lesson = models.ForeignKey(Lesson, related_name="qa_questions", on_delete=models.CASCADE)
+    student = models.ForeignKey(Student, on_delete=models.CASCADE)  # who asked — admin-only, never serialized to students
+    text = models.TextField()
+    category = models.CharField(max_length=40, blank=True)  # e.g. "AI & The Future" — just the starter tag they tapped, optional
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
     
 
 class Badge(models.Model):

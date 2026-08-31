@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: "/camp-admin/attendance",  label: "📅 Attendance"         },
   { to: "/camp-admin/badges",      label: "🏅 Badges"             },
   { to: "/camp-admin/xp",          label: "✨ XP"                 },
+  { to: "/camp-admin/qa", label: "❓ Q&A Inbox" },
   { to: "/admin/camp-control",     label: "🎮 Camp Control" },
 ];
 

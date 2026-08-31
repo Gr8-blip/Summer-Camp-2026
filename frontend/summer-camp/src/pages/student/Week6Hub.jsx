@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { getStudentDashboard, getMissionDetail, getProfile, checkInAttendance } from "../../api/client";
+import { getStudentDashboard, getMissionDetail, getProfile, checkInAttendance, submitLessonQuestion } from "../../api/client";
 import { getWeekSixMission } from "../../utils/week6";
 import MissionCompleteCelebration from "../../components/MissionCompleteCelebration";
 import "./Week6Hub.css";
@@ -12,6 +12,101 @@ import "./Week6Hub.css";
 // week. Add/remove/reorder lessons in the admin and the hub follows.
 const CHAPTER_ICONS = ["🧠", "🚀", "🏆"];
 const CHAPTER_KICKERS = ["CHAPTER I", "CHAPTER II", "CHAPTER III", "CHAPTER IV", "CHAPTER V"];
+
+// Idea-starter categories for the Q&A box. Purely a prompt — tapping one
+// just seeds the textarea, it never restricts what gets submitted.
+const QA_CATEGORIES = [
+  { key: "ai", icon: "🤖", label: "AI & The Future", starter: "What I'm curious about with AI is..." },
+  { key: "tech", icon: "💻", label: "Coding & Tech", starter: "About coding/tech, I wonder..." },
+  { key: "academy", icon: "🌐", label: "Behind the Academy", starter: "About how the Academy works, I wonder..." },
+  { key: "camp", icon: "🏕️", label: "The Camp", starter: "About camp, I wanted to ask..." },
+  { key: "wild", icon: "🚀", label: "Your Craziest Ideas", starter: "Ok this might be a wild idea but..." },
+];
+
+function QASection({ lesson }) {
+  const [category, setCategory] = useState(null);
+  const [text, setText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const handlePickCategory = (cat) => {
+    setCategory(cat.key);
+    if (!text.trim()) setText(cat.starter);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!text.trim()) { setError("Type something first!"); return; }
+    setSubmitting(true); setError("");
+    try {
+      await submitLessonQuestion(lesson.id, text.trim(), category || "");
+      setSubmitted(true);
+      setText("");
+      setCategory(null);
+    } catch (err) {
+      setError(err.data?.error || "Couldn't send that — try again?");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="w6-qa">
+      <div className="w6-qa-header">
+        <div className="w6-qa-icon">❓</div>
+        <div>
+          <h2 className="w6-qa-title">Got Something on Your Mind?</h2>
+          <p className="w6-qa-sub">
+            Ask anything — AI, coding, the Academy, camp, or your wildest ideas. Your
+            name stays with the teacher only, never shown to other students.
+          </p>
+        </div>
+      </div>
+
+      <div className="w6-qa-categories">
+        {QA_CATEGORIES.map((cat) => (
+          <button
+            type="button"
+            key={cat.key}
+            className={`w6-qa-cat ${category === cat.key ? "w6-qa-cat-active" : ""}`}
+            onClick={() => handlePickCategory(cat)}
+          >
+            <span className="w6-qa-cat-icon">{cat.icon}</span>
+            <span>{cat.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {submitted ? (
+        <div className="w6-qa-confirm">
+          <span className="w6-qa-confirm-icon">✅</span>
+          <div>
+            <div className="w6-qa-confirm-title">Sent!</div>
+            <div className="w6-qa-confirm-sub">Your question's in — anonymously. Ask another?</div>
+          </div>
+          <button type="button" className="w6-qa-again" onClick={() => setSubmitted(false)}>
+            Ask Another
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="w6-qa-form">
+          <textarea
+            className="w6-qa-textarea"
+            placeholder="What's on your mind?"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={4}
+          />
+          {error && <div className="w6-modal-error">⚠️ {error}</div>}
+          <button type="submit" className="w6-qa-submit" disabled={submitting}>
+            {submitting ? <span className="w6-spinner" /> : "Send it →"}
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
 
 function CheckInModal({ onClose, onSuccess }) {
   const [code, setCode] = useState("");
@@ -139,6 +234,10 @@ export default function Week6Hub() {
   const completedCount = chapters.filter((c) => c.completed).length;
   const allComplete = totalChapters > 0 && completedCount === totalChapters;
   const progressPct = totalChapters ? (completedCount / totalChapters) * 100 : 0;
+
+  // Not every lesson carries Q&A — the admin flips `qa_enabled` per lesson.
+  // Only offer the box once that lesson is actually reachable.
+  const qaChapter = chapters.find((c) => c.lesson.qa_enabled && c.unlocked);
 
   // Circle math for the medallion ring.
   const RADIUS = 54;
@@ -309,6 +408,8 @@ export default function Week6Hub() {
                 </button>
               ))}
             </div>
+
+            {qaChapter && <QASection lesson={qaChapter.lesson} />}
 
             <div className="w6-mystery">
               <div className="w6-mystery-icon">{allComplete ? "🏆" : "👁️"}</div>

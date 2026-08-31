@@ -9,6 +9,7 @@ from .views.student.mission import (
 
 from .views.student.lesson import (
     LessonDetailView,
+    LessonQuestionCreateView
 )
 
 from .views.student.assignment import (
@@ -60,7 +61,7 @@ from .views.parent.lesson import ParentLessonListView
 from .views.admin.dashboard import AdminDashboardView
 from .views.admin.students import AdminStudentListView
 from .views.admin.mission import MissionView, MissionDetailView
-from .views.admin.lesson import LessonView, LessonDetailView
+from .views.admin.lesson import AdminQAQuestionDetailView, AdminQAQuestionListView, LessonView, LessonDetailView
 from .views.admin.assignment import AssignmentView, AssignmentDetailView
 from .views.admin.submission import SubmissionView, GradeSubmissionView
 from .views.admin.attendance import (
@@ -184,6 +185,8 @@ urlpatterns = [
     path("notifications/", NotificationListView.as_view(), name="notification-list"),
     path("notifications/mark-read/", NotificationMarkReadView.as_view(), name="notification-mark-read"),
     path('project-submission/check/', ProjectSubmissionCheckView.as_view()),
+    path("lessons/<int:pk>/questions/", LessonQuestionCreateView.as_view()),
+
 
 
      # ==========================
@@ -373,7 +376,10 @@ urlpatterns = [
     path("camp-admin/assignments/<int:pk>/questions/", AssignmentQuestionListView.as_view(), name="admin-assignment-questions"),
     path("camp-admin/assignments/<int:pk>/attempts/", AssignmentAttemptListView.as_view(), name="admin-assignment-attempts"),
     path("camp-admin/assignment-questions/<int:pk>/", AssignmentQuestionDetailView.as_view(), name="admin-assignment-question-detail"),
-    
+
+    path("camp-admin/qa-questions/", AdminQAQuestionListView.as_view()),
+    path("camp-admin/qa-questions/<int:pk>/", AdminQAQuestionDetailView.as_view()),
+        
 
     path("camp-admin/camp-settings/", AdminCampSettingsView.as_view(), name='admin-camp-settings-view'),
 ]
