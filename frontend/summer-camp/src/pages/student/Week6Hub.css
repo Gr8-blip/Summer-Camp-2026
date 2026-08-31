@@ -1,4 +1,18 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@400;500;600&display=swap");
+
+/*
+  PERFORMANCE NOTES (read before adding more sparkle):
+  - No animated `filter: blur(...)`, no animated `backdrop-filter`, no
+    animated conic-gradient. Those force the browser to repaint a
+    full-viewport layer every frame and are the fastest way to melt a
+    low-end laptop.
+  - Every animation below only touches `transform` and `opacity` — the two
+    properties the browser can run on the compositor thread, off the main
+    thread, basically free. Nothing animates `left`, `background-position`,
+    or `box-shadow` size.
+  - The "glow" look now comes from static multi-stop gradients baked into
+    backgrounds, not from animated blurred shapes. Color, not motion.
+*/
 
 .w6-shell {
   --w6-bg: #0a0e27;
@@ -6,22 +20,34 @@
   --w6-gold: #ffc857;
   --w6-gold-soft: rgba(255, 200, 87, 0.16);
   --w6-violet: #7c5cfc;
+  --w6-pink: #ff6ec7;
   --w6-text: #f4f2ff;
   --w6-muted: #9aa1c9;
   --w6-border: rgba(255, 255, 255, 0.08);
+  --w6-green: #6ee7a0;
 
   position: relative;
   min-height: 100vh;
-  background: var(--w6-bg);
   color: var(--w6-text);
   font-family: "Inter", system-ui, sans-serif;
   overflow-x: hidden;
+
+  /* Static, rich, multi-color backdrop — no animation, no blur. This is
+     the "color glow up": three soft color pools baked directly into the
+     page background at zero runtime cost. */
+  background:
+    radial-gradient(760px 520px at 18% -6%, rgba(255, 200, 87, 0.16), transparent 60%),
+    radial-gradient(820px 620px at 88% 8%, rgba(124, 92, 252, 0.22), transparent 60%),
+    radial-gradient(700px 500px at 50% 92%, rgba(255, 110, 199, 0.10), transparent 60%),
+    var(--w6-bg);
 }
 
-/* ── Ambient background: starfield + slow aurora sweep ─────────────── */
+/* Single lightweight starfield. Motion is a `transform: translate` on the
+   whole layer (compositor-only), not `background-position` (main-thread
+   repaint) — same twinkle-drift feel for a fraction of the cost. */
 .w6-stars {
   position: fixed;
-  inset: 0;
+  inset: -10% -10%;
   z-index: 0;
   background-image:
     radial-gradient(1.5px 1.5px at 20% 30%, #fff, transparent),
@@ -29,54 +55,43 @@
     radial-gradient(1px 1px at 45% 60%, #fff, transparent),
     radial-gradient(1.5px 1.5px at 85% 70%, #fff, transparent),
     radial-gradient(1px 1px at 10% 80%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 60% 90%, #fff, transparent),
-    radial-gradient(1px 1px at 30% 45%, #fff, transparent),
-    radial-gradient(1.5px 1.5px at 92% 40%, #fff, transparent);
+    radial-gradient(1.5px 1.5px at 60% 90%, #fff, transparent);
   background-repeat: repeat;
   background-size: 600px 600px;
-  opacity: 0.5;
-  animation: w6-drift 90s linear infinite;
+  opacity: 0.45;
+  animation: w6-drift 140s linear infinite;
+  will-change: transform;
 }
 
 @keyframes w6-drift {
-  from { background-position: 0 0; }
-  to { background-position: -600px 300px; }
-}
-
-.w6-aurora {
-  position: fixed;
-  inset: -20% -20%;
-  z-index: 0;
-  background: conic-gradient(from 200deg at 50% 30%, transparent 0deg, rgba(124, 92, 252, 0.18) 90deg, transparent 180deg, rgba(255, 200, 87, 0.12) 270deg, transparent 360deg);
-  filter: blur(60px);
-  animation: w6-rotate 40s linear infinite;
-}
-
-@keyframes w6-rotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-300px, 200px, 0); }
 }
 
 /* ── Top bar ─────────────────────────────────────────────────────── */
 .w6-topbar {
-  position: relative;
-  z-index: 2;
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
   border-bottom: 1px solid var(--w6-border);
-  backdrop-filter: blur(6px);
+  background: #0a0e27;
   flex-wrap: wrap;
   gap: 10px;
 }
 
 .w6-topbar-left {
   font-family: "Space Grotesk", sans-serif;
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.06em;
   font-size: 0.85rem;
-  color: var(--w6-gold);
+  background: linear-gradient(90deg, var(--w6-gold), var(--w6-pink));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .w6-topbar-right {
@@ -99,6 +114,21 @@
 .w6-pill-xp { color: var(--w6-gold); border-color: rgba(255, 200, 87, 0.3); }
 .w6-pill-coins { color: #ffd76b; border-color: rgba(255, 200, 87, 0.3); }
 
+.w6-checkin-pill {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 7px 15px;
+  border-radius: 999px;
+  border: 1px solid rgba(110, 231, 160, 0.4);
+  background: linear-gradient(120deg, rgba(110, 231, 160, 0.2), rgba(110, 231, 160, 0.06));
+  color: var(--w6-green);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease;
+}
+.w6-checkin-pill:hover { transform: translateY(-1px); }
+
 .w6-logout {
   font-size: 0.78rem;
   font-weight: 600;
@@ -112,11 +142,32 @@
 }
 .w6-logout:hover { color: var(--w6-text); border-color: var(--w6-muted); }
 
+/* ── Toast ───────────────────────────────────────────────────────── */
+.w6-toast {
+  position: fixed;
+  top: 78px;
+  left: 50%;
+  z-index: 60;
+  background: linear-gradient(120deg, rgba(110, 231, 160, 0.2), rgba(110, 231, 160, 0.08));
+  border: 1px solid rgba(110, 231, 160, 0.4);
+  color: var(--w6-green);
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 10px 20px;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  animation: w6-toast-in 0.3s ease both;
+}
+@keyframes w6-toast-in {
+  from { opacity: 0; transform: translate3d(-50%, -10px, 0); }
+  to { opacity: 1; transform: translate3d(-50%, 0, 0); }
+}
+
 /* ── Hero ────────────────────────────────────────────────────────── */
 .w6-hero {
   position: relative;
   z-index: 2;
-  min-height: calc(100vh - 60px);
+  min-height: calc(100vh - 61px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -125,6 +176,7 @@
 }
 
 .w6-hero-inner {
+  position: relative;
   max-width: 640px;
   display: flex;
   flex-direction: column;
@@ -132,6 +184,9 @@
 }
 
 .w6-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: "Space Grotesk", sans-serif;
   font-weight: 700;
   letter-spacing: 0.25em;
@@ -142,21 +197,31 @@
   padding: 8px 18px;
   border-radius: 999px;
   margin-bottom: 26px;
-  animation: w6-fade-up 0.7s ease both;
+  animation: w6-fade-up 0.6s ease both;
+}
+
+.w6-eyebrow-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--w6-gold);
+  animation: w6-blink 2s ease-in-out infinite;
 }
 
 .w6-headline {
   font-family: "Space Grotesk", sans-serif;
-  font-weight: 700;
+  font-weight: 800;
   font-size: clamp(2.6rem, 8vw, 5rem);
   line-height: 1.03;
   letter-spacing: -0.01em;
   margin: 0 0 22px;
-  background: linear-gradient(120deg, #fff 20%, var(--w6-gold) 55%, var(--w6-violet) 90%);
+  /* Rich static three-color gradient — the "glow up" lives here, not in a
+     runtime animation. */
+  background: linear-gradient(120deg, var(--w6-gold) 0%, var(--w6-pink) 50%, var(--w6-violet) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  animation: w6-fade-up 0.7s 0.1s ease both;
+  animation: w6-fade-up 0.6s 0.06s ease both;
 }
 
 .w6-hype {
@@ -165,22 +230,21 @@
   line-height: 1.6;
   max-width: 480px;
   margin: 0 0 36px;
-  animation: w6-fade-up 0.7s 0.2s ease both;
+  animation: w6-fade-up 0.6s 0.12s ease both;
 }
 
 @keyframes w6-fade-up {
-  from { opacity: 0; transform: translateY(16px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translate3d(0, 14px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-/* Progress medallion — the signature element: a diploma-seal ring that
-   fills in as chapters are completed. */
+/* Progress medallion */
 .w6-medallion {
   position: relative;
   width: 130px;
   height: 130px;
   margin-bottom: 34px;
-  animation: w6-fade-up 0.7s 0.3s ease both;
+  animation: w6-fade-up 0.6s 0.18s ease both;
 }
 
 .w6-medallion-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
@@ -193,11 +257,10 @@
 
 .w6-medallion-fill {
   fill: none;
-  stroke: var(--w6-gold);
+  stroke: url(#w6-ring-gradient);
   stroke-width: 8;
   stroke-linecap: round;
-  filter: drop-shadow(0 0 6px rgba(255, 200, 87, 0.7));
-  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: stroke-dashoffset 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .w6-medallion-label {
@@ -212,7 +275,7 @@
   line-height: 1;
 }
 
-.w6-medallion-count { font-size: 2.1rem; font-weight: 700; color: var(--w6-text); }
+.w6-medallion-count { font-size: 2.1rem; font-weight: 800; color: var(--w6-text); }
 .w6-medallion-total {
   font-size: 0.7rem;
   font-weight: 600;
@@ -222,6 +285,8 @@
   margin-top: 2px;
 }
 
+/* CTA — one punchy transform-only bounce-in-place, no shine sweep, no
+   growing box-shadow ring. Feels snappy, costs nothing at rest. */
 .w6-cta {
   display: inline-flex;
   align-items: center;
@@ -231,22 +296,49 @@
   font-size: 1.05rem;
   letter-spacing: 0.04em;
   color: #14101f;
-  background: linear-gradient(120deg, var(--w6-gold), #ffe1a3);
+  background: linear-gradient(120deg, var(--w6-gold), var(--w6-pink));
   border: none;
   padding: 16px 34px;
   border-radius: 999px;
   cursor: pointer;
-  box-shadow: 0 0 0 0 rgba(255, 200, 87, 0.5);
-  animation: w6-fade-up 0.7s 0.4s ease both, w6-pulse 2.4s ease-in-out infinite 1.2s;
-  transition: transform 0.15s ease;
+  box-shadow: 0 8px 28px rgba(255, 138, 173, 0.25);
+  animation: w6-fade-up 0.6s 0.24s ease both, w6-bob 2.2s ease-in-out infinite 1s;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.w6-cta:hover { transform: translateY(-2px) scale(1.02); }
-.w6-cta-arrow { transition: transform 0.15s ease; }
+.w6-cta:hover {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 34px rgba(255, 138, 173, 0.35);
+}
+.w6-cta-arrow { display: inline-block; transition: transform 0.15s ease; }
 .w6-cta:hover .w6-cta-arrow { transform: translateX(4px); }
 
-@keyframes w6-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 200, 87, 0.45); }
-  50% { box-shadow: 0 0 0 14px rgba(255, 200, 87, 0); }
+@keyframes w6-bob {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -4px, 0); }
+}
+
+.w6-scroll-cue {
+  margin-top: 40px;
+  width: 22px;
+  height: 36px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 14px;
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+  animation: w6-fade-up 0.6s 0.3s ease both;
+}
+.w6-scroll-cue span {
+  width: 4px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--w6-gold);
+  animation: w6-scroll-dot 1.8s ease-in-out infinite;
+}
+@keyframes w6-scroll-dot {
+  0% { transform: translate3d(0, 0, 0); opacity: 1; }
+  70% { transform: translate3d(0, 10px, 0); opacity: 0; }
+  100% { opacity: 0; }
 }
 
 /* ── Chapters ────────────────────────────────────────────────────── */
@@ -276,8 +368,23 @@
   border: 2px solid rgba(255, 255, 255, 0.2);
   border-top-color: var(--w6-gold);
   animation: w6-spin 0.8s linear infinite;
+  display: inline-block;
 }
 @keyframes w6-spin { to { transform: rotate(360deg); } }
+
+.w6-progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 34px;
+}
+.w6-progress-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--w6-gold), var(--w6-pink), var(--w6-violet));
+  transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
 .w6-chapters-grid {
   display: grid;
@@ -301,8 +408,8 @@
   color: inherit;
   cursor: pointer;
   opacity: 0;
-  transform: translateY(24px);
-  animation: w6-fade-up 0.6s ease forwards;
+  transform: translate3d(0, 20px, 0);
+  animation: w6-fade-up 0.5s ease forwards;
   animation-delay: var(--w6-delay, 0ms);
 }
 
@@ -318,7 +425,7 @@
 
 .w6-card-title {
   font-family: "Space Grotesk", sans-serif;
-  font-weight: 700;
+  font-weight: 800;
   font-size: 1.35rem;
   letter-spacing: 0.01em;
 }
@@ -330,19 +437,21 @@
   margin-top: auto;
 }
 
+/* Unlocked chapters get their color identity baked in statically — a
+   different warm gradient per position — instead of an animated glow. */
 .w6-card-unlocked {
   border-color: rgba(255, 200, 87, 0.35);
-  box-shadow: 0 0 0 rgba(255, 200, 87, 0);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  background: linear-gradient(160deg, rgba(255, 200, 87, 0.1), var(--w6-bg-alt) 55%);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 .w6-card-unlocked:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 40px rgba(255, 200, 87, 0.15);
+  transform: translate3d(0, -5px, 0);
   border-color: var(--w6-gold);
 }
 
 .w6-card-complete {
   border-color: rgba(120, 220, 150, 0.4);
+  background: linear-gradient(160deg, rgba(110, 231, 160, 0.1), var(--w6-bg-alt) 55%);
 }
 
 .w6-card-badge {
@@ -350,47 +459,37 @@
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #6ee7a0;
+  color: var(--w6-green);
   background: rgba(110, 231, 160, 0.12);
   border: 1px solid rgba(110, 231, 160, 0.35);
   padding: 4px 10px;
   border-radius: 999px;
 }
 
+.w6-card-badge-open {
+  color: #ffd76b;
+  background: rgba(255, 200, 87, 0.1);
+  border-color: rgba(255, 200, 87, 0.35);
+}
+
 .w6-card-locked {
   cursor: not-allowed;
   color: var(--w6-muted);
   background: repeating-linear-gradient(135deg, var(--w6-bg-alt), var(--w6-bg-alt) 10px, rgba(255, 255, 255, 0.015) 10px, rgba(255, 255, 255, 0.015) 20px);
-  filter: saturate(0.6);
 }
 .w6-card-locked .w6-card-title,
 .w6-card-locked .w6-card-icon {
-  opacity: 0.55;
-}
-
-.w6-card-shimmer {
-  position: absolute;
-  top: 0;
-  left: -60%;
-  width: 40%;
-  height: 100%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.06), transparent);
-  animation: w6-shimmer 4.5s ease-in-out infinite;
-}
-@keyframes w6-shimmer {
-  0% { left: -60%; }
-  50% { left: 130%; }
-  100% { left: 130%; }
+  opacity: 0.5;
 }
 
 /* ── Mystery footer ──────────────────────────────────────────────── */
 .w6-mystery {
-  margin-top: 48px;
   text-align: center;
   padding: 34px 20px;
   border-radius: 20px;
   border: 1px dashed rgba(124, 92, 252, 0.35);
-  background: radial-gradient(ellipse at center, rgba(124, 92, 252, 0.08), transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(124, 92, 252, 0.1), transparent 70%);
+  margin-top: 48px;
 }
 
 .w6-mystery-icon {
@@ -411,6 +510,98 @@
   margin: 0;
 }
 
+/* ── Check-in modal ──────────────────────────────────────────────── */
+.w6-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(4, 6, 20, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.w6-modal {
+  width: 100%;
+  max-width: 360px;
+  background: linear-gradient(165deg, var(--w6-bg-alt), #0d1230);
+  border: 1px solid rgba(255, 200, 87, 0.25);
+  border-radius: 20px;
+  padding: 28px 26px 26px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+
+.w6-modal-title {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: 1.3rem;
+  margin: 0 0 6px;
+}
+.w6-modal-sub {
+  color: var(--w6-muted);
+  font-size: 0.88rem;
+  margin: 0 0 20px;
+}
+
+.w6-modal-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--w6-text);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--w6-border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.w6-modal-input:focus { border-color: var(--w6-gold); }
+
+.w6-modal-error {
+  color: #ff9d9d;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+}
+
+.w6-modal-actions { display: flex; gap: 10px; }
+
+.w6-modal-cancel,
+.w6-modal-submit {
+  flex: 1;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.w6-modal-cancel {
+  background: transparent;
+  border: 1px solid var(--w6-border);
+  color: var(--w6-muted);
+}
+.w6-modal-cancel:hover { color: var(--w6-text); }
+
+.w6-modal-submit {
+  border: none;
+  color: #14101f;
+  background: linear-gradient(120deg, var(--w6-gold), var(--w6-pink));
+  transition: transform 0.15s ease;
+}
+.w6-modal-submit:hover { transform: translateY(-1px); }
+.w6-modal-submit:disabled { opacity: 0.7; cursor: default; transform: none; }
+.w6-modal-submit .w6-spinner { border-top-color: #14101f; border-color: rgba(20, 16, 31, 0.25); }
+
 /* ── Responsive ──────────────────────────────────────────────────── */
 @media (max-width: 800px) {
   .w6-chapters-grid { grid-template-columns: 1fr; }
@@ -418,10 +609,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .w6-stars, .w6-aurora, .w6-cta, .w6-mystery-icon, .w6-card-shimmer {
+  .w6-stars, .w6-cta, .w6-mystery-icon, .w6-eyebrow-dot, .w6-scroll-cue span {
     animation: none !important;
   }
-  .w6-eyebrow, .w6-headline, .w6-hype, .w6-medallion, .w6-card {
+  .w6-eyebrow, .w6-headline, .w6-hype, .w6-medallion, .w6-card, .w6-scroll-cue {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
