@@ -96,7 +96,8 @@ class LessonSerializer(serializers.ModelSerializer):
             'id', 'title', 'description', 'order', 'duration', 
             'mission', 'is_published', 'locked', 'completed', 'quests_completed',
             'quests_in_progress', 'quests_missed', 'class_missed',
-            'material_file', 'material_filename', 'material_size', 'key_notes'
+            'material_file', 'material_filename', 'material_size', 'key_notes',
+            'qa_enabled',
         ]
 
     def get_material_filename(self, obj):
