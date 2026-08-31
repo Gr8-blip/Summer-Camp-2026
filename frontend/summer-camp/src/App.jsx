@@ -31,6 +31,7 @@ import QuestStats from "./pages/student/QuestStats";
 import ChallengeLeaderboard from "./pages/student/Challengeleaderboard";
 import Marketplace from "./pages/student/Marketplace";
 import Profile from "./pages/student/Profile";
+import Week6Hub from "./pages/student/Week6Hub";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -93,6 +94,7 @@ export default function App() {
 
           {/* Student platform */}
           <Route element={<ThemeProvider><Outlet /></ThemeProvider>}>
+            <Route path="/week6" element={<StudentRoute><Week6Hub /></StudentRoute>} />
             <Route path="/missions" element={<StudentRoute><Missions /></StudentRoute>} />
             <Route path="/missions/:id" element={<StudentRoute><MissionDetail /></StudentRoute>} />
             <Route path="/lessons/:id" element={<StudentRoute><LessonDetail /></StudentRoute>} />

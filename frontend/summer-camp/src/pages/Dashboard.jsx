@@ -5,6 +5,8 @@ import { getStudentDashboard } from "../api/client";
 import ParentDashboard from "./ParentDashboard";
 import StudentDashboard from "./StudentDashboard";
 import { ThemeProvider } from "../context/ThemeContext";
+import { isWeekSixActive } from "../utils/week6";
+import Week6Hub from "./student/Week6Hub";
 import "./Dashboard.css";
 
 export default function Dashboard() {
@@ -15,6 +17,7 @@ export default function Dashboard() {
   const [dashData, setDashData] = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState("");
+  const [week6, setWeek6]       = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -25,13 +28,27 @@ export default function Dashboard() {
     if (isStudentAuthenticated) {
       setViewer("student");
       getStudentDashboard()
-        .then(setDashData)
+        .then((data) => {
+          // Week 6 is a dedicated finale experience — students land straight
+          // on the hub instead of the normal dashboard while it's active
+          // (rendered in place here, not a redirect, so there's no flash of
+          // the old dashboard first). Everything else — lessons, quests,
+          // challenges, XP, badges — stays reachable by URL, it's just off
+          // the main landing path for the week.
+          if (isWeekSixActive(data?.missions)) {
+            setWeek6(true);
+            return;
+          }
+          setDashData(data);
+        })
         .catch((err) => setError(err.data?.error || "Couldn't load your dashboard."))
         .finally(() => setLoading(false));
       return;
     }
     navigate("/login");
   }, [isAuthenticated, isStudentAuthenticated, navigate]);
+
+  if (week6) return <Week6Hub />;
 
   const handleLogout = () => {
     if (viewer === "parent") logout();
