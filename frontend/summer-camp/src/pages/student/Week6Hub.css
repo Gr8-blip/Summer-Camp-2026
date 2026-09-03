@@ -760,3 +760,25 @@
     transform: none !important;
   }
 }
+
+/* Week 6's standalone exploration game is deliberately separate from the
+   lesson cards, so students can spot it immediately without mistaking it
+   for another chapter. */
+.w6-grid-launch {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin: 0 0 24px;
+  padding: 20px 22px;
+  border: 1px solid rgba(167, 139, 250, 0.28);
+  border-radius: 18px;
+  background: linear-gradient(115deg, rgba(86, 56, 144, 0.24), rgba(20, 184, 166, 0.11));
+}
+.w6-grid-launch-icon { font-size: 2.3rem; }
+.w6-grid-launch-copy { flex: 1; }
+.w6-grid-launch-kicker { color: var(--w6-green); font-size: .68rem; font-weight: 800; letter-spacing: .12em; }
+.w6-grid-launch h2 { margin: 3px 0; font-size: 1.25rem; color: var(--w6-text); }
+.w6-grid-launch p { margin: 0; color: var(--w6-muted); font-size: .86rem; line-height: 1.45; }
+.w6-grid-play { flex-shrink: 0; border: 0; border-radius: 999px; padding: 12px 18px; font: inherit; font-size: .84rem; font-weight: 800; color: #151024; background: linear-gradient(120deg, var(--w6-violet), var(--w6-pink)); cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.w6-grid-play:hover { transform: translateY(-2px); box-shadow: 0 9px 22px rgba(167, 139, 250, .32); }
+.w6-grid-soon { color: var(--w6-muted); font-size: .8rem; font-weight: 700; white-space: nowrap; }

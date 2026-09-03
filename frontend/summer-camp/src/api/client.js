@@ -101,6 +101,20 @@ export const adminGetMissions = () => camp("/camp-admin/missions/", { method: "G
 export const adminCreateMission = (body) => camp("/camp-admin/missions/", { method: "POST", adminAuth: true, body });
 export const adminUpdateMission = (id, body) => camp(`/camp-admin/missions/${id}/`, { method: "PATCH", adminAuth: true, body });
 export const adminDeleteMission = (id) => camp(`/camp-admin/missions/${id}/`, { method: "DELETE", adminAuth: true });
+export const getLostGrid = (id) => camp(`/missions/${id}/game/`, { method: "GET", studentAuth: true });
+export const answerLostGrid = (id, questionId, answer) => camp(`/missions/${id}/game/answer/`, { method: "POST", studentAuth: true, body: { question_id: questionId, answer } });
+
+export const adminGetLostGridRounds = (missionId) => camp(`/camp-admin/missions/${missionId}/lostgrid-rounds/`, { method: "GET", adminAuth: true });
+export const adminCreateLostGridRound = (missionId, body) => camp(`/camp-admin/missions/${missionId}/lostgrid-rounds/`, { method: "POST", adminAuth: true, body });
+export const adminUpdateLostGridRound = (id, body) => camp(`/camp-admin/lostgrid-rounds/${id}/`, { method: "PATCH", adminAuth: true, body });
+export const adminDeleteLostGridRound = (id) => camp(`/camp-admin/lostgrid-rounds/${id}/`, { method: "DELETE", adminAuth: true });
+
+export const adminGetLostGridQuestions = (roundId) => camp(`/camp-admin/lostgrid-rounds/${roundId}/questions/`, { method: "GET", adminAuth: true });
+export const adminCreateLostGridQuestion = (roundId, body) => camp(`/camp-admin/lostgrid-rounds/${roundId}/questions/`, { method: "POST", adminAuth: true, body });
+export const adminUpdateLostGridQuestion = (id, body) => camp(`/camp-admin/lostgrid-questions/${id}/`, { method: "PATCH", adminAuth: true, body });
+export const adminDeleteLostGridQuestion = (id) => camp(`/camp-admin/lostgrid-questions/${id}/`, { method: "DELETE", adminAuth: true });
+
+export const adminQuestionCatalog = () => camp('/camp-admin/maze-question-catalog/', { method: 'GET', adminAuth: true });
 
 export const adminGetLessons = () => camp("/camp-admin/lessons/", { method: "GET", adminAuth: true });
 export const adminCreateLesson = (body) => camp("/camp-admin/lessons/", { method: "POST", adminAuth: true, body });

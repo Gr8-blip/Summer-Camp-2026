@@ -7,6 +7,7 @@ BADGE_XP = {
     "rare": 50,
     "epic": 100,
     "legendary": 250,
+    "mythical": 500,
 }
 
 

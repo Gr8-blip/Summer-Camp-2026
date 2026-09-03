@@ -1,7 +1,7 @@
 import random
 from rest_framework import serializers
 from users.serializers import StudentSerializer
-from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage, LessonQuestion
+from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage, LessonQuestion, LostGridRound, LostGridQuestion, MissionGameProgress
 from .models import AssignmentQuestion, AssignmentAttempt, CampSettings, ProjectSubmission
 from .utils.mission_progress import mission_progress
 
@@ -50,7 +50,7 @@ class MissionListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mission
-        fields = ['id', 'week', 'title', 'description', 'xp_reward', 'lesson_count', 'is_published', 'progress', 'locked', 'missed_lesson_count']
+        fields = ['id', 'week', 'title', 'description', 'xp_reward', 'coin_reward', 'map_layout', 'game_active', 'lesson_count', 'is_published', 'progress', 'locked', 'missed_lesson_count']
 
     def get_lesson_count(self, obj):
         return obj.lessons.count()
@@ -587,7 +587,7 @@ class MissionDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Mission
-        fields = ['id', 'week', 'title', 'description', 'xp_reward', 'lessons', 'progress', 'locked', 'is_published', 'challenges']
+        fields = ['id', 'week', 'title', 'description', 'xp_reward', 'coin_reward', 'map_layout', 'game_active', 'lessons', 'progress', 'locked', 'is_published', 'challenges']
 
     def _student(self):
         request = self.context.get("request")
@@ -603,6 +603,114 @@ class MissionDetailSerializer(serializers.ModelSerializer):
 
     def get_locked(self, obj):
         return _mission_locked(obj)
+
+
+# ── Lost Grid quiz arena ─────────────────────────────────────────────────
+
+
+class StudentLostGridQuestionSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    question_type = serializers.CharField(source='effective_type')
+    points = serializers.IntegerField(source='effective_points')
+    # Only meaningful for project_submission (always null otherwise) — the
+    # frontend needs the REAL ChallengeQuestion id to call the existing
+    # checkProjectSubmission("challenge", bank_question_id, ...) flow,
+    # since that's what score_fraction's project_submission branch
+    # ultimately compares the resulting ProjectSubmission.question against.
+    bank_question_id = serializers.IntegerField(source='source_question_id', read_only=True, allow_null=True)
+    time_limit = serializers.IntegerField(allow_null=True)
+    content = serializers.SerializerMethodField()
+
+    def get_content(self, obj):
+        content = dict(obj.effective_content or {})
+        for key in ('answer', 'answers', 'solution', 'example_solution'):
+            content.pop(key, None)
+
+        qtype = obj.effective_type
+        if qtype == 'match_pairs':
+            pairs = (obj.effective_content or {}).get('pairs', {})
+            left = list(pairs.keys())
+            right = list(pairs.values())
+            random.shuffle(right)
+            content.pop('pairs', None)
+            content['left'] = left
+            content['right'] = right
+        elif qtype == 'drag_order':
+            items = list((obj.effective_content or {}).get('items', []))
+            shuffled_items = items[:]
+            random.shuffle(shuffled_items)
+            if len(shuffled_items) > 1 and shuffled_items == items:
+                shuffled_items.reverse()
+            content['items'] = shuffled_items
+
+        return content
+
+
+class StudentLostGridRoundSerializer(serializers.ModelSerializer):
+    questions = StudentLostGridQuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = LostGridRound
+        fields = ['id', 'title', 'icon', 'order', 'xp_reward', 'coin_reward', 'questions']
+
+
+class MissionGameSerializer(serializers.ModelSerializer):
+    rounds = StudentLostGridRoundSerializer(source='lostgrid_rounds', many=True, read_only=True)
+
+    class Meta:
+        model = Mission
+        fields = ['id', 'title', 'description', 'xp_reward', 'coin_reward', 'game_active', 'rounds']
+
+
+class MissionGameProgressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MissionGameProgress
+        fields = ['xp', 'coins', 'answered_questions', 'correct_count', 'answered_count', 'completed_rounds', 'completed_at', 'current_streak']
+
+
+# ── Lost Grid admin builder ──────────────────────────────────────────────
+
+class LostGridQuestionSerializer(serializers.ModelSerializer):
+    # Read-only preview helpers so the builder's question list can show
+    # "what will actually be served" without the client re-deriving the
+    # reference-or-inline branch itself.
+    effective_type = serializers.CharField(read_only=True)
+    source_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = LostGridQuestion
+        fields = ['id', 'round', 'source_question', 'question_type', 'points', 'content', 'order', 'time_limit', 'effective_type', 'source_label']
+        read_only_fields = ['round']
+
+    def get_source_label(self, obj):
+        if not obj.source_question_id:
+            return None
+        content = obj.source_question.content or {}
+        return content.get('question') or content.get('task') or content.get('instruction') or f"Question #{obj.source_question_id}"
+
+    def validate(self, attrs):
+        source_question = attrs.get('source_question', getattr(self.instance, 'source_question', None))
+        question_type = attrs.get('question_type', getattr(self.instance, 'question_type', ''))
+        effective_type = source_question.question_type if source_question else question_type
+        # project_submission's scoring compares the submission's stored
+        # question FK by primary key — that only works against a real,
+        # saved ChallengeQuestion, so inline authoring isn't safe for it.
+        if effective_type == 'project_submission' and not source_question:
+            raise serializers.ValidationError(
+                "Project Submission questions must reference an existing question from the bank."
+            )
+        if not source_question and not question_type:
+            raise serializers.ValidationError("Pick a question type, or select an existing question from the bank.")
+        return attrs
+
+
+class LostGridRoundSerializer(serializers.ModelSerializer):
+    questions = LostGridQuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = LostGridRound
+        fields = ['id', 'mission', 'title', 'icon', 'order', 'xp_reward', 'coin_reward', 'questions']
+        read_only_fields = ['mission']
 
 
 class LessonDetailSerializer(serializers.ModelSerializer):

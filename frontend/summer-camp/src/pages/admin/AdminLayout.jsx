@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import "./AdminLayout.css";
 
 const NAV_ITEMS = [
+  { to: "/camp-admin/lost-grid",   label: "🧭 Lost Grid Builder" },
   { to: "/camp-admin",             label: "🏠 Dashboard",   end: true },
   { to: "/camp-admin/missions",    label: "🎯 Missions"          },
   { to: "/camp-admin/lessons",     label: "📖 Lessons"           },

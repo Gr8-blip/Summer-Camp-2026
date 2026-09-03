@@ -76,6 +76,15 @@ from .views.admin.challenge_question import ChallengeQuestionListView, Challenge
 from .views.admin.assignment_question import AssignmentQuestionListView, AssignmentQuestionDetailView, AssignmentAttemptListView
 from .views.admin.camp_settings import AdminCampSettingsView
 from .views.student.notifications import NotificationListView, NotificationMarkReadView
+from .views.student.game import MissionGameView, MissionGameAnswerView
+
+from .views.admin.maze import AdminQuestionCatalogView
+from .views.admin.lostgrid import (
+    AdminLostGridRoundListView,
+    AdminLostGridRoundDetailView,
+    AdminLostGridQuestionListView,
+    AdminLostGridQuestionDetailView,
+)
 
 
 urlpatterns = [
@@ -98,6 +107,8 @@ urlpatterns = [
         StudentMissionDetailView.as_view(),
         name="mission-detail",
     ),
+    path("missions/<int:pk>/game/", MissionGameView.as_view()),
+    path("missions/<int:pk>/game/answer/", MissionGameAnswerView.as_view()),
 
     # Lessons
     path(
@@ -251,6 +262,11 @@ urlpatterns = [
         MissionDetailView.as_view(),
         name="admin-mission-detail",
     ),
+    path("camp-admin/missions/<int:pk>/lostgrid-rounds/", AdminLostGridRoundListView.as_view()),
+    path("camp-admin/lostgrid-rounds/<int:pk>/", AdminLostGridRoundDetailView.as_view()),
+    path("camp-admin/lostgrid-rounds/<int:pk>/questions/", AdminLostGridQuestionListView.as_view()),
+    path("camp-admin/lostgrid-questions/<int:pk>/", AdminLostGridQuestionDetailView.as_view()),
+    path("camp-admin/maze-question-catalog/", AdminQuestionCatalogView.as_view()),
 
     # ==========================
     # Lessons

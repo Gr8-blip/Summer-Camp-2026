@@ -162,6 +162,7 @@ export default function Week6Hub() {
   const [xp, setXp] = useState(null);
   const [coins, setCoins] = useState(null);
   const [lessons, setLessons] = useState([]);
+  const [weekMission, setWeekMission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [entered, setEntered] = useState(false);
@@ -179,6 +180,7 @@ export default function Week6Hub() {
     const mission = getWeekSixMission(dash?.missions);
     if (mission) {
       const detail = await getMissionDetail(mission.id);
+      setWeekMission(detail);
       const ordered = [...(detail?.lessons || [])].sort((a, b) => a.order - b.order);
       setLessons(ordered);
     }
@@ -301,7 +303,6 @@ export default function Week6Hub() {
           </button>
         </div>
       </header>
-
       {toast && <div className="w6-toast">{toast}</div>}
 
       <section className="w6-hero">
@@ -372,8 +373,23 @@ export default function Week6Hub() {
           <div className="w6-status">The chapters are still being written — check back soon.</div>
         )}
 
-        {!loading && !error && totalChapters > 0 && (
+        {!loading && !error && (totalChapters > 0 || weekMission?.game_active) && (
           <>
+            <section className={`w6-grid-launch ${weekMission?.game_active ? "w6-grid-launch-ready" : ""}`}>
+              <div className="w6-grid-launch-icon">🧠</div>
+              <div className="w6-grid-launch-copy">
+                <div className="w6-grid-launch-kicker">WEEK 6 GAME</div>
+                <h2>QuizGrid: Overdrive</h2>
+                <p>{weekMission?.game_active
+                  ? "Race the clock through rapid-fire rounds — answer fast, answer sharp, and rack up XP."
+                  : "This quiz arena is being prepared by your instructor."}</p>
+              </div>
+              {weekMission?.game_active ? (
+                <button className="w6-grid-play" onClick={() => navigate(`/missions/${weekMission.id}/lost-grid`)}>
+                  ▶ Play QuizGrid
+                </button>
+              ) : <span className="w6-grid-soon">🔒 Coming soon</span>}
+            </section>
             <div className="w6-progress-bar" aria-hidden="true">
               <div className="w6-progress-bar-fill" style={{ width: `${progressPct}%` }} />
             </div>

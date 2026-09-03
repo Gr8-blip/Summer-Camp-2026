@@ -25,10 +25,77 @@ class Mission(models.Model):
     description = models.TextField()
     xp_reward = models.IntegerField()
     is_published = models.BooleanField(default=False)
+    # The Lost Grid reuses the existing week Mission so it stays visible in
+    # the familiar admin and student flows.  A layout is a small JSON grid:
+    # {"cells": ["########", "#......#", ...], "start": [1, 1]}.
+    map_layout = models.JSONField(default=dict, blank=True)
+    coin_reward = models.PositiveIntegerField(default=0)
+    game_active = models.BooleanField(default=False)
 
 
     def __str__(self):
         return f"Week {self.week}: {self.title}"
+
+
+class MazeObject(models.Model):
+    """A configurable interaction in a mission map; question data remains
+    owned by ChallengeQuestion and is never copied here."""
+    TYPES = [
+        ("question", "Question"), ("enemy", "Enemy"), ("clue", "Clue"),
+        ("door", "Door"), ("key", "Key"), ("chest", "Chest"),
+        ("weapon", "Weapon"), ("exit", "Exit"),
+    ]
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="maze_objects")
+    type = models.CharField(max_length=16, choices=TYPES)
+    position = models.JSONField(default=list, help_text="[x, y] grid position")
+    question = models.ForeignKey('ChallengeQuestion', null=True, blank=True, on_delete=models.SET_NULL, related_name='maze_objects')
+    label = models.CharField(max_length=100, blank=True)
+    reward_data = models.JSONField(default=dict, blank=True, help_text="XP, coins, item and effect configuration")
+    required_item = models.CharField(max_length=100, blank=True)
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+
+class MissionGameProgress(models.Model):
+    """Per-student progress through a mission's Lost Grid quiz arena.
+
+    There's no stored "current round/question" pointer on purpose — same
+    as the old maze's `completed_objects`, the frontend derives "what's
+    next" by walking the mission's rounds/questions against
+    `answered_questions`. That keeps this model dumb (just a ledger of
+    what happened) and the game.py view is the only source of truth for
+    scoring.
+    """
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="mission_game_progress")
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="game_progress")
+    # Question ids already scored — the single guard against re-answering
+    # (and re-earning reward for) the same question twice. Plays the same
+    # role `completed_objects` played for the old maze.
+    answered_questions = models.JSONField(default=list)
+    correct_count = models.PositiveIntegerField(default=0)
+    answered_count = models.PositiveIntegerField(default=0)
+    # Round ids whose completion reward has already been paid out, so
+    # resuming mid-round never double-pays the round-complete bonus.
+    completed_rounds = models.JSONField(default=list)
+    # XP/coins earned *within this run* — separate from the student's
+    # account-wide totals, same split MissionGameProgress always used.
+    xp = models.PositiveIntegerField(default=0)
+    coins = models.PositiveIntegerField(default=0)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    # Consecutive-correct streak, live for the whole run (survives across
+    # rounds, resets to 0 on any wrong/timed-out answer). Drives the
+    # Bullseye/On Fire badges, the sneaky streak-milestone XP bonus, and
+    # the "Comeback Kid" badge below.
+    current_streak = models.PositiveIntegerField(default=0)
+    # Whether this run has had at least one wrong/timed-out answer yet —
+    # gates Comeback Kid so it can't fire on a student's very first
+    # correct answer (there's nothing to "come back" from).
+    had_miss = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["student", "mission"], name="unique_student_mission_game")]
 
 
 class Lesson(models.Model):
@@ -88,7 +155,7 @@ class LessonQuestion(models.Model):
 class Badge(models.Model):
     name = models.CharField(max_length=100)
     icon = models.CharField(max_length=10, blank=True)
-    rarity = models.CharField(max_length=50, choices=[('common', 'Common'), ('rare', 'Rare'), ('epic', 'Epic'), ('legendary', 'Legendary')])
+    rarity = models.CharField(max_length=50, choices=[('common', 'Common'), ('rare', 'Rare'), ('epic', 'Epic'), ('legendary', 'Legendary'), ('mythical', 'Mythical')])
 
     def __str__(self):
         return f"{self.name} ({self.rarity})"
@@ -281,6 +348,74 @@ class AssignmentQuestion(models.Model):
  
     class Meta:
         ordering = ["order", "id"]
+
+
+class LostGridRound(models.Model):
+    """One themed round of the Lost Grid quiz arena (e.g. "⚡ QUICK FIRE")."""
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="lostgrid_rounds")
+    title = models.CharField(max_length=100)
+    icon = models.CharField(max_length=10, blank=True, default="⚡")
+    order = models.PositiveIntegerField(default=0)
+    xp_reward = models.PositiveIntegerField(default=0)
+    coin_reward = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.mission.title} — Round {self.order + 1}: {self.title}"
+
+
+class LostGridQuestion(models.Model):
+    """A question inside a Lost Grid round.
+
+    Question data is either borrowed live from the question bank
+    (`source_question` set — same "never copy the bank's content" rule
+    MazeObject used to follow) or authored inline for this round only
+    (`source_question` null, `question_type`/`content`/`points` filled in
+    directly).
+
+    NOTE: `project_submission` questions MUST use `source_question` — the
+    scoring for that type (utils/scoring.py) compares
+    `submission.question != question` by primary key, which only works
+    against a real, saved ChallengeQuestion. This is enforced in the admin
+    serializer, not here.
+    """
+    round = models.ForeignKey(LostGridRound, on_delete=models.CASCADE, related_name="questions")
+    source_question = models.ForeignKey(
+        'ChallengeQuestion', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='lostgrid_questions',
+        help_text="Pulls live content from the question bank instead of the inline fields below.",
+    )
+    question_type = models.CharField(max_length=32, choices=ChallengeQuestion.QUESTION_TYPES, blank=True)
+    points = models.PositiveIntegerField(default=10)
+    content = models.JSONField(default=dict, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    # Lost Grid only — not part of the shared ChallengeQuestion content, so
+    # it applies the same whether this question is bank-linked or authored
+    # inline. Null/blank = no limit. When it expires the frontend submits
+    # {"timed_out": true} instead of a normal answer; the answer view must
+    # treat that as an automatic wrong answer *before* running the
+    # per-question-type comparison (see game.py).
+    time_limit = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Seconds allowed to answer before it's auto-skipped as timed out. Blank = no limit.",
+    )
+
+    class Meta:
+        ordering = ["order", "id"]
+
+    @property
+    def effective_type(self):
+        return self.source_question.question_type if self.source_question_id else self.question_type
+
+    @property
+    def effective_content(self):
+        return self.source_question.content if self.source_question_id else self.content
+
+    @property
+    def effective_points(self):
+        return self.source_question.points if self.source_question_id else self.points
  
  
 class AssignmentAttempt(models.Model):

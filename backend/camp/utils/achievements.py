@@ -8,7 +8,7 @@ from camp.models import (
     PuzzleCompletion, 
     AssignmentAttempt
 )
-from .badges import award_badge
+from .badges_award import award_badge
 
 
 # The question types that count as a "puzzle game" for badge purposes,

@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
-from camp.badges import BADGES
+from camp.badges_data import BADGES
 from camp.models import Badge, StudentBadge
 
 
@@ -14,12 +14,25 @@ RENAMES = {
     "First Submission": "Quest Complete",
 }
 
+# Badges pulled from BADGES entirely (not renamed to anything) — the
+# update_or_create loop below only ever touches names still IN that list,
+# so a badge removed from it would otherwise just sit in the DB forever,
+# still earned by whoever had it. Listing it here retires it for real:
+# the Badge row and every StudentBadge row pointing at it are deleted.
+# Already-awarded XP/CoinLog history is untouched — this only removes the
+# badge itself, never claws back XP a student already earned for it.
+RETIRED = [
+    "Code Blitz",
+    "Coding Goat",
+]
+
 
 class Command(BaseCommand):
     help = "Seed default achievement badges."
 
     def handle(self, *args, **kwargs):
         self._apply_renames()
+        self._retire_badges()
 
         created = 0
         updated = 0
@@ -76,4 +89,19 @@ class Command(BaseCommand):
 
             self.stdout.write(
                 self.style.WARNING(f"↻ Renamed {old_name} → {new_name} (merged StudentBadge rows)")
+            )
+
+    def _retire_badges(self):
+        for name in RETIRED:
+            badge = Badge.objects.filter(name=name).first()
+            if not badge:
+                continue  # already retired in a previous run
+
+            with transaction.atomic():
+                holder_count = StudentBadge.objects.filter(badge=badge).count()
+                StudentBadge.objects.filter(badge=badge).delete()
+                badge.delete()
+
+            self.stdout.write(
+                self.style.WARNING(f"✖ Retired {name} (removed from {holder_count} student(s))")
             )

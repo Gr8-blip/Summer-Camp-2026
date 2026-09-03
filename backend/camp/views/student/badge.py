@@ -48,6 +48,13 @@ BADGE_REQUIREMENTS = {
     "Legend": "Collect every Common, Rare, and Epic badge.",
     "Hall of Fame": "Finish #1 on the leaderboard for a challenge.",
     "Future Innovator": "Reach 2000 XP.",
+    "Comeback Kid": "In QuizGrid, get a correct answer right after a wrong one.",
+    "Bullseye": "Get 3 correct answers in a row in QuizGrid.",
+    "On Fire": "Get 5 correct answers in a row in QuizGrid.",
+    "Sharpshooter": "Finish a QuizGrid run with 80%+ accuracy.",
+    "XP Hoarder": "Earn 1,000 XP from a single QuizGrid run.",
+    "XP Overlord": "Earn 2,000 XP from a single QuizGrid run.",
+    "QuizGrid Legend": "Score 100% on an entire QuizGrid run.",
 }
 
 
@@ -210,8 +217,8 @@ class StudentBadgeGridView(APIView):
 
         owned_non_legendary = StudentBadge.objects.filter(
             student=student
-        ).exclude(badge__rarity="legendary").count()
-        total_non_legendary = Badge.objects.exclude(rarity="legendary").count()
+        ).exclude(badge__rarity__in=["legendary", "mythical"]).count()
+        total_non_legendary = Badge.objects.exclude(rarity__in=["legendary", "mythical"]).count()
 
         ctx = {
             "total_lessons": total_lessons,

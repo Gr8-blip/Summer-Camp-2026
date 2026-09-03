@@ -42,6 +42,11 @@ BADGES = [
         "icon": "🧩",
         "rarity": "common",
     },
+    {
+        "name": "Comeback Kid",
+        "icon": "💪",
+        "rarity": "common",
+    },
 
     # =========================
     # 🔵 RARE
@@ -87,13 +92,8 @@ BADGES = [
         "rarity": "rare",
     },
     {
-        "name": "Code Blitz",
-        "icon": "⚡",
-        "rarity": "rare",
-    },
-    {
-        "name": "Coding Goat",
-        "icon": "🐐",
+        "name": "Bullseye",
+        "icon": "🎯",
         "rarity": "rare",
     },
 
@@ -125,6 +125,16 @@ BADGES = [
         "icon": "🏵️",
         "rarity": "epic",
     },
+    {
+        "name": "On Fire",
+        "icon": "🔥",
+        "rarity": "epic",
+    },
+    {
+        "name": "Sharpshooter",
+        "icon": "🏹",
+        "rarity": "epic",
+    },
 
     # =========================
     # 🟡 LEGENDARY
@@ -153,5 +163,24 @@ BADGES = [
         "name": "Ultimate Challenger",
         "icon": "🏅",
         "rarity": "legendary",
+    },
+    {
+        "name": "XP Hoarder",
+        "icon": "💎",
+        "rarity": "legendary",
+    },
+    {
+        "name": "XP Overlord",
+        "icon": "👑",
+        "rarity": "legendary",
+    },
+
+    # =========================
+    # 🌌 MYTHICAL
+    # =========================
+    {
+        "name": "QuizGrid Legend",
+        "icon": "✨",
+        "rarity": "mythical",
     },
 ]

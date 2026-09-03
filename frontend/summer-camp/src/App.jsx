@@ -32,6 +32,7 @@ import ChallengeLeaderboard from "./pages/student/Challengeleaderboard";
 import Marketplace from "./pages/student/Marketplace";
 import Profile from "./pages/student/Profile";
 import Week6Hub from "./pages/student/Week6Hub";
+import LostGrid from "./pages/student/LostGrid";
 
 // Admin pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -46,6 +47,7 @@ import AdminBadges from "./pages/admin/AdminBadges";
 import AdminChallenges from "./pages/admin/AdminChallenges";
 import AdminCampControl from "./pages/admin/Admincampcontrol";
 import AdminQA from "./pages/admin/AdminQA";
+import MissionBuilder from "./pages/admin/MissionBuilder";
 
 
 function ProtectedRoute({ children }) {
@@ -97,6 +99,7 @@ export default function App() {
           {/* Student platform */}
           <Route element={<ThemeProvider><Outlet /></ThemeProvider>}>
             <Route path="/week6" element={<StudentRoute><Week6Hub /></StudentRoute>} />
+            <Route path="/missions/:id/lost-grid" element={<StudentRoute><LostGrid /></StudentRoute>} />
             <Route path="/missions" element={<StudentRoute><Missions /></StudentRoute>} />
             <Route path="/missions/:id" element={<StudentRoute><MissionDetail /></StudentRoute>} />
             <Route path="/lessons/:id" element={<StudentRoute><LessonDetail /></StudentRoute>} />
@@ -121,6 +124,7 @@ export default function App() {
           <Route path="/camp-admin/login" element={<AdminLogin />} />
           <Route path="/camp-admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/camp-admin/missions" element={<AdminRoute><AdminMissions /></AdminRoute>} />
+          <Route path="/camp-admin/lost-grid" element={<AdminRoute><MissionBuilder /></AdminRoute>} />
           <Route path="/camp-admin/lessons" element={<AdminRoute><AdminLessons /></AdminRoute>} />
           <Route path="/camp-admin/assignments" element={<AdminRoute><AdminAssignments /></AdminRoute>} />
           <Route path="/camp-admin/submissions" element={<AdminRoute><AdminSubmissions /></AdminRoute>} />
