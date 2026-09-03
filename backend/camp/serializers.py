@@ -629,9 +629,25 @@ class StudentLostGridQuestionSerializer(serializers.Serializer):
         qtype = obj.effective_type
         if qtype == 'match_pairs':
             pairs = (obj.effective_content or {}).get('pairs', {})
-            left = list(pairs.keys())
-            right = list(pairs.values())
+
+            if isinstance(pairs, dict):
+                # Old format:
+                # {"Model": "The brain...", "Dataset": "A collection..."}
+                left = list(pairs.keys())
+                right = list(pairs.values())
+
+            elif isinstance(pairs, list):
+                # New format:
+                # [{"left": "Model", "right": "The brain..."}]
+                left = [pair['left'] for pair in pairs]
+                right = [pair['right'] for pair in pairs]
+
+            else:
+                left = []
+                right = []
+
             random.shuffle(right)
+
             content.pop('pairs', None)
             content['left'] = left
             content['right'] = right
