@@ -6,6 +6,9 @@ import {
   adminQuestionCatalog,
 } from "../../api/client";
 import AdminLayout from "./AdminLayout";
+import InteractiveCodingEditor from "../../editors/InteractiveCodingEditor";
+import AdminCodingChallengeEditor from "../../editors/AdminCodingChallengeEditor";
+import ProjectSubmissionEditor from "../../editors/ProjectSubmissionEditor";
 import "./MissionBuilder.css";
 
 // Same 11 types ChallengeQuestion supports. `example` is the default content
@@ -25,9 +28,16 @@ const TYPES = {
   project_submission: ["🚀", "Project Submission", { instruction: "Submit your finished site.", submission: { url: true, zip: true }, checks: [] }],
 };
 
-// Types that get a raw JSON editor because their shape is genuinely
-// code/config (files, checks, languages) rather than a few plain fields.
-const ADVANCED_TYPES = new Set(["interactive_coding", "coding_challenge"]);
+// These three question types get their real, purpose-built editors
+// (same components + {content, onChange} contract the Challenge/Quest
+// builder uses) instead of the plain-field TypeForm below — their content
+// shape (files, checks, submission targets) isn't a handful of text
+// fields, it's a small structured builder in its own right.
+const RICH_EDITORS = {
+  interactive_coding: InteractiveCodingEditor,
+  coding_challenge: AdminCodingChallengeEditor,
+  project_submission: ProjectSubmissionEditor,
+};
 
 const ROUND_EMPTY = { title: "", icon: "⚡", xp_reward: 0, coin_reward: 0 };
 
@@ -310,15 +320,15 @@ function RoundQuestions({ round, catalog, onChanged, flash }) {
   const [points, setPoints] = useState(10);
   const [timeLimit, setTimeLimit] = useState("");
   const [formState, setFormState] = useState(() => stateFromContent("multiple_choice", TYPES.multiple_choice[2]));
-  const [advancedText, setAdvancedText] = useState(JSON.stringify(TYPES.interactive_coding[2], null, 2));
+  const [richContent, setRichContent] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  const isAdvanced = ADVANCED_TYPES.has(newType);
+  const RichEditor = RICH_EDITORS[newType];
 
   const pickType = (type) => {
     setNewType(type);
-    if (ADVANCED_TYPES.has(type)) setAdvancedText(JSON.stringify(TYPES[type][2], null, 2));
+    if (RICH_EDITORS[type]) setRichContent(TYPES[type][2]);
     else setFormState(stateFromContent(type, TYPES[type][2]));
   };
 
@@ -357,14 +367,15 @@ function RoundQuestions({ round, catalog, onChanged, flash }) {
   const resetNewForm = () => {
     setEditingId(null);
     setTimeLimit("");
-    if (isAdvanced) setAdvancedText(JSON.stringify(TYPES[newType][2], null, 2));
+    if (RICH_EDITORS[newType]) setRichContent(TYPES[newType][2]);
     else setFormState(stateFromContent(newType, TYPES[newType][2]));
   };
 
   const saveNew = async () => {
     let content;
-    if (isAdvanced) {
-      try { content = JSON.parse(advancedText); } catch { return flash("Content must be valid JSON.", "bad"); }
+    if (RichEditor) {
+      if (!richContent?.instruction?.trim()) return flash("Add an instruction for students.", "warn");
+      content = richContent;
     } else {
       const err = validateState(newType, formState);
       if (err) return flash(err, "warn");
@@ -398,7 +409,7 @@ function RoundQuestions({ round, catalog, onChanged, flash }) {
     setNewType(q.question_type);
     setPoints(q.points);
     setTimeLimit(q.time_limit ? String(q.time_limit) : "");
-    if (ADVANCED_TYPES.has(q.question_type)) setAdvancedText(JSON.stringify(q.content, null, 2));
+    if (RICH_EDITORS[q.question_type]) setRichContent(q.content);
     else setFormState(stateFromContent(q.question_type, q.content));
     window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
   };
@@ -471,11 +482,9 @@ function RoundQuestions({ round, catalog, onChanged, flash }) {
         <div className="gb-new-question">
           <div className="gb-type-grid">
             {Object.entries(TYPES).map(([key, [icon, label]]) => (
-              key === "project_submission" ? null : (
-                <button key={key} className={`gb-type ${newType === key ? "active" : ""}`} onClick={() => pickType(key)}>
-                  <span>{icon}</span><strong>{label}</strong>
-                </button>
-              )
+              <button key={key} className={`gb-type ${newType === key ? "active" : ""}`} onClick={() => pickType(key)}>
+                <span>{icon}</span><strong>{label}</strong>
+              </button>
             ))}
           </div>
 
@@ -489,14 +498,9 @@ function RoundQuestions({ round, catalog, onChanged, flash }) {
             </label>
           </div>
 
-          {isAdvanced ? (
-            <div className="gb-advanced">
-              <p className="gb-warning">
-                {TYPES[newType][1]} questions need code files and pass/fail checks — edit the raw content below. Everything else on this page stays form-based.
-              </p>
-              <label>Content (JSON)
-                <textarea rows={10} value={advancedText} onChange={(e) => setAdvancedText(e.target.value)} spellCheck={false} />
-              </label>
+          {RichEditor ? (
+            <div className="gb-rich-editor">
+              <RichEditor content={richContent || TYPES[newType][2]} onChange={setRichContent} />
             </div>
           ) : (
             <TypeForm type={newType} state={formState} setState={setFormState} />

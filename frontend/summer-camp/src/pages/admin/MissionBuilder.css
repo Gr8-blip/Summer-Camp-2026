@@ -136,3 +136,8 @@
 
 /* ⏱ badge on a timed question in the round's question list */
 .gb-timer-badge{display:inline-block;margin-left:8px;font-size:.68rem;font-weight:800;background:#fff4e0;color:#8a5a00;border-radius:999px;padding:2px 9px;vertical-align:middle}
+
+/* wrapper around the real InteractiveCodingEditor / AdminCodingChallengeEditor /
+   ProjectSubmissionEditor components — they bring their own ice-*/pse-*
+   styling, this just gives them the same top spacing TypeForm gets */
+.gb-rich-editor{margin-top:4px}
