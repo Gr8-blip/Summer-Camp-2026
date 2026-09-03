@@ -7,7 +7,7 @@ import {
 } from "../../api/client";
 import AdminLayout from "./AdminLayout";
 import InteractiveCodingEditor from "../../editors/InteractiveCodingEditor";
-import AdminCodingChallengeEditor from "../../editors/AdminCodingChallengeEditor";
+import AdminCodingChallengeEditor from "../../editors/Admincodingchallengeeditor";
 import ProjectSubmissionEditor from "../../editors/ProjectSubmissionEditor";
 import "./MissionBuilder.css";
 
