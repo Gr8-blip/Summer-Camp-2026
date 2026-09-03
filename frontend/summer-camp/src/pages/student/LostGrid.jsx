@@ -351,6 +351,15 @@ function QuestionScreen({ round, index, question, theme, busy, onAnswer, project
   const type = question.question_type;
   const timeLimit = question.time_limit;
 
+  // Cache for CodingPlayground/CodingChallengePlayground's onResult — that
+  // fires as soon as the playground computes a result internally (e.g. a
+  // successful test run), well before the student hits its own
+  // Submit/Finish button. It must only ever *store* the latest result, the
+  // same way ChallengePlay's `answer(results)` does — NOT call onAnswer
+  // (submitAnswer), which posts to the backend and advances the screen.
+  // Only onNext (the actual button press) may trigger that.
+  const codingResultRef = useRef(null);
+
   // Countdown lives here so it resets cleanly per-question (key={question.id}
   // on the parent already forces a remount) and fires exactly once.
   const [secondsLeft, setSecondsLeft] = useState(timeLimit || 0);
@@ -400,26 +409,26 @@ function QuestionScreen({ round, index, question, theme, busy, onAnswer, project
           <CodingPlayground
             content={content}
             storageKey={`lostgrid-coding-classic-${question.id}`}
-            onResult={(results) => onAnswer(results)}
+            onResult={(results) => { codingResultRef.current = results; }}
             onExit={() => {}}
             canGoBack={false}
             isLast
             finishLabel="Submit"
             exitLabel=""
-            onNext={(freshResult) => freshResult && onAnswer(freshResult)}
+            onNext={(freshResult) => onAnswer(freshResult || codingResultRef.current)}
           />
         )}
         {type === "coding_challenge" && (
           <CodingChallengePlayground
             content={content}
             storageKey={`lostgrid-coding-${question.id}`}
-            onResult={(results) => onAnswer(results)}
+            onResult={(results) => { codingResultRef.current = results; }}
             onExit={() => {}}
             canGoBack={false}
             isLast
             finishLabel="Submit"
             exitLabel=""
-            onNext={(freshResult) => freshResult && onAnswer(freshResult)}
+            onNext={(freshResult) => onAnswer(freshResult || codingResultRef.current)}
           />
         )}
         {type === "project_submission" && (
@@ -463,7 +472,11 @@ function QuestionScreen({ round, index, question, theme, busy, onAnswer, project
 
 function EncounterQuestion({ question, content, onResolve, theme }) {
   const type = question.question_type;
-  if (type === "multiple_choice") return <ChoiceBody prompt={content.question} options={content.options || []} onPick={(i) => onResolve(i)} theme={theme} />;
+  // multiple_choice must resolve to the option's TEXT, not its index —
+  // content.answer (what scoring.py compares against) is stored as the
+  // correct option's text, same as true_false already resolves to an
+  // actual boolean rather than an index below.
+  if (type === "multiple_choice") return <ChoiceBody prompt={content.question} options={content.options || []} onPick={(i) => onResolve((content.options || [])[i])} theme={theme} />;
   if (type === "true_false") return <ChoiceBody prompt={content.question} options={["True", "False"]} onPick={(i) => onResolve(i === 0)} theme={theme} />;
   if (type === "fill_blank") return <TextBody prompt={content.question} placeholder="Type your answer..." onSubmit={(v) => onResolve(v)} theme={theme} />;
   if (type === "prompt_build") return <TextBody prompt={content.task} placeholder="Write your prompt..." multiline onSubmit={(v) => onResolve(v)} theme={theme} />;
@@ -653,7 +666,25 @@ function MatchPairsBody({ content, onSubmit, theme }) {
                 onClick={() => { if (matchedIdx == null && selRight != null) { setMatches((m) => ({ ...m, [l]: selRight })); setSelRight(null); } }}
               >
                 <strong>{l}</strong>
-                {matchedIdx != null && <span>↔ {rightPool[matchedIdx]}</span>}
+                {matchedIdx != null && (
+                  <span className="lgx-q-match-made">
+                    ↔ {rightPool[matchedIdx]}
+                    <button
+                      type="button"
+                      className="lgx-q-match-cancel"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMatches((m) => {
+                          const next = { ...m };
+                          delete next[l];
+                          return next;
+                        });
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                )}
               </div>
             );
           })}
@@ -681,13 +712,14 @@ function MatchPairsBody({ content, onSubmit, theme }) {
 function DragOrderBody({ content, onResolve, theme }) {
   const correctOrder = content.items || [];
   const [order, setOrder] = useState(() => [...correctOrder].sort(() => Math.random() - 0.5));
+  const [dragFrom, setDragFrom] = useState(null);
 
-  const nudge = (i, dir) => {
-    const target = i + dir;
-    if (target < 0 || target >= order.length) return;
+  const reorderDrag = (from, to) => {
+    if (from === null || from === to) return;
     setOrder((prev) => {
       const next = [...prev];
-      [next[i], next[target]] = [next[target], next[i]];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
       return next;
     });
   };
@@ -695,16 +727,22 @@ function DragOrderBody({ content, onResolve, theme }) {
   return (
     <>
       {content.question && <p className="lgx-q-prompt">{content.question}</p>}
-      <p className="lgx-q-hint">Use the arrows to put these in the correct order:</p>
+      <p className="lgx-q-hint">Drag the cards into the correct order.</p>
       <div className="lgx-q-order">
         {order.map((item, i) => (
-          <div key={item + i} className="lgx-q-order-row">
+          <div
+            key={item + i}
+            className="lgx-q-order-row"
+            draggable
+            onDragStart={() => setDragFrom(i)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => { reorderDrag(dragFrom, i); setDragFrom(null); }}
+            onDragEnd={() => setDragFrom(null)}
+            style={{ opacity: dragFrom === i ? 0.4 : 1 }}
+          >
             <span className="lgx-q-order-num">{i + 1}</span>
             <span className="lgx-q-order-label">{item}</span>
-            <div className="lgx-q-order-nudges">
-              <button disabled={i === 0} onClick={() => nudge(i, -1)}>▲</button>
-              <button disabled={i === order.length - 1} onClick={() => nudge(i, 1)}>▼</button>
-            </div>
+            <span className="lgx-q-order-handle" aria-hidden="true">⠿</span>
           </div>
         ))}
       </div>
