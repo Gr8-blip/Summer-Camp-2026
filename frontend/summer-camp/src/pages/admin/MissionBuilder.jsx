@@ -9,6 +9,7 @@ import AdminLayout from "./AdminLayout";
 import InteractiveCodingEditor from "../../editors/InteractiveCodingEditor";
 import AdminCodingChallengeEditor from "../../editors/Admincodingchallengeeditor";
 import ProjectSubmissionEditor from "../../editors/ProjectSubmissionEditor";
+import BulkImport from "./BulkImport";
 import "./MissionBuilder.css";
 
 // Same 11 types ChallengeQuestion supports. `example` is the default content
@@ -163,6 +164,7 @@ export default function MissionBuilder() {
   const [roundForm, setRoundForm] = useState(ROUND_EMPTY);
   const [editingRoundId, setEditingRoundId] = useState(null);
   const [savingRound, setSavingRound] = useState(false);
+  const [showBulkImport, setShowBulkImport] = useState(false);
 
   const reloadMissions = () => adminGetMissions().then(setMissions);
   const reloadRounds = () => missionId && adminGetLostGridRounds(missionId).then(setRounds);
@@ -295,7 +297,17 @@ export default function MissionBuilder() {
                 </button>
                 {editingRoundId && <button className="btn btn-secondary" onClick={() => { setEditingRoundId(null); setRoundForm(ROUND_EMPTY); }}>Cancel</button>}
               </div>
+
+              <div className="gb-add-tabs" style={{ marginTop: 18, marginBottom: 0 }}>
+                <button className={showBulkImport ? "active" : ""} onClick={() => setShowBulkImport((v) => !v)}>
+                  📥 Bulk import rounds (JSON)
+                </button>
+              </div>
             </section>
+
+            {showBulkImport && (
+              <BulkImport missionId={missionId} onDone={() => { reloadRounds(); flash("✓ Bulk import finished — check the log above."); }} />
+            )}
 
             {activeRound && (
               <RoundQuestions
