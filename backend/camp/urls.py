@@ -77,6 +77,9 @@ from .views.admin.assignment_question import AssignmentQuestionListView, Assignm
 from .views.admin.camp_settings import AdminCampSettingsView
 from .views.student.notifications import NotificationListView, NotificationMarkReadView
 from .views.student.game import MissionGameView, MissionGameAnswerView
+from .views.student.camp_settings_student import StudentCampSettingsView
+from .views.student.student_award import StudentAwardListView, StudentAwardClaimView
+from .views.admin.admin_award import AdminAwardListView, AdminAwardDetailView, AdminAwardTypesView
 
 from .views.admin.maze import AdminQuestionCatalogView
 from .views.admin.lostgrid import (
@@ -86,6 +89,7 @@ from .views.admin.lostgrid import (
     AdminLostGridQuestionDetailView,
 )
 
+from .views.student.leaderboard import LeaderboardView
 
 urlpatterns = [
 
@@ -197,8 +201,10 @@ urlpatterns = [
     path("notifications/mark-read/", NotificationMarkReadView.as_view(), name="notification-mark-read"),
     path('project-submission/check/', ProjectSubmissionCheckView.as_view()),
     path("lessons/<int:pk>/questions/", LessonQuestionCreateView.as_view()),
-
-
+    path("camp-settings/", StudentCampSettingsView.as_view(), name="student-camp-settings"),
+    path("awards/", StudentAwardListView.as_view(), name="student-award-list"),
+    path("awards/<int:pk>/claim/", StudentAwardClaimView.as_view(), name="student-award-claim"),
+    path("leaderboard/", LeaderboardView.as_view(), name="leaderboard"),
 
      # ==========================
     # Parent
@@ -398,4 +404,11 @@ urlpatterns = [
         
 
     path("camp-admin/camp-settings/", AdminCampSettingsView.as_view(), name='admin-camp-settings-view'),
+
+    # ==========================
+    # Awards
+    # ==========================
+    path("camp-admin/awards/", AdminAwardListView.as_view(), name="admin-awards"),
+    path("camp-admin/awards/<int:pk>/", AdminAwardDetailView.as_view(), name="admin-award-detail"),
+    path("camp-admin/award-types/", AdminAwardTypesView.as_view(), name="admin-award-types"),
 ]

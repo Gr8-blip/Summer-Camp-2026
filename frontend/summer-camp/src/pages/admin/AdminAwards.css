@@ -1,0 +1,64 @@
+.aw-panel {
+  background: #fff;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+}
+
+.aw-panel-title { margin: 0 0 16px; font-size: 1.1rem; }
+
+.aw-assign-form {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.aw-assign-form select {
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  min-width: 220px;
+}
+
+.aw-assign-form button {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #9333ea, #22d3ee);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.aw-assign-form button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.aw-error { color: #dc2626; margin-top: 12px; }
+.aw-muted { color: #888; }
+
+.aw-student-block { margin-bottom: 18px; }
+.aw-student-name { margin: 0 0 8px; font-size: 0.95rem; color: #333; }
+
+.aw-award-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.aw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f3f0ff;
+  border: 1px solid #e0d5ff;
+  font-size: 0.85rem;
+}
+
+.aw-chip-claimed { background: #fff8e1; border-color: #ffe4a3; }
+
+.aw-chip-remove {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #999;
+  font-size: 0.8rem;
+}
+.aw-chip-remove:hover { color: #dc2626; }

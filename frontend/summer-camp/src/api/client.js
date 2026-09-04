@@ -94,6 +94,20 @@ export const submitLessonQuestion = (lessonId, text, category) =>
     body: { text, category },
   });
 
+// Read-only camp status for students — just { camp_started, is_graduation }.
+// Powers the GraduationDay lock: the page polls this instead of
+// hardcoding anything, so the admin's toggle in Camp Control takes
+// effect for everyone without a redeploy.
+// NOTE: needs a matching backend view/url (StudentCampSettingsSerializer
+// is already added in serializers.py) — a simple read-only GET on
+// /camp-settings/ guarded by studentAuth, mirroring the admin one at
+// /camp-admin/camp-settings/ but without the PATCH.
+export const getCampSettings = () => camp("/camp-settings/", { method: "GET", studentAuth: true });
+
+// -- Awards (GraduationDay) --
+export const getAwards = () => camp("/awards/", { method: "GET", studentAuth: true });
+export const claimAward = (id) => camp(`/awards/${id}/claim/`, { method: "POST", studentAuth: true });
+
 // ── Admin ──────────────────────────────────────────────────────────────────────
 export const getAdminDashboard = () => camp("/camp-admin/dashboard/", { method: "GET", adminAuth: true });
 
@@ -188,6 +202,12 @@ export const adminDeleteAssignmentQuestion = (id) => camp(`/camp-admin/assignmen
 export const adminGetCampSettings = () => camp("/camp-admin/camp-settings/", { method: "GET", adminAuth: true });
 export const adminUpdateCampSettings = (body) => camp("/camp-admin/camp-settings/", { method: "PATCH", adminAuth: true, body });
 
+// -- Admin: Awards --
+export const adminGetAwards = () => camp("/camp-admin/awards/", { method: "GET", adminAuth: true });
+export const adminAssignAward = (body) => camp("/camp-admin/awards/", { method: "POST", adminAuth: true, body });
+export const adminRevokeAward = (id) => camp(`/camp-admin/awards/${id}/`, { method: "DELETE", adminAuth: true });
+export const adminGetAwardTypes = () => camp("/camp-admin/award-types/", { method: "GET", adminAuth: true });
+
 // ── Marketplace / Profile ─────────────────────────────────────────────────────
 export const getMarketplace = () => camp("/marketplace/", { method: "GET", studentAuth: true });
 export const purchaseCosmetic = (id) => camp(`/marketplace/${id}/purchase/`, { method: "POST", studentAuth: true });
@@ -199,3 +219,5 @@ export const getNotifications = (unreadOnly = false) =>
   camp(`/notifications/${unreadOnly ? "?unread=true" : ""}`, { method: "GET", studentAuth: true });
 export const markNotificationsRead = (ids) =>
   camp("/notifications/mark-read/", { method: "POST", studentAuth: true, body: ids ? { ids } : {} });
+
+export const getLeaderboard = () => camp("/leaderboard/", { method: "GET", studentAuth: true });

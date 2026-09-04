@@ -3,6 +3,7 @@ from rest_framework import serializers
 from users.serializers import StudentSerializer
 from .models import Assignment, Mission, Lesson, Badge, Submission, Challenge, ChallengeQuestion, ChallengeAttempt, StudentBadge, XPLog, AttendanceSession, StudentAttendance, AIConversation, AIMessage, LessonQuestion, LostGridRound, LostGridQuestion, MissionGameProgress
 from .models import AssignmentQuestion, AssignmentAttempt, CampSettings, ProjectSubmission
+from .models import StudentAward, AWARD_DESCRIPTIONS
 from .utils.mission_progress import mission_progress
 
 
@@ -480,6 +481,43 @@ class StudentBadgeSerializer(serializers.ModelSerializer):
         model = StudentBadge
         fields = ['badge', 'earned_at']
 
+
+class StudentAwardSerializer(serializers.ModelSerializer):
+    """Student-facing view of one assigned award. `award_type`/`award_label`
+    are always present (the frontend needs the type to pick an icon), but
+    the description only comes through once claimed — keeps a sliver of
+    the "wait, what did I get?" mystery even though the type itself isn't
+    secret."""
+    award_label = serializers.CharField(source='get_award_type_display', read_only=True)
+    description = serializers.SerializerMethodField()
+
+    class Meta:
+        model = StudentAward
+        fields = ['id', 'award_type', 'award_label', 'description', 'claimed', 'claimed_at', 'awarded_at']
+        read_only_fields = fields
+
+    def get_description(self, obj):
+        return AWARD_DESCRIPTIONS.get(obj.award_type, '') if obj.claimed else None
+
+
+class AwardClaimSerializer(serializers.Serializer):
+    """Empty body — the award id comes from the URL. Exists purely so the
+    claim endpoint has a serializer to validate against, matching the rest
+    of the app's view/serializer split."""
+    pass
+
+
+class AdminStudentAwardSerializer(serializers.ModelSerializer):
+    """Admin-facing view — includes the student so the assignment list can
+    be grouped/filtered without a second lookup."""
+    student_name = serializers.CharField(source='student.full_name', read_only=True)
+    award_label = serializers.CharField(source='get_award_type_display', read_only=True)
+
+    class Meta:
+        model = StudentAward
+        fields = ['id', 'student', 'student_name', 'award_type', 'award_label', 'awarded_at', 'claimed', 'claimed_at']
+        read_only_fields = ['id', 'student_name', 'award_label', 'awarded_at', 'claimed', 'claimed_at']
+
 class AttendanceSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = AttendanceSession
@@ -564,7 +602,15 @@ class AssignmentAttemptSerializer(serializers.ModelSerializer):
 class CampSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = CampSettings
-        fields = ['camp_started']
+        fields = ['camp_started', 'is_graduation']
+
+
+class StudentCampSettingsSerializer(serializers.ModelSerializer):
+    """Read-only subset exposed to students — just the two flags GraduationDay
+    needs to decide what to render. Never exposes anything admin-only."""
+    class Meta:
+        model = CampSettings
+        fields = ['camp_started', 'is_graduation']
 
 
 class AIConversationSerializer(serializers.ModelSerializer):
@@ -810,3 +856,32 @@ class ProjectSubmissionResultSerializer(serializers.ModelSerializer):
         model = ProjectSubmission
         fields = ['id', 'submitted_url', 'submitted_zip', 'results', 'score_fraction', 'created_at']
         read_only_fields = fields
+
+
+class LeaderboardEntrySerializer(serializers.Serializer):
+    """
+    One row per student. Not a ModelSerializer — this is a computed
+    snapshot assembled by LeaderboardView, not a single model instance.
+    Each *_rank field is this student's 1-based rank within that category
+    (1 = best, ties share a rank). overall_rank is the composite rank
+    across the 4 raw metrics — see LeaderboardView for how it's computed.
+    """
+    student_id = serializers.IntegerField()
+    student_name = serializers.CharField()
+    avatar = serializers.CharField(allow_null=True)
+    is_you = serializers.BooleanField()
+
+    xp = serializers.IntegerField()
+    xp_rank = serializers.IntegerField()
+
+    quest_score = serializers.FloatField()      # avg accuracy (%) across completed quests
+    quest_rank = serializers.IntegerField()
+
+    attendance_count = serializers.IntegerField()
+    attendance_rank = serializers.IntegerField()
+
+    challenge_count = serializers.IntegerField()
+    challenge_rank = serializers.IntegerField()
+
+    overall_score = serializers.FloatField()
+    overall_rank = serializers.IntegerField()

@@ -6,12 +6,14 @@ import { useToast, ToastContainer } from "../../components/Toast";
 export default function AdminCampControl() {
   const { toasts, toast } = useToast();
   const [started, setStarted] = useState(false);
+  const [graduation, setGraduation] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving]   = useState(false);
+  const [savingGrad, setSavingGrad] = useState(false);
 
   useEffect(() => {
     adminGetCampSettings()
-      .then((d) => setStarted(d.camp_started))
+      .then((d) => { setStarted(d.camp_started); setGraduation(d.is_graduation); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -26,6 +28,20 @@ export default function AdminCampControl() {
       toast(e.data?.detail || "Couldn't update camp status.", "error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const toggleGraduation = async () => {
+    const next = !graduation;
+    setSavingGrad(true);
+    try {
+      await adminUpdateCampSettings({ is_graduation: next });
+      setGraduation(next);
+      toast(next ? "🎓 Graduation unlocked — certificates are live!" : "Graduation locked back up for students.");
+    } catch (e) {
+      toast(e.data?.detail || "Couldn't update graduation status.", "error");
+    } finally {
+      setSavingGrad(false);
     }
   };
 
@@ -60,6 +76,35 @@ export default function AdminCampControl() {
               </button>
               <strong style={{ fontSize: "1.05rem", color: started ? "#16a34a" : "#6b7280" }}>
                 {started ? "🟢 Camp is LIVE" : "⚪ Camp not started"}
+              </strong>
+            </div>
+
+            <hr style={{ margin: "32px 0", border: "none", borderTop: "1px solid var(--color-border, #e5e7eb)" }} />
+
+            <h2 style={{ marginBottom: 6 }}>🎓 Graduation Reveal</h2>
+            <p style={{ color: "var(--color-text-soft)", marginBottom: 24 }}>
+              Controls the Graduation Day page's locked state. While OFF, students
+              can walk through their journey recap but the certificate stays
+              sealed. Flip ON when it's actually graduation time.
+            </p>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <button
+                onClick={toggleGraduation}
+                disabled={savingGrad}
+                style={{
+                  width: 64, height: 34, borderRadius: 999, border: "none", cursor: "pointer",
+                  background: graduation ? "linear-gradient(135deg,#f59e0b,#f472b6)" : "#d1d5db",
+                  position: "relative", transition: "background .2s ease",
+                }}
+              >
+                <span style={{
+                  position: "absolute", top: 3, left: graduation ? 33 : 3,
+                  width: 28, height: 28, borderRadius: "50%", background: "#fff",
+                  transition: "left .2s ease", boxShadow: "0 2px 4px rgba(0,0,0,.25)",
+                }} />
+              </button>
+              <strong style={{ fontSize: "1.05rem", color: graduation ? "#d97706" : "#6b7280" }}>
+                {graduation ? "🎓 Certificates unlocked" : "🔒 Certificate locked"}
               </strong>
             </div>
           </>

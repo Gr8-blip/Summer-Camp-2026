@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { replayMissedNotifications } from "../../api/replayNotifications";
 import { getStudentDashboard } from "../../api/client";
-import { isWeekSixActive } from "../../utils/week6";
+import { isWeekSixActive } from "../../utils/week6"; // gates the finale hub — now the Graduation Day page
 import "./StudentLayout.css";
 
 const NAV_ITEMS = [
@@ -18,12 +18,13 @@ const NAV_ITEMS = [
   { to: "/profile",      label: "👤 Profile"      },
 ];
 
-// During Week 6 the normal nav is hidden in favor of the finale hub — but
-// students still need a way back to their profile and, if they wandered
-// onto a direct lesson/quest/challenge link, back to the hub itself. This
-// list intentionally does NOT remove any route, just what's shown here.
+// During Week 6 the normal nav is hidden in favor of the Graduation Day
+// page — but students still need a way back to their profile and, if they
+// wandered onto a direct lesson/quest/challenge link, back to graduation
+// itself. This list intentionally does NOT remove any route, just what's
+// shown here.
 const WEEK_SIX_NAV_ITEMS = [
-  { to: "/week6",  label: "🎓 Week 6 Hub" },
+  { to: "/graduation", label: "🎓 Graduation" },
   { to: "/profile", label: "👤 Profile" },
 ];
 

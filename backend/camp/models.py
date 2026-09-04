@@ -177,6 +177,63 @@ class StudentBadge(models.Model):
     def __str__(self):
         return f"{self.student.full_name} earned {self.badge.name} on {self.earned_at}"
     
+AWARD_TYPES = [
+    ("builder", "🏆 Builder Award"),
+    ("problem_solver", "🧠 Problem Solver"),
+    ("ai_explorer", "🤖 AI Explorer"),
+    ("future_innovator", "🚀 Future Innovator"),
+    ("creative_mind", "🎨 Creative Mind"),
+    ("fast_learner", "⚡ Fast Learner"),
+    ("never_give_up", "💪 Never Give Up"),
+    ("rising_developer", "🌟 Rising Developer"),
+    ("quest_master", "🎯 Quest Master"),
+    ("tech_trailblazer", "💻 Tech Trailblazer"),
+]
+
+# Human-readable blurb per award type — kept server-side so the "why you
+# earned this" copy is centrally editable and can't be spoofed by the
+# frontend. Icon/label live in AWARD_TYPES above; this is just the extra
+# sentence shown on the flipped/claimed card.
+AWARD_DESCRIPTIONS = {
+    "builder": "Strong project-building ability.",
+    "problem_solver": "Excellent problem solving and debugging instincts.",
+    "ai_explorer": "Standout AI curiosity and ability.",
+    "future_innovator": "Creative, ambitious ideas that push further.",
+    "creative_mind": "Creative thinking and inventive solutions.",
+    "fast_learner": "Picks up new concepts fast.",
+    "never_give_up": "Exceptional persistence, even when it got hard.",
+    "rising_developer": "Significant growth across the whole camp.",
+    "quest_master": "Excellent Quest performance.",
+    "tech_trailblazer": "Broad technical curiosity and experimentation.",
+}
+
+
+class StudentAward(models.Model):
+    """
+    A single award assigned by an admin to a student. Existence of the row
+    IS the "awarded" state — there's no separate flag for it, mirroring
+    StudentBadge above. `claimed`/`claimed_at` track the second state: the
+    student has opened it on their GraduationDay page. A student can hold
+    several different award types (unique constraint below just blocks the
+    *same* type being assigned twice to the same student).
+    """
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="awards")
+    award_type = models.CharField(max_length=32, choices=AWARD_TYPES)
+    awarded_at = models.DateTimeField(auto_now_add=True)
+    claimed = models.BooleanField(default=False)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["student", "award_type"], name="unique_student_award_type")
+        ]
+        ordering = ["-awarded_at"]
+
+    def __str__(self):
+        state = "claimed" if self.claimed else "unclaimed"
+        return f"{self.student.full_name} — {self.get_award_type_display()} ({state})"
+
+
 class XPLog(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='xp_logs')
     amount = models.IntegerField()
@@ -525,6 +582,11 @@ class CampSettings(models.Model):
     locked from interaction — start/submit/attendance endpoints refuse.
     """
     camp_started = models.BooleanField(default=False)
+    # Separate from camp_started: flips on for the Graduation Day finale.
+    # Students can be mid-camp (camp_started=True) for weeks before this
+    # ever turns on — it's the admin's "reveal the certificate" button,
+    # toggled from the same Camp Control screen.
+    is_graduation = models.BooleanField(default=False)
     updated_at = models.DateTimeField(auto_now=True)
  
     def save(self, *args, **kwargs):
@@ -537,7 +599,9 @@ class CampSettings(models.Model):
         return obj
  
     def __str__(self):
-        return f"Camp {'STARTED' if self.camp_started else 'NOT STARTED'}"
+        status = 'STARTED' if self.camp_started else 'NOT STARTED'
+        grad = ' · GRADUATION LIVE' if self.is_graduation else ''
+        return f"Camp {status}{grad}"
  
  
 class MissionCompletion(models.Model):

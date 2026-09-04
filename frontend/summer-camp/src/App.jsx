@@ -31,7 +31,7 @@ import QuestStats from "./pages/student/QuestStats";
 import ChallengeLeaderboard from "./pages/student/Challengeleaderboard";
 import Marketplace from "./pages/student/Marketplace";
 import Profile from "./pages/student/Profile";
-import Week6Hub from "./pages/student/Week6Hub";
+import GraduationDay from "./pages/student/GraduationDay";
 import LostGrid from "./pages/student/LostGrid";
 
 // Admin pages
@@ -48,6 +48,7 @@ import AdminChallenges from "./pages/admin/AdminChallenges";
 import AdminCampControl from "./pages/admin/Admincampcontrol";
 import AdminQA from "./pages/admin/AdminQA";
 import MissionBuilder from "./pages/admin/MissionBuilder";
+import AdminAwards from "./pages/admin/AdminAwards";
 
 
 function ProtectedRoute({ children }) {
@@ -98,7 +99,7 @@ export default function App() {
 
           {/* Student platform */}
           <Route element={<ThemeProvider><Outlet /></ThemeProvider>}>
-            <Route path="/week6" element={<StudentRoute><Week6Hub /></StudentRoute>} />
+            <Route path="/graduation" element={<StudentRoute><GraduationDay /></StudentRoute>} />
             <Route path="/missions/:id/lost-grid" element={<StudentRoute><LostGrid /></StudentRoute>} />
             <Route path="/missions" element={<StudentRoute><Missions /></StudentRoute>} />
             <Route path="/missions/:id" element={<StudentRoute><MissionDetail /></StudentRoute>} />
@@ -133,6 +134,7 @@ export default function App() {
           <Route path="/camp-admin/badges" element={<AdminRoute><AdminBadges /></AdminRoute>} />
           <Route path="/camp-admin/qa" element={<AdminRoute><AdminQA /></AdminRoute>} />
           <Route path="/camp-admin/challenges" element={<AdminRoute><AdminChallenges /></AdminRoute>} />
+          <Route path="/camp-admin/awards" element={<AdminRoute><AdminAwards /></AdminRoute>} />
           <Route path="/admin/camp-control" element={<AdminCampControl />} />  {/* admin router */}
 
           <Route path="*" element={<Navigate to="/" replace />} />
