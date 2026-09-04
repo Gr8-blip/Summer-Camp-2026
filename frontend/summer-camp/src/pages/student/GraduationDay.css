@@ -973,37 +973,195 @@
   .gd-award-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Certificate PDF export (print-only isolation) ───────────────── */
-/* Used by the "Download Certificate" button: it flips on the
-   `gd-print-certificate` class on <body>, calls window.print(), and the
-   student picks "Save as PDF" as the destination. Only the certificate
-   card is shown in the print output — everything else on the page,
-   including the download button itself, is hidden. */
-@media print {
-  body.gd-print-certificate * {
-    visibility: hidden !important;
-  }
-  body.gd-print-certificate .gd-certificate,
-  body.gd-print-certificate .gd-certificate * {
-    visibility: visible !important;
-  }
-  body.gd-print-certificate .gd-certificate-download {
-    display: none !important;
-  }
-  body.gd-print-certificate .gd-certificate {
-    position: absolute !important;
-    inset: 0 auto auto 0;
-    top: 40px;
-    left: 50%;
-    transform: translateX(-50%) !important;
-    margin: 0;
-    width: min(90vw, 620px);
-    box-shadow: none !important;
-    backdrop-filter: none !important;
-    background: #120a26 !important;
-    animation: none !important;
-  }
-  body.gd-print-certificate .gd-certificate::after {
-    animation: none !important;
-  }
+/* ── Certificate PDF export template ─────────────────────────────── */
+/* Rendered once, off-screen, then rasterized by html2canvas into the
+   downloaded PDF (see handleDownloadCertificate). It must stay in the
+   layout (not display:none) so html2canvas can measure/capture it, but
+   it must never be visible or reachable on the live page — pushed far
+   off the viewport and taken out of tab order / screen readers. */
+.gd-cert-pdf-offstage {
+  position: fixed;
+  top: 0;
+  left: -99999px;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
+
+.gd-cert-pdf-template {
+  width: 1200px;
+  height: 850px;
+  padding: 46px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, rgba(201, 151, 46, 0.1), transparent 60%),
+    #fbf4e2;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.gd-cert-pdf-border {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 56px 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border: 3px solid #c9972e;
+  border-radius: 6px;
+  background: #fbf4e2;
+}
+.gd-cert-pdf-border::before {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border: 1px solid rgba(201, 151, 46, 0.55);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.gd-cert-pdf-corner {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-color: #c9972e;
+}
+.gd-cert-pdf-tl { top: 26px; left: 26px; border-top: 3px solid; border-left: 3px solid; }
+.gd-cert-pdf-tr { top: 26px; right: 26px; border-top: 3px solid; border-right: 3px solid; }
+.gd-cert-pdf-bl { bottom: 26px; left: 26px; border-bottom: 3px solid; border-left: 3px solid; }
+.gd-cert-pdf-br { bottom: 26px; right: 26px; border-bottom: 3px solid; border-right: 3px solid; }
+
+.gd-cert-pdf-seal {
+  position: relative;
+  z-index: 1;
+  width: 84px;
+  height: 84px;
+  margin: 0 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.4rem;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffe9b0, #e8b74a 60%, #c9972e 100%);
+  box-shadow: 0 0 0 4px #fbf4e2, 0 0 0 5px rgba(201, 151, 46, 0.6), 0 10px 24px rgba(120, 84, 12, 0.25);
+}
+
+.gd-cert-pdf-eyebrow {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 6px;
+  color: #8a6a1f;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.gd-cert-pdf-title {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 22px;
+  color: #2a1b45;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: 2.5rem;
+  letter-spacing: 0.02em;
+}
+
+.gd-cert-pdf-rule {
+  position: relative;
+  z-index: 1;
+  width: 130px;
+  height: 3px;
+  margin: 0 0 34px;
+  background: linear-gradient(90deg, transparent, #c9972e, transparent);
+}
+
+.gd-cert-pdf-presented {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 14px;
+  color: #7a6a8f;
+  font-style: italic;
+  font-size: 1.05rem;
+}
+
+.gd-cert-pdf-name {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 22px;
+  padding: 0 0 14px;
+  color: #4b2e83;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: 3rem;
+  border-bottom: 2px solid rgba(201, 151, 46, 0.5);
+}
+
+.gd-cert-pdf-body {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 10px;
+  color: #7a6a8f;
+  font-size: 1.05rem;
+}
+
+.gd-cert-pdf-track {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 40px;
+  color: #22637a;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+}
+
+.gd-cert-pdf-footer {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.gd-cert-pdf-sig {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-width: 200px;
+}
+.gd-cert-pdf-sig-line { width: 200px; height: 1px; background: #b8a8c9; }
+.gd-cert-pdf-sig-label {
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  color: #7a6a8f;
+}
+
+.gd-cert-pdf-stamp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  border: 2px dashed #c9972e;
+  color: #8a6a1f;
+  font-family: "Space Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  transform: rotate(-6deg);
+}
+.gd-cert-pdf-stamp-year { font-size: 0.9rem; letter-spacing: 0.04em; }
